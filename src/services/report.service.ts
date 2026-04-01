@@ -1,0 +1,94 @@
+import { prisma } from '@/lib/prisma';
+import type { MonthlySummary, CategoryBreakdown, MonthlyTrend } from '@/types';
+import { format, subMonths } from 'date-fns';
+
+export async function getMonthlySummary(userId: string, month: number, year: number): Promise<MonthlySummary> {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
+  const [income, expense, count] = await Promise.all([
+    prisma.transaction.aggregate({
+      where: { userId, type: 'INCOME', date: { gte: startDate, lte: endDate } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { userId, type: 'EXPENSE', date: { gte: startDate, lte: endDate } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.count({
+      where: { userId, date: { gte: startDate, lte: endDate } },
+    }),
+  ]);
+
+  const totalIncome = Number(income._sum.amount || 0);
+  const totalExpense = Number(expense._sum.amount || 0);
+
+  return {
+    totalIncome,
+    totalExpense,
+    balance: totalIncome - totalExpense,
+    transactionCount: count,
+  };
+}
+
+export async function getCategoryBreakdown(userId: string, month: number, year: number): Promise<CategoryBreakdown[]> {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59);
+
+  const spending = await prisma.transaction.groupBy({
+    by: ['categoryId'],
+    where: { userId, type: 'EXPENSE', date: { gte: startDate, lte: endDate } },
+    _sum: { amount: true },
+  });
+
+  const totalExpense = spending.reduce((sum, s) => sum + Number(s._sum.amount || 0), 0);
+
+  const categories = await prisma.category.findMany({
+    where: { userId, id: { in: spending.map((s) => s.categoryId) } },
+  });
+
+  const categoryMap = new Map(categories.map((c) => [c.id, c]));
+
+  return spending
+    .map((s) => {
+      const cat = categoryMap.get(s.categoryId);
+      const total = Number(s._sum.amount || 0);
+      return {
+        categoryId: s.categoryId,
+        categoryName: cat?.name || 'Unknown',
+        categoryColor: cat?.color || '#64748b',
+        categoryIcon: cat?.icon || 'tag',
+        total,
+        percentage: totalExpense > 0 ? Math.round((total / totalExpense) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+}
+
+export async function getMonthlyTrend(userId: string, months: number = 6): Promise<MonthlyTrend[]> {
+  const trends: MonthlyTrend[] = [];
+  const now = new Date();
+
+  for (let i = months - 1; i >= 0; i--) {
+    const date = subMonths(now, i);
+    const month = date.getMonth() + 1;
+    const year = date.getFullYear();
+    const summary = await getMonthlySummary(userId, month, year);
+    trends.push({
+      month: format(date, 'MMM yyyy'),
+      income: summary.totalIncome,
+      expense: summary.totalExpense,
+    });
+  }
+
+  return trends;
+}
+
+export async function getRecentTransactions(userId: string, limit: number = 5) {
+  return prisma.transaction.findMany({
+    where: { userId },
+    include: { category: true, account: true },
+    orderBy: { date: 'desc' },
+    take: limit,
+  });
+}
