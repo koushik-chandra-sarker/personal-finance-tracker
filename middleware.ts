@@ -1,26 +1,7 @@
-import { auth } from '@/lib/auth';
-import { NextResponse } from 'next/server';
+import NextAuth from 'next-auth';
+import { authConfig } from '@/lib/auth.config';
 
-export default auth((req) => {
-  const { pathname } = req.nextUrl;
-  const isLoggedIn = !!req.auth;
-
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/register');
-  const isProtectedRoute = pathname.startsWith('/dashboard') || pathname.startsWith('/transactions') ||
-    pathname.startsWith('/accounts') || pathname.startsWith('/budgets') ||
-    pathname.startsWith('/goals') || pathname.startsWith('/recurring') ||
-    pathname.startsWith('/reports') || pathname.startsWith('/settings');
-
-  if (isAuthPage && isLoggedIn) {
-    return NextResponse.redirect(new URL('/dashboard', req.nextUrl));
-  }
-
-  if (isProtectedRoute && !isLoggedIn) {
-    return NextResponse.redirect(new URL('/login', req.nextUrl));
-  }
-
-  return NextResponse.next();
-});
+export default NextAuth(authConfig).auth;
 
 export const config = {
   matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
