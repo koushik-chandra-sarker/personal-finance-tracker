@@ -24,10 +24,10 @@ const colorMap = {
 
 export default function InsightsWidget({ insights }: InsightsWidgetProps) {
   return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-6">
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
       <div className="flex items-center gap-2 mb-4">
-        <Lightbulb className="h-5 w-5 text-amber-400" />
-        <h3 className="text-lg font-semibold text-white">AI Insights</h3>
+        <Lightbulb className="h-5 w-5 text-amber-500 dark:text-amber-400" />
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">AI Insights</h3>
       </div>
 
       {insights.length === 0 ? (
@@ -42,8 +42,9 @@ export default function InsightsWidget({ insights }: InsightsWidgetProps) {
               <div key={i} className={`flex items-start gap-3 p-3 rounded-xl border ${colorMap[insight.type]}`}>
                 <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-medium text-white">{insight.title}</p>
-                  <p className="text-xs text-slate-400 mt-0.5">{insight.message}</p>
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">{insight.title}</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{insight.message}</p>
+
                 </div>
               </div>
             );

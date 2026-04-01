@@ -22,13 +22,13 @@ export default function DashboardLoading() {
       {/* Main content rows */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6 space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 p-6 space-y-4">
             <Skeleton className="h-6 w-1/4" />
             <Skeleton className="h-64 w-full" />
           </div>
         </div>
         <div>
-          <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6 space-y-4">
+          <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 p-6 space-y-4">
             <Skeleton className="h-6 w-1/2" />
             <Skeleton className="h-64 w-full max-w-[250px] rounded-full mx-auto" />
           </div>
@@ -36,7 +36,7 @@ export default function DashboardLoading() {
       </div>
 
       {/* Table skeleton */}
-      <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6">
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 p-6">
         <Skeleton className="h-6 w-1/4 mb-4" />
         <TableSkeleton rows={5} />
       </div>

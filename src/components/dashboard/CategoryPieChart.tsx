@@ -13,9 +13,9 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
   if (!active || !payload || !payload[0]) return null;
   const d = payload[0].payload;
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800 p-3 shadow-2xl">
-      <p className="text-sm font-medium text-white">{d.categoryName}</p>
-      <p className="text-xs text-slate-400">{formatCurrency(d.total)} ({d.percentage}%)</p>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3 shadow-2xl">
+      <p className="text-sm font-medium text-slate-900 dark:text-white">{d.categoryName}</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(d.total)} ({d.percentage}%)</p>
     </div>
   );
 };
@@ -23,8 +23,8 @@ const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<
 export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPieChartProps) {
   if (data.length === 0) {
     return (
-      <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-6">
-        <h3 className="text-lg font-semibold text-white mb-4">Expense Breakdown</h3>
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Expense Breakdown</h3>
         <div className="flex items-center justify-center h-[250px] text-slate-500 text-sm">
           No expense data for this month
         </div>
@@ -33,8 +33,8 @@ export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPie
   }
 
   return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Expense Breakdown</h3>
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Expense Breakdown</h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -61,8 +61,8 @@ export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPie
         {data.slice(0, 6).map((cat) => (
           <div key={cat.categoryId} className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.categoryColor }} />
-            <span className="text-xs text-slate-400 truncate">{cat.categoryName}</span>
-            <span className="text-xs text-slate-500 ml-auto">{cat.percentage}%</span>
+            <span className="text-xs text-slate-600 dark:text-slate-400 truncate">{cat.categoryName}</span>
+            <span className="text-xs text-slate-500 dark:text-slate-500 ml-auto">{cat.percentage}%</span>
           </div>
         ))}
       </div>

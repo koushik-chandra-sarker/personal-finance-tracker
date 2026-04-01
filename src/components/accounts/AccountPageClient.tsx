@@ -62,8 +62,8 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Accounts</h1>
-          <p className="text-sm text-slate-400">Total Balance: {formatCurrency(totalBalance)}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accounts</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Total Balance: {formatCurrency(totalBalance)}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add Account
@@ -74,7 +74,7 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
         <EmptyState
           title="No accounts yet"
           description="Add your first account to start tracking balances"
-          icon={<Wallet className="h-12 w-12 text-slate-500" />}
+          icon={<Wallet className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
           action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Account</Button>}
         />
       ) : (
@@ -82,22 +82,22 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
           {accounts.map((account) => {
             const Icon = iconMap[account.type] || Wallet;
             return (
-              <div key={account.id} className="relative group rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-6 hover:border-slate-600/50 transition-all">
+              <div key={account.id} className="relative group rounded-2xl p-5 border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 backdrop-blur-xl hover:border-slate-300 dark:hover:border-slate-600/50 transition-all">
                 <div className="flex items-start justify-between">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: account.color + '20' }}>
                     <Icon className="h-6 w-6" style={{ color: account.color }} />
                   </div>
                   <button
                     onClick={() => handleDelete(account.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm text-slate-400">{ACCOUNT_TYPE_LABELS[account.type]}</p>
-                  <p className="text-lg font-semibold text-white mt-1">{account.name}</p>
-                  <p className="text-2xl font-bold text-white mt-2">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{ACCOUNT_TYPE_LABELS[account.type]}</p>
+                  <p className="text-lg font-semibold text-slate-900 dark:text-white mt-1">{account.name}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
                     {formatCurrency(Number(account.balance), account.currency)}
                   </p>
                 </div>

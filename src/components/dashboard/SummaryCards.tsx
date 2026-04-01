@@ -51,14 +51,14 @@ export default function SummaryCards({ summary, totalBalance, currency = 'USD' }
       {cards.map((card, i) => (
         <div
           key={card.title}
-          className={`relative overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-5 animate-slide-up stagger-${i + 1} ${card.glow}`}
+          className={`relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-5 animate-slide-up stagger-${i + 1} ${card.glow}`}
         >
           <div className="flex items-start justify-between">
             <div>
-              <p className="text-sm text-slate-400 mb-1">{card.title}</p>
-              <p className="text-2xl font-bold text-white">{card.value}</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">{card.title}</p>
+              <p className="text-2xl font-bold text-slate-900 dark:text-white">{card.value}</p>
               {card.change && (
-                <p className="text-xs text-slate-500 mt-1">{card.change}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">{card.change}</p>
               )}
             </div>
             <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${card.gradient} flex items-center justify-center`}>

@@ -66,8 +66,8 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Savings Goals</h1>
-          <p className="text-sm text-slate-400">{goals.length} active goals</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Savings Goals</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{goals.length} active goals</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> New Goal</Button>
       </div>
@@ -76,7 +76,7 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
         <EmptyState
           title="No savings goals"
           description="Set goals to track your savings progress"
-          icon={<Target className="h-12 w-12 text-slate-500" />}
+          icon={<Target className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
           action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> New Goal</Button>}
         />
       ) : (
@@ -88,23 +88,23 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
             const daysLeft = formatDistanceToNow(new Date(goal.deadline), { addSuffix: false });
 
             return (
-              <div key={goal.id} className="group rounded-2xl border border-slate-700/50 bg-slate-800/50 p-6 hover:border-slate-600/50 transition-all">
+              <div key={goal.id} className="group rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all">
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: goal.color + '20' }}>
                     <Target className="h-6 w-6" style={{ color: goal.color }} />
                   </div>
-                  <button onClick={() => handleDelete(goal.id)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-red-400 transition-all">
+                  <button onClick={() => handleDelete(goal.id)} className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 transition-all">
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <h3 className="text-lg font-semibold text-white">{goal.name}</h3>
-                <p className="text-xs text-slate-400 mt-1">{daysLeft} left</p>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{goal.name}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{daysLeft} left</p>
 
                 {/* Progress circle */}
                 <div className="flex items-center justify-center my-6">
                   <div className="relative w-28 h-28">
                     <svg className="w-28 h-28 -rotate-90" viewBox="0 0 120 120">
-                      <circle cx="60" cy="60" r="52" fill="none" stroke="#334155" strokeWidth="8" />
+                      <circle cx="60" cy="60" r="52" fill="none" strokeWidth="8" className="stroke-slate-200 dark:stroke-slate-700" />
                       <circle
                         cx="60" cy="60" r="52" fill="none" stroke={goal.color} strokeWidth="8"
                         strokeDasharray={`${pct * 3.27} 327`}
@@ -112,13 +112,13 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-xl font-bold text-white">{pct}%</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-white">{pct}%</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-sm text-white font-medium">{formatCurrency(current)} <span className="text-slate-400">of</span> {formatCurrency(target)}</p>
+                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current)} <span className="text-slate-500 dark:text-slate-400">of</span> {formatCurrency(target)}</p>
                   {goal.isCompleted ? (
                     <p className="text-xs text-emerald-400 font-medium">🎉 Goal reached!</p>
                   ) : (

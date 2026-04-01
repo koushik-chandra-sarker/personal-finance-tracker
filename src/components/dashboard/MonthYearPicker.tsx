@@ -7,6 +7,7 @@ import { useTransition } from 'react';
 interface MonthYearPickerProps {
   month: number;
   year: number;
+  route?: string;
 }
 
 const MONTHS = [
@@ -24,7 +25,7 @@ const MONTHS = [
   { value: 12, label: 'December' },
 ];
 
-export default function MonthYearPicker({ month, year }: MonthYearPickerProps) {
+export default function MonthYearPicker({ month, year, route = '/dashboard' }: MonthYearPickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -35,7 +36,7 @@ export default function MonthYearPicker({ month, year }: MonthYearPickerProps) {
     params.set('year', String(y));
     
     startTransition(() => {
-      router.push(`/dashboard?${params.toString()}`);
+      router.push(`${route}?${params.toString()}`);
     });
   };
 
@@ -58,11 +59,11 @@ export default function MonthYearPicker({ month, year }: MonthYearPickerProps) {
         value={month}
         disabled={isPending}
         onChange={(e) => navigate(Number(e.target.value), year)}
-        className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-sm font-medium text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
+        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
       >
         {MONTHS.map((m) => (
-          <option key={m.value} value={m.value}>{m.label}</option>
+          <option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>
         ))}
       </select>
 
@@ -70,11 +71,11 @@ export default function MonthYearPicker({ month, year }: MonthYearPickerProps) {
         value={year}
         disabled={isPending}
         onChange={(e) => navigate(month, Number(e.target.value))}
-        className="rounded-xl border border-slate-700/50 bg-slate-800/60 px-3 py-2 text-sm font-medium text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
+        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
       >
         {years.map((y) => (
-          <option key={y} value={y}>{y}</option>
+          <option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>
         ))}
       </select>
 
@@ -82,7 +83,7 @@ export default function MonthYearPicker({ month, year }: MonthYearPickerProps) {
         <button
           disabled={isPending}
           onClick={() => navigate(now.getMonth() + 1, currentYear)}
-          className="px-3 py-2 rounded-xl text-xs font-medium text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/20 transition-colors disabled:opacity-50"
+          className="px-3 py-2 rounded-xl text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 transition-colors disabled:opacity-50"
         >
           Today
         </button>

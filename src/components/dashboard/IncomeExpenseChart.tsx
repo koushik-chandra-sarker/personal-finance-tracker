@@ -10,8 +10,8 @@ interface IncomeExpenseChartProps {
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) => {
   if (!active || !payload) return null;
   return (
-    <div className="rounded-xl border border-slate-700/50 bg-slate-800 p-3 shadow-2xl">
-      <p className="text-sm font-medium text-white mb-2">{label}</p>
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3 shadow-2xl">
+      <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">{label}</p>
       {payload.map((entry, i) => (
         <p key={i} className="text-xs" style={{ color: entry.color }}>
           {entry.name}: ${entry.value.toLocaleString()}
@@ -23,8 +23,8 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
 
 export default function IncomeExpenseChart({ data }: IncomeExpenseChartProps) {
   return (
-    <div className="rounded-2xl border border-slate-700/50 bg-slate-800/50 backdrop-blur-xl p-6">
-      <h3 className="text-lg font-semibold text-white mb-4">Income vs Expenses</h3>
+    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Income vs Expenses</h3>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barGap={8}>
