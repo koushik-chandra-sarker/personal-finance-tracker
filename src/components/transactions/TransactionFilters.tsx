@@ -152,7 +152,7 @@ export default function TransactionFilters({ categories, accounts }: { categorie
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             title="Start Date"
-            className="w-full max-w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
+            className="block w-full max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
           />
         </div>
 
@@ -163,7 +163,7 @@ export default function TransactionFilters({ categories, accounts }: { categorie
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             title="End Date"
-            className="w-full max-w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
+            className="block w-full max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
           />
         </div>
       </div>

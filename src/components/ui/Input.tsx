@@ -30,7 +30,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
               'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
               'transition-all duration-200',
               props.type === 'date' 
-                ? 'min-h-[46px] [color-scheme:light] dark:[color-scheme:dark] cursor-pointer' 
+                ? 'block min-h-[44px] [color-scheme:light] dark:[color-scheme:dark] cursor-pointer' 
                 : 'appearance-none',
               '[&::-webkit-calendar-picker-indicator]:opacity-100 [&::-webkit-calendar-picker-indicator]:cursor-pointer',
               icon && 'pl-10',
