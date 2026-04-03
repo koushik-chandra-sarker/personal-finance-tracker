@@ -2,8 +2,8 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { signIn } from '@/lib/auth';
-import { registerSchema } from '@/lib/validations/auth';
+import { auth, signIn } from '@/lib/auth';
+import { registerSchema, changePasswordSchema } from '@/lib/validations/auth';
 import type { ActionResponse } from '@/types';
 
 const DEFAULT_CATEGORIES = [
@@ -89,4 +89,36 @@ export async function loginUser(formData: FormData): Promise<ActionResponse> {
   } catch {
     return { success: false, message: 'Invalid email or password' };
   }
+}
+export async function changePasswordAction(formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  const raw = {
+    currentPassword: formData.get('currentPassword') as string,
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const parsed = changePasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const user = await prisma.user.findUnique({ where: { id: session.user.id } });
+  if (!user) return { success: false, message: 'User not found' };
+
+  const passwordMatch = await bcrypt.compare(parsed.data.currentPassword, user.password);
+  if (!passwordMatch) {
+    return { success: false, message: 'Incorrect current password' };
+  }
+
+  const hashedPassword = await bcrypt.hash(parsed.data.newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashedPassword },
+  });
+
+  return { success: true, message: 'Password updated successfully' };
 }
