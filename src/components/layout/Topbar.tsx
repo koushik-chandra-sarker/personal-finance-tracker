@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
 import { Bell, LogOut, Menu, Search, User } from 'lucide-react';
@@ -64,7 +64,7 @@ export default function Topbar() {
           {/* Right side */}
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <button className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-200 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors">
+            <button className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors">
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full" />
             </button>
