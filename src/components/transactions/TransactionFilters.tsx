@@ -32,7 +32,7 @@ export default function TransactionFilters({ categories, accounts }: { categorie
 
   const applyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
-    
+
     // Always reset to page 1 on new filter
     params.set('page', '1');
 
@@ -64,7 +64,7 @@ export default function TransactionFilters({ categories, accounts }: { categorie
   const filteredCategories = type ? categories.filter(c => c.type === type) : categories;
 
   return (
-    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-5 mb-6 space-y-4">
+    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-5 mb-6 space-y-4 overflow-hidden">
       <div className="flex flex-col md:flex-row gap-4">
         {/* Search Bar */}
         <div className="relative flex-1">
@@ -103,7 +103,7 @@ export default function TransactionFilters({ categories, accounts }: { categorie
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
         {/* Type Filter */}
         <select
           value={type}

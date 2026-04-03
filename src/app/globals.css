@@ -113,19 +113,32 @@ body {
 input[type="date"] {
   display: block;
   min-width: 0;
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
 }
 
 input[type="date"]::-webkit-date-and-time-value {
   margin: 0;
-  line-height: normal;
-  min-height: 1.5em;
-  display: flex !important;
-  align-items: center !important;
+  line-height: inherit;
+  min-height: 1.25em;
+  text-align: left;
+}
+
+/* Hide extra Safari/Chrome buttons that can push width */
+input[type="date"]::-webkit-inner-spin-button,
+input[type="date"]::-webkit-clear-button {
+  display: none !important;
+  -webkit-appearance: none !important;
 }
 
 /* Select option styling */
 select option {
+  background: #ffffff;
+  color: #1e293b;
+}
+
+.dark select option {
   background: #1e293b;
   color: #e2e8f0;
 }
