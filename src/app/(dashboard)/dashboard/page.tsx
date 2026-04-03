@@ -12,6 +12,7 @@ import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import BudgetOverview from '@/components/dashboard/BudgetOverview';
 import InsightsWidget from '@/components/dashboard/InsightsWidget';
 import MonthYearPicker from '@/components/dashboard/MonthYearPicker';
+import { getEffectiveUserId } from '@/lib/access';
 
 interface DashboardPageProps {
   searchParams: Promise<{ month?: string; year?: string }>;
@@ -20,7 +21,7 @@ interface DashboardPageProps {
 export default async function DashboardPage({ searchParams }: DashboardPageProps) {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  const userId = session.user.id;
+  const userId = await getEffectiveUserId();
 
   const params = await searchParams;
   const current = getCurrentMonthYear();

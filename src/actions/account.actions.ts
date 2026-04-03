@@ -5,20 +5,19 @@ import { revalidatePath } from 'next/cache';
 import { accountSchema } from '@/lib/validations/account';
 import * as accountService from '@/services/account.service';
 import type { ActionResponse } from '@/types';
-
-async function getUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  return session.user.id;
-}
-
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
 export async function getAccountsAction() {
-  const userId = await getUserId();
+  const userId = await getEffectiveUserId();
+  await validateAccess('ACCOUNTS', 'VIEW');
   return accountService.getAccounts(userId);
 }
 
 export async function createAccountAction(formData: FormData): Promise<ActionResponse> {
-  const userId = await getUserId();
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('ACCOUNTS', 'EDIT');
   const raw = {
     name: formData.get('name') as string,
     type: formData.get('type') as string,
@@ -30,14 +29,15 @@ export async function createAccountAction(formData: FormData): Promise<ActionRes
   const parsed = accountSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
 
-  await accountService.createAccount(userId, parsed.data);
+  await accountService.createAccount(userId, executorId, parsed.data);
   revalidatePath('/accounts');
   revalidatePath('/dashboard');
   return { success: true, message: 'Account created' };
 }
 
 export async function deleteAccountAction(id: string): Promise<ActionResponse> {
-  const userId = await getUserId();
+  const userId = await getEffectiveUserId();
+  await validateAccess('ACCOUNTS', 'EDIT');
   await accountService.deleteAccount(userId, id);
   revalidatePath('/accounts');
   revalidatePath('/dashboard');

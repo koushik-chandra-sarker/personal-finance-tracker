@@ -4,11 +4,13 @@ import { getBudgets } from '@/services/budget.service';
 import { prisma } from '@/lib/prisma';
 import { getCurrentMonthYear } from '@/lib/utils';
 import BudgetPageClient from '@/components/budgets/BudgetPageClient';
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
 
 export default async function BudgetsPage({ searchParams }: { searchParams: Promise<{ month?: string; year?: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  const userId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('BUDGETS', 'VIEW');
   
   const params = await searchParams;
   const current = getCurrentMonthYear();

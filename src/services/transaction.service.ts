@@ -28,7 +28,10 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   const [transactions, total] = await Promise.all([
     prisma.transaction.findMany({
       where,
-      include: { category: true, account: true },
+      include: { 
+        category: true, 
+        account: true,
+      },
       orderBy: { date: 'desc' },
       skip: (page - 1) * limit,
       take: limit,
@@ -36,10 +39,27 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     prisma.transaction.count({ where }),
   ]);
 
-  return { transactions, total, pages: Math.ceil(total / limit) };
+  const userIds = new Set<string>();
+  transactions.forEach(t => {
+    if (t.createdById) userIds.add(t.createdById);
+    if (t.updatedById) userIds.add(t.updatedById);
+  });
+  const users = await prisma.user.findMany({
+    where: { id: { in: Array.from(userIds) } },
+    select: { id: true, name: true },
+  });
+  const userMap = new Map(users.map(u => [u.id, u.name]));
+
+  const enriched = transactions.map(t => ({
+    ...t,
+    createdByName: t.createdById ? userMap.get(t.createdById) || null : null,
+    updatedByName: t.updatedById ? userMap.get(t.updatedById) || null : null,
+  }));
+
+  return { transactions: enriched, total, pages: Math.ceil(total / limit) };
 }
 
-export async function createTransaction(userId: string, data: {
+export async function createTransaction(userId: string, executorId: string, data: {
   accountId: string; categoryId: string; type: 'INCOME' | 'EXPENSE';
   amount: number; description: string; date: string; tags?: string[]; notes?: string;
 }) {
@@ -54,6 +74,8 @@ export async function createTransaction(userId: string, data: {
       date: new Date(data.date),
       tags: data.tags || [],
       notes: data.notes,
+      createdById: executorId,
+      updatedById: executorId,
     },
     include: { category: true, account: true },
   });
@@ -68,7 +90,7 @@ export async function createTransaction(userId: string, data: {
   return transaction;
 }
 
-export async function updateTransaction(userId: string, id: string, data: {
+export async function updateTransaction(userId: string, executorId: string, id: string, data: {
   accountId: string; categoryId: string; type: 'INCOME' | 'EXPENSE';
   amount: number; description: string; date: string; tags?: string[]; notes?: string;
 }) {
@@ -93,6 +115,7 @@ export async function updateTransaction(userId: string, id: string, data: {
       date: new Date(data.date),
       tags: data.tags || [],
       notes: data.notes,
+      updatedById: executorId,
     },
     include: { category: true, account: true },
   });

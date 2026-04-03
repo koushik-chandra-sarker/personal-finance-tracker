@@ -1,11 +1,22 @@
 import { prisma } from '@/lib/prisma';
 import type { BudgetWithSpent } from '@/types';
 
-export async function getBudgets(userId: string, month: number, year: number): Promise<BudgetWithSpent[]> {
+export async function getBudgets(userId: string, month: number, year: number) {
   const budgets = await prisma.budget.findMany({
     where: { userId, month, year },
     include: { category: true },
   });
+
+  const userIds = new Set<string>();
+  budgets.forEach(b => {
+    if (b.createdById) userIds.add(b.createdById);
+    if (b.updatedById) userIds.add(b.updatedById);
+  });
+  const users = await prisma.user.findMany({
+    where: { id: { in: Array.from(userIds) } },
+    select: { id: true, name: true },
+  });
+  const userMap = new Map(users.map(u => [u.id, u.name]));
 
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
@@ -36,11 +47,13 @@ export async function getBudgets(userId: string, month: number, year: number): P
       percentage: amount > 0 ? Math.round((spent / amount) * 100) : 0,
       month: budget.month,
       year: budget.year,
+      createdByName: budget.createdById ? userMap.get(budget.createdById) || null : null,
+      updatedByName: budget.updatedById ? userMap.get(budget.updatedById) || null : null,
     };
   });
 }
 
-export async function createOrUpdateBudget(userId: string, data: {
+export async function createOrUpdateBudget(userId: string, executorId: string, data: {
   categoryId: string; amount: number; month: number; year: number;
 }) {
   return prisma.budget.upsert({
@@ -52,13 +65,18 @@ export async function createOrUpdateBudget(userId: string, data: {
         year: data.year,
       },
     },
-    update: { amount: data.amount },
+    update: { 
+      amount: data.amount,
+      updatedById: executorId
+    },
     create: {
       userId,
       categoryId: data.categoryId,
       amount: data.amount,
       month: data.month,
       year: data.year,
+      createdById: executorId,
+      updatedById: executorId,
     },
   });
 }

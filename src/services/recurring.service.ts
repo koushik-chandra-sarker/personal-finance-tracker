@@ -2,13 +2,30 @@ import { prisma } from '@/lib/prisma';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
 
 export async function getRecurringTransactions(userId: string) {
-  return prisma.recurringTransaction.findMany({
+  const recurring = await prisma.recurringTransaction.findMany({
     where: { userId },
     orderBy: { nextRunDate: 'asc' },
   });
+
+  const userIds = new Set<string>();
+  recurring.forEach(r => {
+    if (r.createdById) userIds.add(r.createdById);
+    if (r.updatedById) userIds.add(r.updatedById);
+  });
+  const users = await prisma.user.findMany({
+    where: { id: { in: Array.from(userIds) } },
+    select: { id: true, name: true },
+  });
+  const userMap = new Map(users.map(u => [u.id, u.name]));
+
+  return recurring.map(r => ({
+    ...r,
+    createdByName: r.createdById ? userMap.get(r.createdById) || null : null,
+    updatedByName: r.updatedById ? userMap.get(r.updatedById) || null : null,
+  }));
 }
 
-export async function createRecurringTransaction(userId: string, data: {
+export async function createRecurringTransaction(userId: string, executorId: string, data: {
   accountId: string; categoryId: string; type: 'INCOME' | 'EXPENSE';
   amount: number; description: string; frequency: 'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY';
   nextRunDate: string;
@@ -23,6 +40,8 @@ export async function createRecurringTransaction(userId: string, data: {
       description: data.description,
       frequency: data.frequency,
       nextRunDate: new Date(data.nextRunDate),
+      createdById: executorId,
+      updatedById: executorId,
     },
   });
 }
@@ -34,12 +53,15 @@ export async function deleteRecurringTransaction(userId: string, id: string) {
   return true;
 }
 
-export async function toggleRecurring(userId: string, id: string) {
+export async function toggleRecurring(userId: string, executorId: string, id: string) {
   const rec = await prisma.recurringTransaction.findFirst({ where: { id, userId } });
   if (!rec) throw new Error('Not found');
   return prisma.recurringTransaction.update({
     where: { id },
-    data: { isActive: !rec.isActive },
+    data: { 
+      isActive: !rec.isActive,
+      updatedById: executorId,
+    },
   });
 }
 

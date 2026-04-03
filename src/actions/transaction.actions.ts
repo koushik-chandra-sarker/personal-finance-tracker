@@ -5,20 +5,19 @@ import { revalidatePath } from 'next/cache';
 import { transactionSchema } from '@/lib/validations/transaction';
 import * as transactionService from '@/services/transaction.service';
 import type { ActionResponse } from '@/types';
-
-async function getUserId(): Promise<string> {
-  const session = await auth();
-  if (!session?.user?.id) throw new Error('Unauthorized');
-  return session.user.id;
-}
-
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
 export async function getTransactionsAction(filters = {}) {
-  const userId = await getUserId();
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'VIEW');
   return transactionService.getTransactions(userId, filters);
 }
 
 export async function createTransactionAction(formData: FormData): Promise<ActionResponse> {
-  const userId = await getUserId();
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'EDIT');
   const raw = {
     accountId: formData.get('accountId') as string,
     categoryId: formData.get('categoryId') as string,
@@ -32,14 +31,18 @@ export async function createTransactionAction(formData: FormData): Promise<Actio
   const parsed = transactionSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
 
-  await transactionService.createTransaction(userId, parsed.data);
+  await transactionService.createTransaction(userId, executorId, parsed.data);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');
   return { success: true, message: 'Transaction created' };
 }
 
 export async function updateTransactionAction(id: string, formData: FormData): Promise<ActionResponse> {
-  const userId = await getUserId();
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'EDIT');
   const raw = {
     accountId: formData.get('accountId') as string,
     categoryId: formData.get('categoryId') as string,
@@ -53,14 +56,15 @@ export async function updateTransactionAction(id: string, formData: FormData): P
   const parsed = transactionSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
 
-  await transactionService.updateTransaction(userId, id, parsed.data);
+  await transactionService.updateTransaction(userId, executorId, id, parsed.data);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');
   return { success: true, message: 'Transaction updated' };
 }
 
 export async function deleteTransactionAction(id: string): Promise<ActionResponse> {
-  const userId = await getUserId();
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'EDIT');
   await transactionService.deleteTransaction(userId, id);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');

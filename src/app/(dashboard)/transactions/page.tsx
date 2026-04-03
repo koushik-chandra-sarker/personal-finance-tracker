@@ -2,12 +2,14 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getTransactions } from '@/services/transaction.service';
 import { prisma } from '@/lib/prisma';
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
 import TransactionPageClient from '@/components/transactions/TransactionPageClient';
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string }> }) {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  const userId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'VIEW');
 
   const params = await searchParams;
   const page = parseInt(params.page || '1');

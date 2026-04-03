@@ -4,17 +4,17 @@ import { useState, useTransition } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transactionSchema, type TransactionInput } from '@/lib/validations/transaction';
-import { createTransactionAction, deleteTransactionAction } from '@/actions/transaction.actions';
+import { createTransactionAction, updateTransactionAction, deleteTransactionAction } from '@/actions/transaction.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import TransactionFilters from '@/components/transactions/TransactionFilters';
 import { useRouter } from 'next/navigation';
+import { Edit2, Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 
 interface Category { id: string; name: string; type: string; color: string; }
 interface Account { id: string; name: string; type: string; }
@@ -23,6 +23,8 @@ interface Transaction {
   date: Date | string; tags: string[]; notes: string | null;
   category: { id: string; name: string; color: string };
   account: { id: string; name: string };
+  createdByName?: string | null;
+  updatedByName?: string | null;
 }
 
 interface TransactionPageClientProps {
@@ -38,10 +40,11 @@ export default function TransactionPageClient({
   initialTransactions, categories, accounts, total, pages, currentPage
 }: TransactionPageClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<TransactionInput>({
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionInput>({
     resolver: zodResolver(transactionSchema) as any,
     defaultValues: { type: 'EXPENSE', amount: 0, tags: [], date: new Date().toISOString().split('T')[0] },
   });
@@ -53,22 +56,45 @@ export default function TransactionPageClient({
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'tags') {
-        // tags comes as string from input, pass as-is — the action will split it
-        formData.set(key, String(value ?? ''));
+        formData.set(key, Array.isArray(value) ? value.join(',') : String(value ?? ''));
       } else {
         formData.set(key, String(value ?? ''));
       }
     });
+
     startTransition(async () => {
-      const result = await createTransactionAction(formData);
+      const result = editingTransaction 
+        ? await updateTransactionAction(editingTransaction.id, formData)
+        : await createTransactionAction(formData);
+
       if (result.success) {
         setIsModalOpen(false);
+        setEditingTransaction(null);
         reset();
         router.refresh();
       } else {
         console.error('Transaction failed:', result.message, result.errors);
       }
     });
+  };
+
+  const handleEdit = (tx: Transaction) => {
+    setEditingTransaction(tx);
+    setValue('type', tx.type as any);
+    setValue('amount', Number(tx.amount));
+    setValue('description', tx.description);
+    setValue('accountId', tx.account.id);
+    setValue('categoryId', tx.category.id);
+    setValue('date', new Date(tx.date).toISOString().split('T')[0]);
+    setValue('tags', tx.tags);
+    setValue('notes', tx.notes || '');
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingTransaction(null);
+    reset();
   };
 
   const handleDelete = (id: string) => {
@@ -86,7 +112,7 @@ export default function TransactionPageClient({
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{total} total transactions</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}>
+        <Button onClick={() => { setEditingTransaction(null); reset(); setIsModalOpen(true); }}>
           <Plus className="h-4 w-4" /> Add Transaction
         </Button>
       </div>
@@ -113,9 +139,18 @@ export default function TransactionPageClient({
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                  {tx.updatedByName && (
+                    <div className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                      <Clock className="h-3 w-3" />
+                      <span>{tx.updatedByName}</span>
+                    </div>
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {tx.category.name} · {tx.account.name} · {formatDate(tx.date)}
+                  {tx.createdByName && <span className="ml-1 opacity-60">· Created by {tx.createdByName}</span>}
                 </p>
                 {tx.tags.length > 0 && (
                   <div className="flex gap-1 mt-1">
@@ -126,12 +161,22 @@ export default function TransactionPageClient({
               <p className={`text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                 {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
               </p>
-              <button
-                onClick={() => handleDelete(tx.id)}
-                className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <button
+                  onClick={() => handleEdit(tx)}
+                  className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
+                  title="Edit Transaction"
+                >
+                  <Edit2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(tx.id)}
+                  className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
+                  title="Delete Transaction"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
@@ -154,7 +199,11 @@ export default function TransactionPageClient({
       )}
 
       {/* Add Transaction Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Transaction">
+      <Modal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
+      >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="flex gap-2">
             <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'INCOME' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent'}`}>
@@ -173,7 +222,9 @@ export default function TransactionPageClient({
           <Input id="date" label="Date" type="date" error={errors.date?.message} {...register('date')} />
           <Input id="tags" label="Tags (comma separated)" placeholder="food, groceries" {...register('tags')} />
           <Input id="notes" label="Notes (optional)" {...register('notes')} />
-          <Button type="submit" className="w-full" isLoading={isPending}>Create Transaction</Button>
+          <Button type="submit" className="w-full" isLoading={isPending}>
+            {editingTransaction ? "Update Transaction" : "Create Transaction"}
+          </Button>
         </form>
       </Modal>
     </div>

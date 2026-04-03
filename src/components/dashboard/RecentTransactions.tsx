@@ -10,6 +10,8 @@ interface Transaction {
   date: Date | string;
   category: { name: string; color: string; icon: string };
   account: { name: string };
+  createdByName?: string | null;
+  updatedByName?: string | null;
 }
 
 interface RecentTransactionsProps {
@@ -46,6 +48,7 @@ export default function RecentTransactions({ transactions, currency = 'USD' }: R
                 <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {tx.category.name} · {tx.account.name} · {formatRelativeDate(tx.date)}
+                  {tx.createdByName && <span className="ml-1 opacity-60">· {tx.createdByName}</span>}
                 </p>
               </div>
               <p className={`text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}`}>

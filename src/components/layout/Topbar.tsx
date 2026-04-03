@@ -4,6 +4,7 @@ import { useSession, signOut } from 'next-auth/react';
 import { Bell, LogOut, Menu, Search, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { useState } from 'react';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -63,6 +64,7 @@ export default function Topbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            <WorkspaceSwitcher />
             <ThemeToggle />
             <button className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors">
               <Bell className="h-5 w-5" />

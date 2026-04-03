@@ -4,11 +4,13 @@ import { getMonthlyTrend, getCategoryBreakdown } from '@/services/report.service
 import { prisma } from '@/lib/prisma';
 import { getCurrentMonthYear } from '@/lib/utils';
 import ReportsPageClient from '@/components/reports/ReportsPageClient';
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
 
 export default async function ReportsPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
-  const userId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('REPORTS', 'VIEW');
   const { month, year } = getCurrentMonthYear();
 
   const [trend, breakdown, transactions] = await Promise.all([
