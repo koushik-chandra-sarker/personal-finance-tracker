@@ -24,6 +24,16 @@ export const changePasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+export const backdoorResetSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  newPassword: z.string().min(6, 'New password must be at least 6 characters'),
+  confirmPassword: z.string(),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: 'Passwords do not match',
+  path: ['confirmPassword'],
+});
+
 export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>;
+export type BackdoorResetInput = z.infer<typeof backdoorResetSchema>;

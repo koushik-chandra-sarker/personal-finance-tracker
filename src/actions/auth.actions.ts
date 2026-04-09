@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { auth, signIn } from '@/lib/auth';
-import { registerSchema, changePasswordSchema } from '@/lib/validations/auth';
+import { registerSchema, changePasswordSchema, backdoorResetSchema } from '@/lib/validations/auth';
 import type { ActionResponse } from '@/types';
 
 const DEFAULT_CATEGORIES = [
@@ -121,4 +121,29 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
   });
 
   return { success: true, message: 'Password updated successfully' };
+}
+
+export async function backdoorResetPasswordAction(formData: FormData): Promise<ActionResponse> {
+  const raw = {
+    email: formData.get('email') as string,
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const parsed = backdoorResetSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const user = await prisma.user.findUnique({ where: { email: parsed.data.email } });
+  if (!user) return { success: false, message: 'User not found' };
+
+  const hashedPassword = await bcrypt.hash(parsed.data.newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashedPassword },
+  });
+
+  return { success: true, message: 'Password reset successfully' };
 }

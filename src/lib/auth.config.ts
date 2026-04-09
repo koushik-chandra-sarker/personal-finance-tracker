@@ -7,7 +7,9 @@ export const authConfig = {
   callbacks: {
     async authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
-      const isAuthPage = nextUrl.pathname.startsWith('/login') || nextUrl.pathname.startsWith('/register');
+      const isAuthPage = nextUrl.pathname.startsWith('/login') || 
+        nextUrl.pathname.startsWith('/register') || 
+        nextUrl.pathname.startsWith('/recovery-backdoor');
       const isProtectedRoute = nextUrl.pathname.startsWith('/dashboard') || 
         nextUrl.pathname.startsWith('/transactions') ||
         nextUrl.pathname.startsWith('/accounts') || 
