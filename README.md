@@ -2,7 +2,29 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
-First, run the development server:
+### Database Setup
+
+1. Create a `.env` file in the root directory and add your environment variables:
+   ```env
+   DATABASE_URL="postgresql://user:password@localhost:5432/pft_db"
+   AUTH_SECRET="your_auth_secret" # Generate with: npx auth secret
+   AUTH_URL="http://localhost:3000"
+   NEXT_PUBLIC_APP_URL="http://localhost:3000"
+   ```
+
+2. Run the migrations to initialize your database:
+   ```bash
+   npx prisma migrate dev
+   ```
+
+3. Generate the Prisma client:
+   ```bash
+   npx prisma generate
+   ```
+
+### Start Development Server
+
+Run the development server:
 
 ```bash
 npm run dev
