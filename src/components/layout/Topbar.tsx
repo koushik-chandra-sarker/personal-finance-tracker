@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { Bell, LogOut, Menu, Search, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -29,6 +29,23 @@ export default function Topbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const pathname = usePathname();
+  const userMenuRef = useRef<HTMLDivElement>(null);
+
+  // Close user menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Close user menu on pathname change
+  useEffect(() => {
+    setUserMenuOpen(false);
+  }, [pathname]);
 
   return (
     <>
@@ -70,24 +87,25 @@ export default function Topbar() {
               <Bell className="h-5 w-5" />
               <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full" />
             </button>
-            <div className="relative">
+            <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
+                aria-expanded={userMenuOpen}
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="hidden md:block text-sm text-slate-900 dark:text-white">{session?.user?.name}</span>
+                <span className="hidden md:block text-sm text-slate-900 dark:text-white truncate max-w-[170px]">{session?.user?.name}</span>
               </button>
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl py-2">
-                  <Link href="/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5">
+                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                  <Link href="/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                     <Settings className="h-4 w-4" /> Settings
                   </Link>
                   <button
                     onClick={() => signOut({ callbackUrl: '/login' })}
-                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-white/5"
+                    className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                   >
                     <LogOut className="h-4 w-4" /> Sign Out
                   </button>
