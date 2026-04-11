@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { categorySchema, type CategoryInput } from '@/lib/validations/category';
@@ -20,6 +20,11 @@ import {
   Pill, Stethoscope, Palmtree, Tent, Shirt, Glasses
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import MonthYearPicker from '@/components/dashboard/MonthYearPicker';
+import Loader from '@/components/ui/Loader';
+import ProgressBar from '@/components/ui/ProgressBar';
+import { formatCurrency } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -27,6 +32,9 @@ interface Category {
   type: string;
   color: string;
   icon: string;
+  budgetAmount: number | null;
+  spent: number;
+  isDefault: boolean;
   _count: { transactions: number; budgets: number };
 }
 
@@ -49,13 +57,18 @@ const ICON_MAP: Record<string, React.ElementType> = {
 
 const ICONS = Object.keys(ICON_MAP);
 
-export default function CategoryPageClient({ initialCategories }: { initialCategories: Category[] }) {
+export default function CategoryPageClient({ initialCategories, currentMonth, currentYear }: { initialCategories: Category[]; currentMonth: number; currentYear: number; }) {
   const [categories, setCategories] = useState(initialCategories);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
 
+  useEffect(() => {
+    setCategories(initialCategories);
+  }, [initialCategories]);
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<CategoryInput>({
     resolver: zodResolver(categorySchema) as any,
     defaultValues: { type: 'EXPENSE', color: '#6366f1', icon: 'tag' },
@@ -114,8 +127,8 @@ export default function CategoryPageClient({ initialCategories }: { initialCateg
     });
   };
 
-  const expenses = initialCategories.filter(c => c.type === 'EXPENSE');
-  const incomes = initialCategories.filter(c => c.type === 'INCOME');
+  const expenses = categories.filter(c => c.type === 'EXPENSE');
+  const incomes = categories.filter(c => c.type === 'INCOME');
 
   const renderCategoryList = (list: Category[], title: string) => (
     <div className="space-y-4">
@@ -132,10 +145,34 @@ export default function CategoryPageClient({ initialCategories }: { initialCateg
                   <IconCmp className="h-5 w-5" style={{ color: c.color }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{c.name}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {c._count.transactions} txns · {c._count.budgets} budgets
-                  </p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{c.name}</p>
+                    {c.type === 'EXPENSE' && (
+                      <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${c.budgetAmount ? (c.spent > c.budgetAmount ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-slate-500/10 text-slate-500'}`}>
+                        {c.budgetAmount ? `${Math.round((c.spent / c.budgetAmount) * 100)}%` : 'No Budget'}
+                      </span>
+                    )}
+                  </div>
+                  
+                  {c.type === 'EXPENSE' ? (
+                    <div className="mt-2 space-y-1.5">
+                      <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                        <span>{formatCurrency(c.spent, userCurrency)}</span>
+                        {c.budgetAmount && <span>/ {formatCurrency(c.budgetAmount, userCurrency)}</span>}
+                      </div>
+                      <ProgressBar 
+                        value={c.spent} 
+                        max={c.budgetAmount || Math.max(c.spent, 1)} 
+                        color={c.color} 
+                        size="xs" 
+                        showLabel={false}
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1 font-medium">
+                      +{formatCurrency(c.spent, userCurrency)} this month
+                    </p>
+                  )}
                 </div>
                 <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEditModal(c)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">
@@ -155,10 +192,14 @@ export default function CategoryPageClient({ initialCategories }: { initialCateg
 
   return (
     <div className="space-y-8">
+      <Loader show={isPending} message="Updating categories..." />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Categories</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Manage your custom transaction categories</p>
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Categories</h1>
+            <MonthYearPicker month={currentMonth} year={currentYear} route="/categories" />
+          </div>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Manage custom categories and track monthly usage</p>
         </div>
         <Button onClick={openAddModal}>
           <Plus className="h-4 w-4" /> Add Category

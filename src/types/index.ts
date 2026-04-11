@@ -61,3 +61,15 @@ export type MonthlyTrend = {
   income: number;
   expense: number;
 };
+
+export type CategoryWithStats = {
+  id: string;
+  name: string;
+  type: string;
+  color: string;
+  icon: string;
+  isDefault: boolean;
+  budgetAmount: number | null;
+  spent: number;
+  _count: { transactions: number; budgets: number };
+};

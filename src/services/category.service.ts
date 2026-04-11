@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
 
-export async function getCategories(userId: string) {
+export async function getCategories(userId: string, month?: number, year?: number) {
   const categories = await prisma.category.findMany({
     where: { userId },
     orderBy: [{ type: 'asc' }, { name: 'asc' }],
@@ -23,11 +23,40 @@ export async function getCategories(userId: string) {
   });
   const userMap = new Map(users.map(u => [u.id, u.name]));
 
-  return categories.map(c => ({
-    ...c,
-    createdByName: c.createdById ? userMap.get(c.createdById) || null : null,
-    updatedByName: c.updatedById ? userMap.get(c.updatedById) || null : null,
-  }));
+  // If month/year provided, fetch additional stats
+  let budgets: any[] = [];
+  let dailyTotals: any[] = [];
+
+  if (month !== undefined && year !== undefined) {
+    budgets = await prisma.budget.findMany({
+      where: { userId, month, year }
+    });
+
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0); // Last day of month
+
+    dailyTotals = await prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: {
+        userId,
+        date: { gte: startDate, lte: endDate }
+      },
+      _sum: { amount: true }
+    });
+  }
+
+  return categories.map(c => {
+    const budget = budgets.find(b => b.categoryId === c.id);
+    const spent = dailyTotals.find(t => t.categoryId === c.id)?._sum.amount || 0;
+
+    return {
+      ...c,
+      createdByName: c.createdById ? userMap.get(c.createdById) || null : null,
+      updatedByName: c.updatedById ? userMap.get(c.updatedById) || null : null,
+      budgetAmount: budget ? Number(budget.amount) : null,
+      spent: Number(spent),
+    };
+  });
 }
 
 export async function createCategory(userId: string, executorId: string, data: { name: string; type: 'INCOME' | 'EXPENSE'; color: string; icon: string }) {
