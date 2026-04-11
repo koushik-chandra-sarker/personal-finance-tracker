@@ -1,10 +1,13 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { User, Shield, Palette } from 'lucide-react';
+import { User, Shield, Palette, Globe } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import CollaboratorsList from '@/components/settings/CollaboratorsList';
+import Select from '@/components/ui/Select';
+import Loader from '@/components/ui/Loader';
+import { updateCurrencyAction } from '@/actions/settings.actions';
 
 import { useEffect, useState, useTransition } from 'react';
 import { getAccessibleWorkspacesAction } from '@/actions/ui.actions';
@@ -17,14 +20,28 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 
 export default function SettingsPage() {
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [activeId, setActiveId] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  
+  const currentCurrency = (session?.user as any)?.currency || 'USD';
+
   useEffect(() => {
     getAccessibleWorkspacesAction().then(res => setActiveId(res.activeId));
   }, []);
+
+  const handleCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newCurrency = e.target.value;
+    setIsCurrencyUpdating(true);
+    const result = await updateCurrencyAction(newCurrency);
+    if (result.success) {
+      await update({ currency: newCurrency });
+    }
+    setIsCurrencyUpdating(false);
+  };
 
   const isPersonalWorkspace = !activeId || activeId === session?.user?.id;
 
@@ -53,6 +70,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
+        <Loader show={isCurrencyUpdating} message="Updating currency..." />
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Settings</h1>
         <p className="text-sm text-slate-500 dark:text-slate-400">Manage your account preferences</p>
       </div>
@@ -89,6 +107,41 @@ export default function SettingsPage() {
                 <p className="text-xs text-slate-500 dark:text-slate-400">Toggle dark/light mode</p>
               </div>
               <ThemeToggle />
+            </div>
+          </Card>
+
+          {/* Preferences */}
+          <Card>
+            <div className="flex items-center gap-3 mb-4">
+              <Globe className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Preferences</h2>
+            </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-sm text-slate-900 dark:text-white">Base Currency</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Global formatting preference</p>
+                </div>
+                <div className="w-32">
+                  <Select
+                    id="currency"
+                    value={currentCurrency}
+                    onChange={handleCurrencyChange}
+                    options={[
+                      { value: 'USD', label: 'USD ($)' },
+                      { value: 'EUR', label: 'EUR (€)' },
+                      { value: 'GBP', label: 'GBP (£)' },
+                      { value: 'BDT', label: 'BDT (English Digits)' },
+                      { value: 'BDT_BN', label: 'BDT (Bengali Digits)' },
+                      { value: 'INR', label: 'INR (₹)' },
+                      { value: 'JPY', label: 'JPY (¥)' },
+                      { value: 'CAD', label: 'CAD (C$)' },
+                      { value: 'AUD', label: 'AUD (A$)' },
+                    ]}
+                    disabled={isCurrencyUpdating}
+                  />
+                </div>
+              </div>
             </div>
           </Card>
 

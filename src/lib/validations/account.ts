@@ -4,7 +4,6 @@ export const accountSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   type: z.enum(['CASH', 'BANK', 'MOBILE_WALLET', 'CREDIT_CARD', 'INVESTMENT']),
   balance: z.coerce.number().default(0),
-  currency: z.string().default('USD'),
   color: z.string().default('#6366f1'),
   icon: z.string().default('wallet'),
 });

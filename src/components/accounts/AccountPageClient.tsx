@@ -2,21 +2,23 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { accountSchema, type AccountInput } from '@/lib/validations/account';
-import { createAccountAction, deleteAccountAction } from '@/actions/account.actions';
+import { createAccountAction, deleteAccountAction, updateAccountAction } from '@/actions/account.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
-import { Plus, Trash2, Wallet, CreditCard, Landmark, Smartphone, TrendingUp } from 'lucide-react';
+import Loader from '@/components/ui/Loader';
+import { Plus, Trash2, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, Edit2 } from 'lucide-react';
 import { formatCurrency, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
 
 interface Account {
   id: string; name: string; type: string; balance: unknown;
-  currency: string; color: string; icon: string;
+  color: string; icon: string;
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -29,23 +31,47 @@ const iconMap: Record<string, React.ElementType> = {
 
 export default function AccountPageClient({ accounts }: { accounts: Account[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
+
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AccountInput>({
     resolver: zodResolver(accountSchema) as any,
-    defaultValues: { type: 'BANK', balance: 0, currency: 'USD', color: '#6366f1' },
+    defaultValues: { type: 'BANK', balance: 0, color: '#6366f1' },
   });
 
   const onSubmit = async (data: any) => {
     const formData = new FormData();
     Object.entries(data).forEach(([k, v]) => formData.set(k, String(v)));
     startTransition(async () => {
-      await createAccountAction(formData);
-      setIsModalOpen(false);
-      reset();
+      if (editingAccount) {
+        await updateAccountAction(editingAccount.id, formData);
+      } else {
+        await createAccountAction(formData);
+      }
+      handleCloseModal();
       router.refresh();
     });
+  };
+
+  const handleEdit = (account: Account) => {
+    setEditingAccount(account);
+    reset({
+      name: account.name,
+      type: account.type as any,
+      balance: Number(account.balance),
+      color: account.color,
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingAccount(null);
+    reset({ type: 'BANK', balance: 0, color: '#6366f1' });
   };
 
   const handleDelete = (id: string) => {
@@ -60,10 +86,11 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
 
   return (
     <div className="space-y-6">
+      <Loader show={isPending} message={editingAccount ? "Updating account..." : "Creating account..."} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accounts</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Total Balance: {formatCurrency(totalBalance)}</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Total Balance: {formatCurrency(totalBalance, userCurrency)}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add Account
@@ -87,18 +114,26 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
                   <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: account.color + '20' }}>
                     <Icon className="h-6 w-6" style={{ color: account.color }} />
                   </div>
-                  <button
-                    onClick={() => handleDelete(account.id)}
-                    className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <div className="flex gap-1 transition-all">
+                    <button
+                      onClick={() => handleEdit(account)}
+                      className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-all"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(account.id)}
+                      className="opacity-0 group-hover:opacity-100 p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-4">
                   <p className="text-sm text-slate-500 dark:text-slate-400">{ACCOUNT_TYPE_LABELS[account.type]}</p>
                   <p className="text-lg font-semibold text-slate-900 dark:text-white mt-1">{account.name}</p>
                   <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                    {formatCurrency(Number(account.balance), account.currency)}
+                    {formatCurrency(Number(account.balance), userCurrency)}
                   </p>
                 </div>
                 <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full opacity-5 blur-2xl" style={{ backgroundColor: account.color }} />
@@ -108,13 +143,15 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Account">
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingAccount ? "Edit Account" : "Add Account"}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input id="name" label="Account Name" placeholder="My Bank" error={errors.name?.message} {...register('name')} />
           <Select id="type" label="Account Type" options={Object.entries(ACCOUNT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} error={errors.type?.message} {...register('type')} />
-          <Input id="balance" label="Initial Balance" type="number" step="0.01" error={errors.balance?.message} {...register('balance')} />
+          <Input id="balance" label="Initial Balance" type="number" step="0.01" error={errors.balance?.message} {...register('balance')} disabled={!!editingAccount} />
           <Input id="color" label="Color" type="color" {...register('color')} />
-          <Button type="submit" className="w-full" isLoading={isPending}>Create Account</Button>
+          <Button type="submit" className="w-full" isLoading={isPending}>
+            {editingAccount ? "Update Account" : "Create Account"}
+          </Button>
         </form>
       </Modal>
     </div>

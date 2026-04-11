@@ -6,11 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-const CURRENCY_MAP: Record<string, { symbol: string; locale: string }> = {
+const CURRENCY_MAP: Record<string, { symbol: string; locale: string; iso?: string }> = {
   USD: { symbol: '$', locale: 'en-US' },
   EUR: { symbol: '€', locale: 'de-DE' },
   GBP: { symbol: '£', locale: 'en-GB' },
-  BDT: { symbol: '৳', locale: 'bn-BD' },
+  BDT: { symbol: '৳', locale: 'en-BD' },
+  BDT_BN: { symbol: '৳', locale: 'bn-BD', iso: 'BDT' },
   INR: { symbol: '₹', locale: 'en-IN' },
   JPY: { symbol: '¥', locale: 'ja-JP' },
   CAD: { symbol: 'C$', locale: 'en-CA' },
@@ -22,7 +23,7 @@ export function formatCurrency(amount: number | string, currency: string = 'USD'
   const config = CURRENCY_MAP[currency] || { symbol: currency, locale: 'en-US' };
   return new Intl.NumberFormat(config.locale, {
     style: 'currency',
-    currency: currency,
+    currency: config.iso || currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(num);

@@ -26,7 +26,6 @@ export async function GET() {
           name: 'Main Checking',
           type: 'BANK',
           balance: 5000.00,
-          currency: 'USD',
           color: '#3b82f6',
           icon: 'wallet',
         },

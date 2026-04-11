@@ -12,6 +12,8 @@ import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import Loader from '@/components/ui/Loader';
+import { useSession } from 'next-auth/react';
 import { Plus, Trash2, RefreshCw, Power, TrendingUp, TrendingDown } from 'lucide-react';
 import { formatCurrency, formatDate, FREQUENCY_LABELS } from '@/lib/utils';
 
@@ -29,6 +31,8 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
 
   const { register, handleSubmit, reset, watch, formState: { errors } } = useForm<RecurringInput>({
     resolver: zodResolver(recurringSchema) as any,
@@ -66,6 +70,7 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
 
   return (
     <div className="space-y-6">
+      <Loader show={isPending} message="Processing..." />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-white">Recurring Transactions</h1>
@@ -96,7 +101,7 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
               </div>
               <Badge variant={rec.isActive ? 'success' : 'default'}>{rec.isActive ? 'Active' : 'Paused'}</Badge>
               <p className={`text-sm font-semibold ${rec.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {formatCurrency(Number(rec.amount))}
+                {formatCurrency(Number(rec.amount), userCurrency)}
               </p>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                 <button onClick={() => handleToggle(rec.id)} className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10">

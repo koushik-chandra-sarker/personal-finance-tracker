@@ -38,6 +38,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getSpendingInsights(userId),
   ]);
 
+  const userCurrency = (session?.user as any)?.currency || 'USD';
+
   return (
     <div className="space-y-6">
       {/* Header with Month/Year Picker */}
@@ -47,23 +49,23 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {/* Summary Cards */}
-      <SummaryCards summary={summary} totalBalance={totalBalance} />
+      <SummaryCards summary={summary} totalBalance={totalBalance} currency={userCurrency} />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
           <IncomeExpenseChart data={trend} />
         </div>
-        <CategoryPieChart data={categoryBreakdown} />
+        <CategoryPieChart data={categoryBreakdown} currency={userCurrency} />
       </div>
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <RecentTransactions transactions={recentTx} />
+          <RecentTransactions transactions={recentTx} currency={userCurrency} />
         </div>
         <div className="space-y-6">
-          <BudgetOverview budgets={budgets} />
+          <BudgetOverview budgets={budgets} currency={userCurrency} />
           <InsightsWidget insights={insights} />
         </div>
       </div>

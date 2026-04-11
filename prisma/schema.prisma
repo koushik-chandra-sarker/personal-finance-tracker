@@ -57,7 +57,6 @@ model Account {
   name         String
   type         AccountType
   balance      Decimal       @default(0) @db.Decimal(12, 2)
-  currency     String        @default("USD")
   color        String        @default("#6366f1")
   icon         String        @default("wallet")
   isActive     Boolean       @default(true)

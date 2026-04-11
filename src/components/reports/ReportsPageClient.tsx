@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
+import { useSession } from 'next-auth/react';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { MonthlyTrend, CategoryBreakdown } from '@/types';
 import { formatCurrency } from '@/lib/utils';
@@ -16,6 +17,8 @@ interface ReportsPageClientProps {
 
 export default function ReportsPageClient({ trend, breakdown, transactions }: ReportsPageClientProps) {
   const { theme, resolvedTheme } = useTheme();
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -68,7 +71,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions }: Re
               <LineChart data={trend}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis dataKey="month" tick={{ fill: chartColors.text, fontSize: 11 }} axisLine={false} />
-                <YAxis tick={{ fill: chartColors.text, fontSize: 11 }} axisLine={false} tickFormatter={(v) => `$${v}`} />
+                <YAxis tick={{ fill: chartColors.text, fontSize: 11 }} axisLine={false} tickFormatter={(v) => ` ${v}`} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: chartColors.tooltipBg,
@@ -77,7 +80,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions }: Re
                     color: chartColors.tooltipText
                   }}
                   itemStyle={{ color: chartColors.tooltipText }}
-                  formatter={(value: any) => [formatCurrency(Number(value) || 0), '']}
+                  formatter={(value: any) => [formatCurrency(Number(value) || 0, userCurrency), '']}
                 />
                 <Legend wrapperStyle={{ color: chartColors.text, fontSize: 12, paddingTop: '20px' }} />
                 <Line type="monotone" dataKey="income" name="Income" stroke="#10b981" strokeWidth={2} dot={{ fill: '#10b981', r: 4 }} />
@@ -112,7 +115,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions }: Re
                         <span className="text-slate-900 dark:text-white">{cat.categoryName}</span>
                       </div>
                     </td>
-                    <td className="py-3 text-right text-slate-900 dark:text-white font-medium">{formatCurrency(cat.total)}</td>
+                    <td className="py-3 text-right text-slate-900 dark:text-white font-medium">{formatCurrency(cat.total, userCurrency)}</td>
                     <td className="py-3 text-right text-slate-500 dark:text-slate-400">{cat.percentage}%</td>
                   </tr>
                 ))}

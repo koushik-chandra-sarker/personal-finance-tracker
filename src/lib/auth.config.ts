@@ -29,15 +29,20 @@ export const authConfig = {
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id;
+        token.currency = (user as any).currency;
+      }
+      if (trigger === "update" && session?.currency) {
+        token.currency = session.currency;
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
+        (session.user as any).currency = token.currency as string;
       }
       return session;
     },

@@ -26,7 +26,7 @@ export async function getAccounts(userId: string) {
 
 export async function createAccount(userId: string, executorId: string, data: {
   name: string; type: 'CASH' | 'BANK' | 'MOBILE_WALLET' | 'CREDIT_CARD' | 'INVESTMENT';
-  balance?: number; currency?: string; color?: string; icon?: string;
+  balance?: number; color?: string; icon?: string;
 }) {
   return prisma.account.create({
     data: {
@@ -34,7 +34,6 @@ export async function createAccount(userId: string, executorId: string, data: {
       name: data.name,
       type: data.type,
       balance: data.balance || 0,
-      currency: data.currency || 'USD',
       color: data.color || '#6366f1',
       icon: data.icon || 'wallet',
       createdById: executorId,

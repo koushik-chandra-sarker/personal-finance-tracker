@@ -10,6 +10,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
+import Loader from '@/components/ui/Loader';
+import { useSession } from 'next-auth/react';
 import { Plus, Trash2, Target, DollarSign } from 'lucide-react';
 import { formatCurrency, getPercentage } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
@@ -25,6 +27,8 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
   const [contributeAmount, setContributeAmount] = useState('');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<GoalInput>({
     resolver: zodResolver(goalSchema) as any,
@@ -64,6 +68,7 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
 
   return (
     <div className="space-y-6">
+      <Loader show={isPending} message="Processing..." />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Savings Goals</h1>
@@ -118,7 +123,7 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current)} <span className="text-slate-500 dark:text-slate-400">of</span> {formatCurrency(target)}</p>
+                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current, userCurrency)} <span className="text-slate-500 dark:text-slate-400">of</span> {formatCurrency(target, userCurrency)}</p>
                   {goal.isCompleted ? (
                     <p className="text-xs text-emerald-400 font-medium">🎉 Goal reached!</p>
                   ) : (

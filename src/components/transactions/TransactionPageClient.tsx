@@ -1,6 +1,8 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transactionSchema, type TransactionInput } from '@/lib/validations/transaction';
@@ -11,9 +13,9 @@ import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
+import Loader from '@/components/ui/Loader';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import TransactionFilters from '@/components/transactions/TransactionFilters';
-import { useRouter } from 'next/navigation';
 import { Edit2, Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown, Clock } from 'lucide-react';
 
 interface Category { id: string; name: string; type: string; color: string; }
@@ -43,6 +45,8 @@ export default function TransactionPageClient({
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { data: session } = useSession();
+  const userCurrency = (session?.user as any)?.currency || 'USD';
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionInput>({
     resolver: zodResolver(transactionSchema) as any,
@@ -107,6 +111,7 @@ export default function TransactionPageClient({
 
   return (
     <div className="space-y-6">
+      <Loader show={isPending} message={editingTransaction ? "Updating transaction..." : "Processing..."} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
@@ -159,7 +164,7 @@ export default function TransactionPageClient({
                 )}
               </div>
               <p className={`text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount))}
+                {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
               </p>
               <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                 <button
