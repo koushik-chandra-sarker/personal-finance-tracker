@@ -35,7 +35,7 @@ export async function getCategories(userId: string, month?: number, year?: numbe
     const startDate = new Date(year, month - 1, 1);
     const endDate = new Date(year, month, 0); // Last day of month
 
-    dailyTotals = await prisma.transaction.groupBy({
+    dailyTotals = await (prisma.transaction as any).groupBy({
       by: ['categoryId'],
       where: {
         userId,

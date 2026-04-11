@@ -164,7 +164,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                         value={c.spent} 
                         max={c.budgetAmount || Math.max(c.spent, 1)} 
                         color={c.color} 
-                        size="xs" 
+                        size="sm" 
                         showLabel={false}
                       />
                     </div>
