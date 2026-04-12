@@ -40,14 +40,36 @@ export async function contributeToGoalAction(id: string, formData: FormData): Pr
   const executorId = session.user.id;
   const userId = await getEffectiveUserId();
   await validateAccess('GOALS', 'EDIT');
-  const raw = { amount: formData.get('amount') as string };
-  const parsed = contributeSchema.safeParse(raw);
+  const raw = {
+    amount: formData.get('amount') as string,
+    description: formData.get('description') as string,
+  };
+  const parsed = contributeSchema.safeParse(raw); // I'll update the schema in the next step or if needed.
   if (!parsed.success) return { success: false, message: 'Validation failed' };
 
-  await goalService.contributeToGoal(userId, executorId, id, parsed.data.amount);
+  await goalService.contributeToGoal(userId, executorId, id, parsed.data.amount, raw.description);
   revalidatePath('/goals');
   revalidatePath('/dashboard');
   return { success: true, message: 'Contribution added' };
+}
+
+export async function deductFromGoalAction(id: string, formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('GOALS', 'EDIT');
+  const raw = {
+    amount: formData.get('amount') as string,
+    description: formData.get('description') as string,
+  };
+  const parsed = contributeSchema.safeParse(raw);
+  if (!parsed.success) return { success: false, message: 'Validation failed' };
+
+  await goalService.deductFromGoal(userId, executorId, id, parsed.data.amount, raw.description);
+  revalidatePath('/goals');
+  revalidatePath('/dashboard');
+  return { success: true, message: 'Deduction added' };
 }
 
 export async function deleteGoalAction(id: string): Promise<ActionResponse> {

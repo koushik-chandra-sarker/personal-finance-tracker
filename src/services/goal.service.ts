@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 export async function getGoals(userId: string) {
   const goals = await prisma.goal.findMany({
     where: { userId },
+    include: { progress: { orderBy: { createdAt: 'desc' } } },
     orderBy: { deadline: 'asc' },
   });
 
@@ -41,21 +42,62 @@ export async function createGoal(userId: string, executorId: string, data: {
   });
 }
 
-export async function contributeToGoal(userId: string, executorId: string, id: string, amount: number) {
+export async function contributeToGoal(userId: string, executorId: string, id: string, amount: number, description?: string) {
   const goal = await prisma.goal.findFirst({ where: { id, userId } });
   if (!goal) throw new Error('Goal not found');
 
   const newAmount = Number(goal.currentAmount) + amount;
   const isCompleted = newAmount >= Number(goal.targetAmount);
 
-  return prisma.goal.update({
-    where: { id },
-    data: {
-      currentAmount: newAmount,
-      isCompleted,
-      updatedById: executorId,
-    },
-  });
+  const [updatedGoal] = await prisma.$transaction([
+    prisma.goal.update({
+      where: { id },
+      data: {
+        currentAmount: newAmount,
+        isCompleted,
+        updatedById: executorId,
+      },
+    }),
+    prisma.goalProgress.create({
+      data: {
+        goalId: id,
+        amount,
+        type: 'CONTRIBUTION',
+        description: description || 'Goal contribution',
+      },
+    }),
+  ]);
+
+  return updatedGoal;
+}
+
+export async function deductFromGoal(userId: string, executorId: string, id: string, amount: number, description?: string) {
+  const goal = await prisma.goal.findFirst({ where: { id, userId } });
+  if (!goal) throw new Error('Goal not found');
+
+  const newAmount = Math.max(0, Number(goal.currentAmount) - amount);
+  const isCompleted = newAmount >= Number(goal.targetAmount);
+
+  const [updatedGoal] = await prisma.$transaction([
+    prisma.goal.update({
+      where: { id },
+      data: {
+        currentAmount: newAmount,
+        isCompleted,
+        updatedById: executorId,
+      },
+    }),
+    prisma.goalProgress.create({
+      data: {
+        goalId: id,
+        amount,
+        type: 'DEDUCTION',
+        description: description || 'Goal deduction',
+      },
+    }),
+  ]);
+
+  return updatedGoal;
 }
 
 export async function updateGoal(userId: string, executorId: string, id: string, data: {

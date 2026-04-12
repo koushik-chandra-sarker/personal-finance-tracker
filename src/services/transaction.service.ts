@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
 
 export async function getTransactions(userId: string, filters: TransactionFilters = {}) {
-  const { search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 20 } = filters;
+  const { search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50 } = filters;
 
   const where: Prisma.TransactionWhereInput = { userId };
 
@@ -18,14 +18,22 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   if (type) where.type = type;
   if (dateFrom || dateTo) {
     where.date = {};
-    if (dateFrom) where.date.gte = new Date(dateFrom);
-    if (dateTo) where.date.lte = new Date(dateTo);
+    if (dateFrom) {
+      const d = new Date(dateFrom);
+      d.setUTCHours(0, 0, 0, 0);
+      where.date.gte = d;
+    }
+    if (dateTo) {
+      const d = new Date(dateTo);
+      d.setUTCHours(23, 59, 59, 999);
+      where.date.lte = d;
+    }
   }
   if (tags && tags.length > 0) {
     where.tags = { hasSome: tags };
   }
 
-  const [transactions, total] = await Promise.all([
+  const [transactions, total, aggregate] = await Promise.all([
     prisma.transaction.findMany({
       where,
       include: { 
@@ -37,7 +45,15 @@ export async function getTransactions(userId: string, filters: TransactionFilter
       take: limit,
     }),
     prisma.transaction.count({ where }),
+    prisma.transaction.groupBy({
+      by: ['type'],
+      where,
+      _sum: { amount: true },
+    })
   ]);
+
+  const totalIncome = Number(aggregate.find(a => a.type === 'INCOME')?._sum.amount || 0);
+  const totalExpense = Number(aggregate.find(a => a.type === 'EXPENSE')?._sum.amount || 0);
 
   const userIds = new Set<string>();
   transactions.forEach(t => {
@@ -56,7 +72,13 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     updatedByName: t.updatedById ? userMap.get(t.updatedById) || null : null,
   }));
 
-  return { transactions: enriched, total, pages: Math.ceil(total / limit) };
+  return { 
+    transactions: enriched, 
+    total, 
+    pages: Math.ceil(total / limit),
+    totalIncome,
+    totalExpense
+  };
 }
 
 export async function createTransaction(userId: string, executorId: string, data: {

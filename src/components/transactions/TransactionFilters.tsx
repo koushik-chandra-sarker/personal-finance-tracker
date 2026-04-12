@@ -7,7 +7,17 @@ import { Search, Loader2, X, Filter } from 'lucide-react';
 interface Category { id: string; name: string; type: string }
 interface Account { id: string; name: string; type: string }
 
-export default function TransactionFilters({ categories, accounts }: { categories: Category[], accounts: Account[] }) {
+export default function TransactionFilters({ 
+  categories, 
+  accounts,
+  defaultDateFrom = '',
+  defaultDateTo = '',
+}: { 
+  categories: Category[]; 
+  accounts: Account[];
+  defaultDateFrom?: string;
+  defaultDateTo?: string;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -17,8 +27,8 @@ export default function TransactionFilters({ categories, accounts }: { categorie
   const [type, setType] = useState(searchParams.get('type') || '');
   const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
   const [accountId, setAccountId] = useState(searchParams.get('accountId') || '');
-  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || '');
-  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || '');
+  const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || defaultDateFrom);
+  const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || defaultDateTo);
 
   // Keep local state in sync with URL if user uses back/forward browser buttons
   useEffect(() => {
@@ -26,9 +36,9 @@ export default function TransactionFilters({ categories, accounts }: { categorie
     setType(searchParams.get('type') || '');
     setCategoryId(searchParams.get('categoryId') || '');
     setAccountId(searchParams.get('accountId') || '');
-    setDateFrom(searchParams.get('dateFrom') || '');
-    setDateTo(searchParams.get('dateTo') || '');
-  }, [searchParams]);
+    setDateFrom(searchParams.get('dateFrom') || defaultDateFrom);
+    setDateTo(searchParams.get('dateTo') || defaultDateTo);
+  }, [searchParams, defaultDateFrom, defaultDateTo]);
 
   const applyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());

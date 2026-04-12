@@ -36,10 +36,15 @@ interface TransactionPageClientProps {
   total: number;
   pages: number;
   currentPage: number;
+  totalIncome: number;
+  totalExpense: number;
+  dateFrom: string;
+  dateTo: string;
 }
 
 export default function TransactionPageClient({
-  initialTransactions, categories, accounts, total, pages, currentPage
+  initialTransactions, categories, accounts, total, pages, currentPage,
+  totalIncome, totalExpense, dateFrom, dateTo
 }: TransactionPageClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
@@ -115,7 +120,13 @@ export default function TransactionPageClient({
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{total} total transactions</p>
+          <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+            <span>{total} transactions</span>
+            <span>•</span>
+            <span className="font-medium text-slate-900 dark:text-slate-200">
+              Net: {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency)}
+            </span>
+          </div>
         </div>
         <Button onClick={() => { setEditingTransaction(null); reset(); setIsModalOpen(true); }}>
           <Plus className="h-4 w-4" /> Add Transaction
@@ -123,7 +134,47 @@ export default function TransactionPageClient({
       </div>
 
       {/* Filters */}
-      <TransactionFilters categories={categories} accounts={accounts} />
+      <TransactionFilters 
+        categories={categories} 
+        accounts={accounts} 
+        defaultDateFrom={dateFrom} 
+        defaultDateTo={dateTo} 
+      />
+
+      {/* Totals Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Income</p>
+            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <TrendingUp className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">+{formatCurrency(totalIncome, userCurrency)}</p>
+        </div>
+        
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 shadow-sm">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Expense</p>
+            <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
+              <TrendingDown className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">-{formatCurrency(totalExpense, userCurrency)}</p>
+        </div>
+
+        <div className="relative overflow-hidden p-5 rounded-2xl bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-500/20">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-sm font-medium text-indigo-100">Net Balance</p>
+            <div className="p-2 rounded-lg bg-white/20 text-white">
+              <ArrowLeftRight className="h-4 w-4" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-white">
+            {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency)}
+          </p>
+        </div>
+      </div>
 
       {/* Transaction List */}
       {initialTransactions.length === 0 ? (
