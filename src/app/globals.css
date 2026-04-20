@@ -116,6 +116,8 @@ input[type="date"] {
   width: 100% !important;
   max-width: 100% !important;
   box-sizing: border-box !important;
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 input[type="date"]::-webkit-date-and-time-value {
@@ -130,6 +132,28 @@ input[type="date"]::-webkit-inner-spin-button,
 input[type="date"]::-webkit-clear-button {
   display: none !important;
   -webkit-appearance: none !important;
+}
+
+/* iOS: Prevent auto-zoom on input focus (iOS zooms when font-size < 16px) */
+@media screen and (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Ensure all containers respect parent bounds on mobile */
+@media screen and (max-width: 768px) {
+  .grid {
+    max-width: 100%;
+  }
 }
 
 /* Select option styling */

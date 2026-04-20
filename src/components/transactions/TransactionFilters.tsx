@@ -74,10 +74,10 @@ export default function TransactionFilters({
   const filteredCategories = type ? categories.filter(c => c.type === type) : categories;
 
   return (
-    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-5 mb-6 space-y-4 overflow-hidden">
-      <div className="flex flex-col md:flex-row gap-4">
+    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6 space-y-4 overflow-hidden box-border max-w-full">
+      <div className="flex flex-col md:flex-row gap-3 sm:gap-4">
         {/* Search Bar */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
           <input
             type="text"
@@ -85,7 +85,7 @@ export default function TransactionFilters({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
           />
           {isPending && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-500 dark:text-indigo-400 animate-spin" />
@@ -93,7 +93,7 @@ export default function TransactionFilters({
         </div>
 
         {/* Action Buttons */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
           {hasActiveFilters && (
             <button
               onClick={clearFilters}
@@ -113,7 +113,7 @@ export default function TransactionFilters({
         </div>
       </div>
 
-      <div className="flex flex-col sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 max-w-full">
         {/* Type Filter */}
         <select
           value={type}
@@ -121,7 +121,7 @@ export default function TransactionFilters({
             setType(e.target.value);
             setCategoryId(''); // Reset category when type changes
           }}
-          className="rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none"
+          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
         >
           <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Types</option>
@@ -133,7 +133,7 @@ export default function TransactionFilters({
         <select
           value={categoryId}
           onChange={(e) => setCategoryId(e.target.value)}
-          className="rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
+          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
         >
           <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Categories</option>
@@ -146,7 +146,7 @@ export default function TransactionFilters({
         <select
           value={accountId}
           onChange={(e) => setAccountId(e.target.value)}
-          className="rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
+          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
         >
           <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Accounts</option>
@@ -156,24 +156,24 @@ export default function TransactionFilters({
         </select>
 
         {/* Date From */}
-        <div className="relative min-w-0 w-full">
+        <div className="min-w-0 w-full overflow-hidden">
           <input
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             title="Start Date"
-            className="block w-full max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
+            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
 
         {/* Date To */}
-        <div className="relative min-w-0 w-full">
+        <div className="min-w-0 w-full overflow-hidden">
           <input
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             title="End Date"
-            className="block w-full max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 light:[color-scheme:light] dark:[color-scheme:dark]"
+            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
       </div>

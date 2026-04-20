@@ -187,50 +187,88 @@ export default function TransactionPageClient({
       ) : (
         <div className="space-y-2">
           {initialTransactions.map((tx) => (
-            <div key={tx.id} className="flex items-center gap-3 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all group">
-              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: tx.category.color + '20' }}>
-                {tx.type === 'INCOME' ?
-                  <TrendingUp className="h-5 w-5" style={{ color: tx.category.color }} /> :
-                  <TrendingDown className="h-5 w-5" style={{ color: tx.category.color }} />
-                }
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
-                  {tx.updatedByName && (
-                    <div className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                      <Clock className="h-3 w-3" />
-                      <span>{tx.updatedByName}</span>
+            <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all group">
+              
+              {/* Top Section / Left Side */}
+              <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
+                <div className="shrink-0 w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: tx.category.color + '20' }}>
+                  {tx.type === 'INCOME' ?
+                    <TrendingUp className="h-5 w-5" style={{ color: tx.category.color }} /> :
+                    <TrendingDown className="h-5 w-5" style={{ color: tx.category.color }} />
+                  }
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                    {/* Mobile Amount */}
+                    <p className={`sm:hidden text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                      {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
+                    </p>
+                  </div>
+                  
+                  <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                    {tx.category.name} · {tx.account.name} · {formatDate(tx.date)}
+                  </p>
+                  
+                  {tx.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1.5">
+                      {tx.tags.map(tag => <Badge key={tag} variant="default">{tag}</Badge>)}
                     </div>
                   )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {tx.category.name} · {tx.account.name} · {formatDate(tx.date)}
-                  {tx.createdByName && <span className="ml-1 opacity-60">· Created by {tx.createdByName}</span>}
-                </p>
-                {tx.tags.length > 0 && (
-                  <div className="flex gap-1 mt-1">
-                    {tx.tags.map(tag => <Badge key={tag} variant="default">{tag}</Badge>)}
+                  
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {tx.updatedByName && (
+                      <div className="flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 shrink-0 w-fit">
+                        <Clock className="h-3 w-3" />
+                        <span>{tx.updatedByName}</span>
+                      </div>
+                    )}
+                    {tx.createdByName && tx.createdByName !== tx.updatedByName && (
+                       <span className="text-[10px] text-slate-400 opacity-60">Created by {tx.createdByName}</span>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
-              <p className={`text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
-              </p>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+
+              {/* Desktop Actions & Amount */}
+              <div className="hidden sm:flex items-center gap-4 shrink-0">
+                <p className={`text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
+                  {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
+                </p>
+                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button
+                    onClick={() => handleEdit(tx)}
+                    className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
+                    title="Edit Transaction"
+                  >
+                    <Edit2 className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(tx.id)}
+                    className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
+                    title="Delete Transaction"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Mobile Actions */}
+              <div className="sm:hidden flex items-center justify-end gap-2 pt-3 mt-1 border-t border-slate-100 dark:border-slate-700/50">
                 <button
                   onClick={() => handleEdit(tx)}
-                  className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
-                  title="Edit Transaction"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                 >
-                  <Edit2 className="h-4 w-4" />
+                  <Edit2 className="h-3.5 w-3.5" />
+                  Edit
                 </button>
                 <button
                   onClick={() => handleDelete(tx.id)}
-                  className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
-                  title="Delete Transaction"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
                 </button>
               </div>
             </div>

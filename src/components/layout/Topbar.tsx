@@ -1,7 +1,7 @@
  'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { Bell, LogOut, Menu, Search, User } from 'lucide-react';
+import { Bell, LogOut, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { useState, useRef, useEffect } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -19,6 +19,7 @@ const navItems = [
   { href: '/accounts', label: 'Accounts', icon: Wallet },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
