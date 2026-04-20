@@ -32,13 +32,13 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          'relative w-full max-w-lg rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-6 shadow-2xl',
+          'relative flex flex-col w-full max-w-lg max-h-[calc(100vh-2rem)] rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl',
           'transform transition-all duration-200 scale-100 opacity-100',
           className
         )}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center justify-between shrink-0 px-4 pt-4 sm:px-6 sm:pt-6 pb-4">
           <h2 className="text-xl font-semibold text-slate-900 dark:text-white">{title}</h2>
           <button
             onClick={onClose}
@@ -47,7 +47,9 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
             <X className="h-5 w-5" />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto overscroll-contain px-4 pb-4 sm:px-6 sm:pb-6">
+          {children}
+        </div>
       </div>
     </div>
   );
