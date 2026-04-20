@@ -32,7 +32,7 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          'relative flex flex-col w-full max-w-lg max-h-[calc(100vh-2rem)] rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl',
+          'relative flex flex-col w-full max-w-lg max-h-[calc(100vh-6rem)] rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl',
           'transform transition-all duration-200 scale-100 opacity-100',
           className
         )}
