@@ -40,7 +40,10 @@ export async function getTransactions(userId: string, filters: TransactionFilter
         category: true, 
         account: true,
       },
-      orderBy: { date: 'desc' },
+      orderBy: [
+        { date: 'desc' },
+        { createdAt: 'desc' }
+      ],
       skip: (page - 1) * limit,
       take: limit,
     }),

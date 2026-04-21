@@ -121,7 +121,9 @@ export default function TransactionPageClient({
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-            <span>{total} transactions</span>
+            <span>
+              {total > 0 ? `Showing ${(currentPage - 1) * 20 + 1}-${(currentPage - 1) * 20 + initialTransactions.length} of ${total} transactions` : '0 transactions'}
+            </span>
             <span>•</span>
             <span className="font-medium text-slate-900 dark:text-slate-200">
               Net: {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency)}
