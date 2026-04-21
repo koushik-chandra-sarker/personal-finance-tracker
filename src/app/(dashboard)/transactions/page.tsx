@@ -33,6 +33,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     accountId: params.accountId,
     dateFrom,
     dateTo,
+    sortBy: params.sortBy,
   };
 
   const [{ transactions, total, pages, totalIncome, totalExpense }, categories, accounts] = await Promise.all([

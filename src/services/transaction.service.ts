@@ -3,7 +3,7 @@ import { Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
 
 export async function getTransactions(userId: string, filters: TransactionFilters = {}) {
-  const { search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50 } = filters;
+  const { search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50, sortBy = 'createdAt_desc' } = filters;
 
   const where: Prisma.TransactionWhereInput = { userId };
 
@@ -33,6 +33,32 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     where.tags = { hasSome: tags };
   }
 
+  let orderBy: Prisma.TransactionOrderByWithRelationInput | Prisma.TransactionOrderByWithRelationInput[] = [
+    { createdAt: 'desc' }
+  ];
+
+  switch (sortBy) {
+    case 'date_desc':
+      orderBy = [{ date: 'desc' }, { createdAt: 'desc' }];
+      break;
+    case 'date_asc':
+      orderBy = [{ date: 'asc' }, { createdAt: 'asc' }];
+      break;
+    case 'amount_desc':
+      orderBy = [{ amount: 'desc' }, { createdAt: 'desc' }];
+      break;
+    case 'amount_asc':
+      orderBy = [{ amount: 'asc' }, { createdAt: 'asc' }];
+      break;
+    case 'createdAt_asc':
+      orderBy = [{ createdAt: 'asc' }];
+      break;
+    case 'createdAt_desc':
+    default:
+      orderBy = [{ createdAt: 'desc' }];
+      break;
+  }
+
   const [transactions, total, aggregate] = await Promise.all([
     prisma.transaction.findMany({
       where,
@@ -40,10 +66,7 @@ export async function getTransactions(userId: string, filters: TransactionFilter
         category: true, 
         account: true,
       },
-      orderBy: [
-        { date: 'desc' },
-        { createdAt: 'desc' }
-      ],
+      orderBy,
       skip: (page - 1) * limit,
       take: limit,
     }),

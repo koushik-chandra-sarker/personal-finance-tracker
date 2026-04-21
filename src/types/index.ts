@@ -25,6 +25,7 @@ export type TransactionFilters = {
   tags?: string[];
   page?: number;
   limit?: number;
+  sortBy?: string;
 };
 
 export type MonthlySummary = {
