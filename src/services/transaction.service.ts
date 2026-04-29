@@ -3,7 +3,10 @@ import { Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
 
 export async function getTransactions(userId: string, filters: TransactionFilters = {}) {
-  const { search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50, sortBy = 'createdAt_desc' } = filters;
+  const { 
+    search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50, sortBy = 'createdAt_desc',
+    types, typeMode = 'include', categoryIds, categoryMode = 'include', accountIds, accountMode = 'include',
+  } = filters;
 
   const where: Prisma.TransactionWhereInput = { userId };
 
@@ -13,9 +16,39 @@ export async function getTransactions(userId: string, filters: TransactionFilter
       { notes: { contains: search, mode: 'insensitive' } },
     ];
   }
-  if (categoryId) where.categoryId = categoryId;
-  if (accountId) where.accountId = accountId;
-  if (type) where.type = type;
+
+  // Multi-select type filter (takes priority over single type)
+  if (types && types.length > 0) {
+    if (typeMode === 'exclude') {
+      where.type = { notIn: types as any };
+    } else {
+      where.type = { in: types as any };
+    }
+  } else if (type) {
+    where.type = type;
+  }
+
+  // Multi-select category filter (takes priority over single categoryId)
+  if (categoryIds && categoryIds.length > 0) {
+    if (categoryMode === 'exclude') {
+      where.categoryId = { notIn: categoryIds };
+    } else {
+      where.categoryId = { in: categoryIds };
+    }
+  } else if (categoryId) {
+    where.categoryId = categoryId;
+  }
+
+  // Multi-select account filter (takes priority over single accountId)
+  if (accountIds && accountIds.length > 0) {
+    if (accountMode === 'exclude') {
+      where.accountId = { notIn: accountIds };
+    } else {
+      where.accountId = { in: accountIds };
+    }
+  } else if (accountId) {
+    where.accountId = accountId;
+  }
   if (dateFrom || dateTo) {
     where.date = {};
     if (dateFrom) {

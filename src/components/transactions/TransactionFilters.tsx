@@ -1,8 +1,9 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTransition, useState, useEffect } from 'react';
+import { useTransition, useState, useEffect, useMemo } from 'react';
 import { Search, Loader2, X, Filter } from 'lucide-react';
+import MultiSelectFilter, { type FilterMode } from '@/components/ui/MultiSelectFilter';
 
 interface Category { id: string; name: string; type: string }
 interface Account { id: string; name: string; type: string }
@@ -24,9 +25,29 @@ export default function TransactionFilters({
 
   // Local state for tracking inputs before applying
   const [search, setSearch] = useState(searchParams.get('search') || '');
-  const [type, setType] = useState(searchParams.get('type') || '');
-  const [categoryId, setCategoryId] = useState(searchParams.get('categoryId') || '');
-  const [accountId, setAccountId] = useState(searchParams.get('accountId') || '');
+
+  // Multi-select states
+  const [selectedTypes, setSelectedTypes] = useState<string[]>(
+    searchParams.get('types')?.split(',').filter(Boolean) || []
+  );
+  const [typeMode, setTypeMode] = useState<FilterMode>(
+    (searchParams.get('typeMode') as FilterMode) || 'include'
+  );
+
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    searchParams.get('categoryIds')?.split(',').filter(Boolean) || []
+  );
+  const [categoryMode, setCategoryMode] = useState<FilterMode>(
+    (searchParams.get('categoryMode') as FilterMode) || 'include'
+  );
+
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>(
+    searchParams.get('accountIds')?.split(',').filter(Boolean) || []
+  );
+  const [accountMode, setAccountMode] = useState<FilterMode>(
+    (searchParams.get('accountMode') as FilterMode) || 'include'
+  );
+
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || defaultDateFrom);
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || defaultDateTo);
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt_desc');
@@ -34,9 +55,12 @@ export default function TransactionFilters({
   // Keep local state in sync with URL if user uses back/forward browser buttons
   useEffect(() => {
     setSearch(searchParams.get('search') || '');
-    setType(searchParams.get('type') || '');
-    setCategoryId(searchParams.get('categoryId') || '');
-    setAccountId(searchParams.get('accountId') || '');
+    setSelectedTypes(searchParams.get('types')?.split(',').filter(Boolean) || []);
+    setTypeMode((searchParams.get('typeMode') as FilterMode) || 'include');
+    setSelectedCategories(searchParams.get('categoryIds')?.split(',').filter(Boolean) || []);
+    setCategoryMode((searchParams.get('categoryMode') as FilterMode) || 'include');
+    setSelectedAccounts(searchParams.get('accountIds')?.split(',').filter(Boolean) || []);
+    setAccountMode((searchParams.get('accountMode') as FilterMode) || 'include');
     setDateFrom(searchParams.get('dateFrom') || defaultDateFrom);
     setDateTo(searchParams.get('dateTo') || defaultDateTo);
     setSortBy(searchParams.get('sortBy') || 'createdAt_desc');
@@ -49,9 +73,38 @@ export default function TransactionFilters({
     params.set('page', '1');
 
     if (search) params.set('search', search); else params.delete('search');
-    if (type) params.set('type', type); else params.delete('type');
-    if (categoryId) params.set('categoryId', categoryId); else params.delete('categoryId');
-    if (accountId) params.set('accountId', accountId); else params.delete('accountId');
+
+    // Multi-select type
+    if (selectedTypes.length > 0) {
+      params.set('types', selectedTypes.join(','));
+      params.set('typeMode', typeMode);
+    } else {
+      params.delete('types');
+      params.delete('typeMode');
+    }
+    // Remove legacy single type param
+    params.delete('type');
+
+    // Multi-select category
+    if (selectedCategories.length > 0) {
+      params.set('categoryIds', selectedCategories.join(','));
+      params.set('categoryMode', categoryMode);
+    } else {
+      params.delete('categoryIds');
+      params.delete('categoryMode');
+    }
+    params.delete('categoryId');
+
+    // Multi-select account
+    if (selectedAccounts.length > 0) {
+      params.set('accountIds', selectedAccounts.join(','));
+      params.set('accountMode', accountMode);
+    } else {
+      params.delete('accountIds');
+      params.delete('accountMode');
+    }
+    params.delete('accountId');
+
     if (dateFrom) params.set('dateFrom', dateFrom); else params.delete('dateFrom');
     if (dateTo) params.set('dateTo', dateTo); else params.delete('dateTo');
     if (sortBy && sortBy !== 'createdAt_desc') params.set('sortBy', sortBy); else params.delete('sortBy');
@@ -63,9 +116,12 @@ export default function TransactionFilters({
 
   const clearFilters = () => {
     setSearch('');
-    setType('');
-    setCategoryId('');
-    setAccountId('');
+    setSelectedTypes([]);
+    setTypeMode('include');
+    setSelectedCategories([]);
+    setCategoryMode('include');
+    setSelectedAccounts([]);
+    setAccountMode('include');
     setDateFrom('');
     setDateTo('');
     setSortBy('createdAt_desc');
@@ -74,11 +130,29 @@ export default function TransactionFilters({
     });
   };
 
-  const hasActiveFilters = search || type || categoryId || accountId || dateFrom || dateTo || (sortBy && sortBy !== 'createdAt_desc');
-  const filteredCategories = type ? categories.filter(c => c.type === type) : categories;
+  const hasActiveFilters = search || selectedTypes.length > 0 || selectedCategories.length > 0 || selectedAccounts.length > 0 || dateFrom || dateTo || (sortBy && sortBy !== 'createdAt_desc');
+
+  // Build option arrays
+  const typeOptions = [
+    { value: 'INCOME', label: 'Income' },
+    { value: 'EXPENSE', label: 'Expense' },
+  ];
+
+  // Filter categories based on selected types (if only one type is selected in include mode)
+  const filteredCategoryOptions = useMemo(() => {
+    let cats = categories;
+    if (selectedTypes.length === 1 && typeMode === 'include') {
+      cats = categories.filter(c => c.type === selectedTypes[0]);
+    }
+    return cats.map(c => ({ value: c.id, label: c.name, group: c.type }));
+  }, [categories, selectedTypes, typeMode]);
+
+  const accountOptions = useMemo(() => {
+    return accounts.map(a => ({ value: a.id, label: a.name }));
+  }, [accounts]);
 
   return (
-    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6 space-y-4 overflow-hidden box-border max-w-full">
+    <div className="bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 sm:p-5 mb-6 space-y-4 overflow-visible box-border max-w-full">
       <div className="flex flex-col gap-3 sm:gap-4">
         {/* Search Bar */}
         <div className="relative flex-1 min-w-0">
@@ -98,46 +172,38 @@ export default function TransactionFilters({
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-w-full">
-        {/* Type Filter */}
-        <select
-          value={type}
-          onChange={(e) => {
-            setType(e.target.value);
-            setCategoryId(''); // Reset category when type changes
-          }}
-          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
-        >
-          <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Types</option>
-          <option value="INCOME" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Income</option>
-          <option value="EXPENSE" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Expense</option>
-        </select>
+        {/* Type Multi-Select */}
+        <MultiSelectFilter
+          label="Types"
+          options={typeOptions}
+          selected={selectedTypes}
+          onChange={setSelectedTypes}
+          mode={typeMode}
+          onModeChange={setTypeMode}
+          placeholder="All Types"
+        />
 
-        {/* Category Filter */}
-        <select
-          value={categoryId}
-          onChange={(e) => setCategoryId(e.target.value)}
-          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
-        >
-          <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Categories</option>
-          {filteredCategories.map(c => (
-            <option key={c.id} value={c.id} className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{c.name}</option>
-          ))}
-        </select>
+        {/* Category Multi-Select */}
+        <MultiSelectFilter
+          label="Categories"
+          options={filteredCategoryOptions}
+          selected={selectedCategories}
+          onChange={setSelectedCategories}
+          mode={categoryMode}
+          onModeChange={setCategoryMode}
+          placeholder="All Categories"
+        />
 
-        {/* Account Filter */}
-        <select
-          value={accountId}
-          onChange={(e) => setAccountId(e.target.value)}
-          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
-          style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
-        >
-          <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">All Accounts</option>
-          {accounts.map(a => (
-            <option key={a.id} value={a.id} className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{a.name}</option>
-          ))}
-        </select>
+        {/* Account Multi-Select */}
+        <MultiSelectFilter
+          label="Accounts"
+          options={accountOptions}
+          selected={selectedAccounts}
+          onChange={setSelectedAccounts}
+          mode={accountMode}
+          onModeChange={setAccountMode}
+          placeholder="All Accounts"
+        />
 
         {/* Date From */}
         <div className="min-w-0 w-full overflow-hidden">

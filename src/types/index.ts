@@ -15,11 +15,20 @@ export type ActionResponse<T = undefined> = {
   errors?: Record<string, string[]>;
 };
 
+export type FilterMode = 'include' | 'exclude';
+
 export type TransactionFilters = {
   search?: string;
   categoryId?: string;
   accountId?: string;
   type?: 'INCOME' | 'EXPENSE';
+  // Multi-select filter fields
+  types?: string[];
+  typeMode?: FilterMode;
+  categoryIds?: string[];
+  categoryMode?: FilterMode;
+  accountIds?: string[];
+  accountMode?: FilterMode;
   dateFrom?: string;
   dateTo?: string;
   tags?: string[];

@@ -24,13 +24,24 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const dateFrom = params.dateFrom || firstDayOfMonth;
   const dateTo = params.dateTo || lastDayOfMonth;
 
+  // Parse multi-select comma-separated values
+  const types = params.types ? params.types.split(',').filter(Boolean) : undefined;
+  const categoryIds = params.categoryIds ? params.categoryIds.split(',').filter(Boolean) : undefined;
+  const accountIds = params.accountIds ? params.accountIds.split(',').filter(Boolean) : undefined;
+
   const filters = {
     page,
     limit,
     search: params.search,
     type: params.type as 'INCOME' | 'EXPENSE' | undefined,
+    types,
+    typeMode: (params.typeMode as 'include' | 'exclude') || 'include',
     categoryId: params.categoryId,
+    categoryIds,
+    categoryMode: (params.categoryMode as 'include' | 'exclude') || 'include',
     accountId: params.accountId,
+    accountIds,
+    accountMode: (params.accountMode as 'include' | 'exclude') || 'include',
     dateFrom,
     dateTo,
     sortBy: params.sortBy,
