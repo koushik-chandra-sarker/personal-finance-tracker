@@ -34,7 +34,20 @@ export async function getMonthlySummary(userId: string, month: number, year: num
 export async function getCategoryBreakdown(userId: string, month: number, year: number): Promise<CategoryBreakdown[]> {
   const startDate = new Date(year, month - 1, 1);
   const endDate = new Date(year, month, 0, 23, 59, 59);
+  return getCategoryBreakdownForRange(userId, startDate, endDate);
+}
 
+export async function getCategoryBreakdownRange(
+  userId: string,
+  startMonth: number, startYear: number,
+  endMonth: number, endYear: number
+): Promise<CategoryBreakdown[]> {
+  const startDate = new Date(startYear, startMonth - 1, 1);
+  const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+  return getCategoryBreakdownForRange(userId, startDate, endDate);
+}
+
+async function getCategoryBreakdownForRange(userId: string, startDate: Date, endDate: Date): Promise<CategoryBreakdown[]> {
   const spending = await prisma.transaction.groupBy({
     by: ['categoryId'],
     where: { userId, type: 'EXPENSE', date: { gte: startDate, lte: endDate } },
@@ -66,19 +79,35 @@ export async function getCategoryBreakdown(userId: string, month: number, year: 
 }
 
 export async function getMonthlyTrend(userId: string, months: number = 6): Promise<MonthlyTrend[]> {
-  const trends: MonthlyTrend[] = [];
   const now = new Date();
+  const startDate = subMonths(now, months - 1);
+  return getMonthlyTrendRange(
+    userId,
+    startDate.getMonth() + 1, startDate.getFullYear(),
+    now.getMonth() + 1, now.getFullYear()
+  );
+}
 
-  for (let i = months - 1; i >= 0; i--) {
-    const date = subMonths(now, i);
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
-    const summary = await getMonthlySummary(userId, month, year);
+export async function getMonthlyTrendRange(
+  userId: string,
+  startMonth: number, startYear: number,
+  endMonth: number, endYear: number
+): Promise<MonthlyTrend[]> {
+  const trends: MonthlyTrend[] = [];
+
+  let m = startMonth;
+  let y = startYear;
+
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    const summary = await getMonthlySummary(userId, m, y);
+    const date = new Date(y, m - 1, 1);
     trends.push({
       month: format(date, 'MMM yyyy'),
       income: summary.totalIncome,
       expense: summary.totalExpense,
     });
+    m++;
+    if (m > 12) { m = 1; y++; }
   }
 
   return trends;

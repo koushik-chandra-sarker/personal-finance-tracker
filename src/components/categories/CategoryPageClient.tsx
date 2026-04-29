@@ -140,48 +140,52 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
           {list.map(c => {
             const IconCmp = ICON_MAP[c.icon] || Tags;
             return (
-              <div key={c.id} className="flex items-center gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: c.color + '20' }}>
-                  <IconCmp className="h-5 w-5" style={{ color: c.color }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{c.name}</p>
+              <div key={c.id} className="flex flex-col p-4 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
+                {/* Row 1: icon + badge + actions */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0" style={{ backgroundColor: c.color + '20' }}>
+                      <IconCmp className="h-4 w-4" style={{ color: c.color }} />
+                    </div>
                     {c.type === 'EXPENSE' && (
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${c.budgetAmount ? (c.spent > c.budgetAmount ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-slate-500/10 text-slate-500'}`}>
                         {c.budgetAmount ? `${Math.round((c.spent / c.budgetAmount) * 100)}%` : 'No Budget'}
                       </span>
                     )}
                   </div>
-                  
-                  {c.type === 'EXPENSE' ? (
-                    <div className="mt-2 space-y-1.5">
-                      <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                        <span>{formatCurrency(c.spent, userCurrency)}</span>
-                        {c.budgetAmount && <span>/ {formatCurrency(c.budgetAmount, userCurrency)}</span>}
-                      </div>
-                      <ProgressBar 
-                        value={c.spent} 
-                        max={c.budgetAmount || Math.max(c.spent, 1)} 
-                        color={c.color} 
-                        size="sm" 
-                        showLabel={false}
-                      />
+                  <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEditModal(c)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </button>
+                    <button onClick={() => handleDelete(c)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-rose-400 bg-slate-100 dark:bg-slate-700/50 hover:bg-red-50 dark:hover:bg-rose-500/20 rounded-lg">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Row 2: Full-width title */}
+                <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{c.name}</p>
+
+                {/* Row 3: Full-width budget / spending info */}
+                {c.type === 'EXPENSE' ? (
+                  <div className="w-full space-y-1.5">
+                    <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
+                      <span>{formatCurrency(c.spent, userCurrency)}</span>
+                      {c.budgetAmount && <span>/ {formatCurrency(c.budgetAmount, userCurrency)}</span>}
                     </div>
-                  ) : (
-                    <p className="text-xs text-emerald-500 dark:text-emerald-400 mt-1 font-medium">
-                      +{formatCurrency(c.spent, userCurrency)} this month
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEditModal(c)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">
-                    <Edit2 className="h-4 w-4" />
-                  </button>
-                  <button onClick={() => handleDelete(c)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-rose-400 bg-slate-100 dark:bg-slate-700/50 hover:bg-red-50 dark:hover:bg-rose-500/20 rounded-lg">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
+                    <ProgressBar 
+                      value={c.spent} 
+                      max={c.budgetAmount || Math.max(c.spent, 1)} 
+                      color={c.color} 
+                      size="sm" 
+                      showLabel={false}
+                    />
+                  </div>
+                ) : (
+                  <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">
+                    +{formatCurrency(c.spent, userCurrency)} this month
+                  </p>
+                )}
               </div>
             );
           })}
