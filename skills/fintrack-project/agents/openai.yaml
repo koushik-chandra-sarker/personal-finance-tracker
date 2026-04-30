@@ -1,0 +1,4 @@
+interface:
+  display_name: "FinTrack Project"
+  short_description: "Work effectively in the FinTrack repo"
+  default_prompt: "Use $fintrack-project to implement a FinTrack feature or fix."
