@@ -5,6 +5,7 @@ import { User, Shield, Palette, Globe } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import CollaboratorsList from '@/components/settings/CollaboratorsList';
+import NotificationSettings from '@/components/settings/NotificationSettings';
 import Select from '@/components/ui/Select';
 import Loader from '@/components/ui/Loader';
 import { updateCurrencyAction } from '@/actions/settings.actions';
@@ -28,7 +29,7 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'security' | 'community'>('account');
   
-  const currentCurrency = (session?.user as any)?.currency || 'USD';
+  const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
   const userName = session?.user?.name || 'User';
   const userEmail = session?.user?.email || '';
   const initial = userName.charAt(0).toUpperCase();
@@ -126,7 +127,7 @@ export default function SettingsPage() {
                 <Shield className="h-16 w-16 text-slate-300 dark:text-slate-700 mb-6" />
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Collaborator View</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
-                  Personal settings and security options are disabled while you are viewing someone else's workspace.
+                  Personal settings and security options are disabled while you are viewing someone&apos;s workspace.
                 </p>
               </div>
             </Card>
@@ -204,6 +205,8 @@ export default function SettingsPage() {
                       </div>
                     </div>
                   </Card>
+
+                  <NotificationSettings />
                 </div>
               )}
 

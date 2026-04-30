@@ -1,17 +1,24 @@
  'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { Bell, LogOut, Menu, Search, Tags, User } from 'lucide-react';
+import { AlertTriangle, Bell, CheckCircle2, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { useState, useRef, useEffect } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
+  getNotificationsAction,
+  getUnreadNotificationCountAction,
+  markAllNotificationsReadAction,
+  markNotificationReadAction,
+} from '@/actions/notification.actions';
+import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
   RefreshCw, FileBarChart, Settings, X, DollarSign
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatRelativeDate } from '@/lib/utils';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -25,18 +32,45 @@ const navItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
+type NotificationItem = {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  actionUrl: string | null;
+  isRead: boolean;
+  createdAt: string;
+};
+
 export default function Topbar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  const fetchNotifications = async () => {
+    if (!session?.user?.id) return;
+    const [items, count] = await Promise.all([
+      getNotificationsAction({ limit: 10 }),
+      getUnreadNotificationCountAction(),
+    ]);
+    setNotifications(items as NotificationItem[]);
+    setUnreadCount(count);
+  };
 
   // Close user menu on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
         setUserMenuOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -45,8 +79,51 @@ export default function Topbar() {
 
   // Close user menu on pathname change
   useEffect(() => {
-    setUserMenuOpen(false);
+    queueMicrotask(() => {
+      setUserMenuOpen(false);
+      setNotificationOpen(false);
+    });
   }, [pathname]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+    let cancelled = false;
+    Promise.all([
+      getNotificationsAction({ limit: 10 }),
+      getUnreadNotificationCountAction(),
+    ]).then(([items, count]) => {
+      if (cancelled) return;
+      setNotifications(items as NotificationItem[]);
+      setUnreadCount(count);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [session?.user?.id]);
+
+  const handleMarkAllRead = async () => {
+    await markAllNotificationsReadAction();
+    await fetchNotifications();
+  };
+
+  const handleNotificationClick = async (id: string) => {
+    await markNotificationReadAction(id);
+    await fetchNotifications();
+    setNotificationOpen(false);
+  };
+
+  const severityStyle: Record<string, string> = {
+    INFO: 'text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-500/10',
+    WARNING: 'text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-500/10',
+    CRITICAL: 'text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10',
+    SUCCESS: 'text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10',
+  };
+
+  const SeverityIcon = ({ severity }: { severity: string }) => {
+    if (severity === 'SUCCESS') return <CheckCircle2 className="h-4 w-4" />;
+    if (severity === 'WARNING' || severity === 'CRITICAL') return <AlertTriangle className="h-4 w-4" />;
+    return <Info className="h-4 w-4" />;
+  };
 
   return (
     <>
@@ -84,10 +161,71 @@ export default function Topbar() {
           <div className="flex items-center gap-2">
             <WorkspaceSwitcher />
             <ThemeToggle />
-            {/* <button className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-indigo-500 rounded-full" />
-            </button> */}
+            <div className="relative" ref={notificationRef}>
+              <button
+                onClick={() => setNotificationOpen(!notificationOpen)}
+                className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
+                aria-label="Notifications"
+                aria-expanded={notificationOpen}
+              >
+                <Bell className="h-5 w-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 rounded-full bg-rose-500 text-white text-[11px] font-bold flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {notificationOpen && (
+                <div className="absolute right-0 mt-2 w-[min(calc(100vw-2rem),24rem)] rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                  <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700/50">
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</p>
+                    <button
+                      onClick={handleMarkAllRead}
+                      disabled={unreadCount === 0}
+                      className="text-xs font-medium text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 dark:disabled:text-slate-600"
+                    >
+                      Mark all read
+                    </button>
+                  </div>
+                  {notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
+                      No notifications yet
+                    </div>
+                  ) : (
+                    <div className="max-h-96 overflow-y-auto">
+                      {notifications.map((notification) => {
+                        const content = (
+                          <div className={cn(
+                            'flex gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/5 transition-colors',
+                            !notification.isRead && 'bg-indigo-50/50 dark:bg-indigo-500/10'
+                          )}>
+                            <div className={cn('mt-0.5 h-8 w-8 rounded-lg flex items-center justify-center flex-shrink-0', severityStyle[notification.severity] || severityStyle.INFO)}>
+                              <SeverityIcon severity={notification.severity} />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{notification.title}</p>
+                              <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{notification.message}</p>
+                              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt)}</p>
+                            </div>
+                            {!notification.isRead && <span className="mt-2 h-2 w-2 rounded-full bg-indigo-500 flex-shrink-0" />}
+                          </div>
+                        );
+
+                        return notification.actionUrl ? (
+                          <Link key={notification.id} href={notification.actionUrl} onClick={() => handleNotificationClick(notification.id)}>
+                            {content}
+                          </Link>
+                        ) : (
+                          <button key={notification.id} onClick={() => handleNotificationClick(notification.id)} className="block w-full">
+                            {content}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}

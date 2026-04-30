@@ -1,4 +1,6 @@
 import { prisma } from '@/lib/prisma';
+import { formatCurrency } from '@/lib/utils';
+import { createNotificationOnce } from '@/services/notification.service';
 
 export async function getGoals(userId: string) {
   const goals = await prisma.goal.findMany({
@@ -67,6 +69,24 @@ export async function contributeToGoal(userId: string, executorId: string, id: s
       },
     }),
   ]);
+
+  if (!goal.isCompleted && isCompleted) {
+    try {
+      const user = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
+      await createNotificationOnce(userId, {
+        title: `${goal.name} reached`,
+        message: `You reached your ${formatCurrency(Number(goal.targetAmount), user?.currency || 'USD')} goal.`,
+        type: 'GOAL_REACHED',
+        severity: 'SUCCESS',
+        sourceType: 'GOAL',
+        sourceId: goal.id,
+        dedupeKey: `goal-reached:${goal.id}`,
+        actionUrl: '/goals',
+      });
+    } catch (error) {
+      console.error('Failed to create goal reached notification:', error);
+    }
+  }
 
   return updatedGoal;
 }

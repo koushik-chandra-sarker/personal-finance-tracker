@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
+import { CategoryType, Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
+import { detectUnusualExpenses } from '@/services/notification-detector.service';
 
 export async function getTransactions(userId: string, filters: TransactionFilters = {}) {
   const { 
@@ -20,9 +21,9 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   // Multi-select type filter (takes priority over single type)
   if (types && types.length > 0) {
     if (typeMode === 'exclude') {
-      where.type = { notIn: types as any };
+      where.type = { notIn: types as CategoryType[] };
     } else {
-      where.type = { in: types as any };
+      where.type = { in: types as CategoryType[] };
     }
   } else if (type) {
     where.type = type;
@@ -167,6 +168,14 @@ export async function createTransaction(userId: string, executorId: string, data
     where: { id: data.accountId },
     data: { balance: { increment: balanceChange } },
   });
+
+  if (data.type === 'EXPENSE') {
+    try {
+      await detectUnusualExpenses(userId, transaction.id);
+    } catch (error) {
+      console.error('Failed to detect unusual expense:', error);
+    }
+  }
 
   return transaction;
 }

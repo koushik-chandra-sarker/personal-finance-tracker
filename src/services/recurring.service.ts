@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { addDays, addWeeks, addMonths, addYears } from 'date-fns';
+import { detectUnusualExpenses } from '@/services/notification-detector.service';
 
 export async function getRecurringTransactions(userId: string) {
   const recurring = await prisma.recurringTransaction.findMany({
@@ -85,7 +86,7 @@ export async function processRecurringTransactions() {
 
   for (const rec of dueTransactions) {
     // Create the transaction
-    await prisma.transaction.create({
+    const transaction = await prisma.transaction.create({
       data: {
         userId: rec.userId,
         accountId: rec.accountId,
@@ -110,6 +111,14 @@ export async function processRecurringTransactions() {
       where: { id: rec.id },
       data: { nextRunDate: getNextDate(rec.nextRunDate, rec.frequency) },
     });
+
+    if (rec.type === 'EXPENSE') {
+      try {
+        await detectUnusualExpenses(rec.userId, transaction.id);
+      } catch (error) {
+        console.error('Failed to detect unusual recurring expense:', error);
+      }
+    }
   }
 
   return dueTransactions.length;

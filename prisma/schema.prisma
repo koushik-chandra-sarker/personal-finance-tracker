@@ -20,6 +20,7 @@ model User {
   categories    Category[]
   goals         Goal[]
   notifications Notification[]
+  notificationPreference NotificationPreference?
   recurringTxns RecurringTransaction[]
   joinedShares  SharedAccess[]         @relation("JoinedShares")
   ownedShares   SharedAccess[]         @relation("OwnedShares")
@@ -187,16 +188,43 @@ model GoalProgress {
 }
 
 model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  title     String
-  message   String
-  type      NotificationType
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String                @id @default(cuid())
+  userId     String
+  title      String
+  message    String
+  type       NotificationType
+  severity   NotificationSeverity @default(INFO)
+  sourceType NotificationSource?
+  sourceId   String?
+  dedupeKey  String?
+  actionUrl  String?
+  isRead     Boolean              @default(false)
+  createdAt  DateTime             @default(now())
+  user       User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, dedupeKey])
   @@index([userId, isRead])
+  @@index([userId, type, createdAt])
+}
+
+model NotificationPreference {
+  id                       String   @id @default(cuid())
+  userId                   String   @unique
+  billRemindersEnabled     Boolean  @default(true)
+  billReminderDaysBefore   Int      @default(3)
+  budgetAlertsEnabled      Boolean  @default(true)
+  budgetWarningThreshold   Int      @default(80)
+  budgetCriticalThreshold  Int      @default(100)
+  goalDeadlineEnabled      Boolean  @default(true)
+  goalReminderDaysBefore   Int      @default(14)
+  unusualExpenseEnabled    Boolean  @default(true)
+  unusualExpenseMultiplier Decimal  @default(2.00) @db.Decimal(6, 2)
+  unusualExpenseMinAmount  Decimal  @default(50.00) @db.Decimal(12, 2)
+  lowBalanceEnabled        Boolean  @default(true)
+  lowBalanceThreshold      Decimal  @default(100.00) @db.Decimal(12, 2)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+  user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Feature {
@@ -242,9 +270,29 @@ enum GoalTransactionType {
 }
 
 enum NotificationType {
+  BILL_REMINDER
   BUDGET_ALERT
+  GOAL_DEADLINE
   GOAL_REACHED
+  UNUSUAL_EXPENSE
+  LOW_BALANCE
   RECURRING_CREATED
   INSIGHT
+  SYSTEM
+}
+
+enum NotificationSeverity {
+  INFO
+  WARNING
+  CRITICAL
+  SUCCESS
+}
+
+enum NotificationSource {
+  RECURRING_TRANSACTION
+  BUDGET
+  GOAL
+  TRANSACTION
+  ACCOUNT
   SYSTEM
 }
