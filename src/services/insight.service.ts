@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { subMonths } from 'date-fns';
+import { getBudgets } from '@/services/budget.service';
 
 type Insight = {
   type: 'warning' | 'success' | 'info';
@@ -89,24 +90,23 @@ export async function getSpendingInsights(userId: string): Promise<Insight[]> {
   }
 
   // Budget alerts
-  const budgets = await prisma.budget.findMany({
-    where: { userId, month: thisMonth, year: thisYear },
-    include: { category: true },
-  });
+  const budgets = await getBudgets(userId, thisMonth, thisYear);
 
   for (const budget of budgets) {
-    const spent = await prisma.transaction.aggregate({
-      where: { userId, categoryId: budget.categoryId, type: 'EXPENSE', date: { gte: startThis, lte: endThis } },
-      _sum: { amount: true },
-    });
-    const spentVal = Number(spent._sum.amount || 0);
-    const budgetVal = Number(budget.amount);
+    const spentVal = budget.spent;
+    const budgetVal = budget.effectiveAmount;
     const pct = budgetVal > 0 ? Math.round((spentVal / budgetVal) * 100) : 0;
 
     if (pct > 100) {
-      insights.push({ type: 'warning', title: `${budget.category.name} Over Budget`, message: `You've exceeded your ${budget.category.name} budget by ${pct - 100}%.` });
+      insights.push({ type: 'warning', title: `${budget.categoryName} Over Budget`, message: `You've exceeded your ${budget.categoryName} effective budget by ${pct - 100}%.` });
     } else if (pct > 80) {
-      insights.push({ type: 'info', title: `${budget.category.name} Budget Alert`, message: `You've used ${pct}% of your ${budget.category.name} budget.` });
+      insights.push({ type: 'info', title: `${budget.categoryName} Budget Alert`, message: `You've used ${pct}% of your ${budget.categoryName} effective budget.` });
+    } else if (budget.projectedRolloverAmount > 0) {
+      insights.push({
+        type: 'success',
+        title: `${budget.categoryName} Rollover`,
+        message: `${budget.categoryName} is on track to roll over ${budget.projectedRolloverAmount.toFixed(2)} next month.`,
+      });
     }
   }
 

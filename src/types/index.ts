@@ -60,10 +60,17 @@ export type BudgetWithSpent = {
   categoryColor: string;
   categoryIcon: string;
   amount: number;
+  rolloverEnabled: boolean;
+  rolloverAmount: number;
+  effectiveAmount: number;
+  projectedRolloverAmount: number;
   spent: number;
+  remaining: number;
   percentage: number;
   month: number;
   year: number;
+  createdByName?: string | null;
+  updatedByName?: string | null;
 };
 
 export type MonthlyTrend = {

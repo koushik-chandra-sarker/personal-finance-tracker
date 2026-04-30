@@ -1,0 +1,1 @@
+ALTER TABLE "Budget" ADD COLUMN "rolloverEnabled" BOOLEAN NOT NULL DEFAULT false;

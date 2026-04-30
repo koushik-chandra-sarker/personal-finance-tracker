@@ -21,6 +21,7 @@ export async function createBudgetAction(formData: FormData): Promise<ActionResp
   const raw = {
     categoryId: formData.get('categoryId') as string,
     amount: formData.get('amount') as string,
+    rolloverEnabled: formData.get('rolloverEnabled') ?? 'false',
     month: formData.get('month') as string,
     year: formData.get('year') as string,
   };

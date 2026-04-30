@@ -115,18 +115,19 @@ model Transaction {
 }
 
 model Budget {
-  id          String   @id @default(cuid())
-  userId      String
-  categoryId  String
-  amount      Decimal  @db.Decimal(12, 2)
-  month       Int
-  year        Int
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  createdById String?
-  updatedById String?
-  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String   @id @default(cuid())
+  userId          String
+  categoryId      String
+  amount          Decimal  @db.Decimal(12, 2)
+  rolloverEnabled Boolean  @default(false)
+  month           Int
+  year            Int
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdById     String?
+  updatedById     String?
+  category        Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, categoryId, month, year])
   @@index([userId, month, year])
