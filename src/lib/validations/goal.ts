@@ -9,6 +9,7 @@ export const goalSchema = z.object({
 });
 
 export const contributeSchema = z.object({
+  accountId: z.string().min(1, 'Account is required'),
   amount: z.coerce.number().positive('Amount must be positive'),
 });
 

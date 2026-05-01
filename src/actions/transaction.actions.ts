@@ -68,5 +68,7 @@ export async function deleteTransactionAction(id: string): Promise<ActionRespons
   await transactionService.deleteTransaction(userId, id);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');
+  revalidatePath('/accounts');
+  revalidatePath('/goals');
   return { success: true, message: 'Transaction deleted' };
 }

@@ -41,14 +41,19 @@ export async function contributeToGoalAction(id: string, formData: FormData): Pr
   const userId = await getEffectiveUserId();
   await validateAccess('GOALS', 'EDIT');
   const raw = {
+    accountId: formData.get('accountId') as string,
     amount: formData.get('amount') as string,
     description: formData.get('description') as string,
   };
-  const parsed = contributeSchema.safeParse(raw); // I'll update the schema in the next step or if needed.
+  const parsed = contributeSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed' };
 
-  await goalService.contributeToGoal(userId, executorId, id, parsed.data.amount, raw.description);
+  await validateAccess('ACCOUNTS', 'EDIT');
+  await validateAccess('TRANSACTIONS', 'EDIT');
+  await goalService.contributeToGoal(userId, executorId, id, parsed.data.accountId, parsed.data.amount, raw.description);
   revalidatePath('/goals');
+  revalidatePath('/accounts');
+  revalidatePath('/transactions');
   revalidatePath('/dashboard');
   return { success: true, message: 'Contribution added' };
 }
@@ -60,14 +65,19 @@ export async function deductFromGoalAction(id: string, formData: FormData): Prom
   const userId = await getEffectiveUserId();
   await validateAccess('GOALS', 'EDIT');
   const raw = {
+    accountId: formData.get('accountId') as string,
     amount: formData.get('amount') as string,
     description: formData.get('description') as string,
   };
   const parsed = contributeSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed' };
 
-  await goalService.deductFromGoal(userId, executorId, id, parsed.data.amount, raw.description);
+  await validateAccess('ACCOUNTS', 'EDIT');
+  await validateAccess('TRANSACTIONS', 'EDIT');
+  await goalService.deductFromGoal(userId, executorId, id, parsed.data.accountId, parsed.data.amount, raw.description);
   revalidatePath('/goals');
+  revalidatePath('/accounts');
+  revalidatePath('/transactions');
   revalidatePath('/dashboard');
   return { success: true, message: 'Deduction added' };
 }

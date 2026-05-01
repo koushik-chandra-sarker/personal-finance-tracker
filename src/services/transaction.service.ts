@@ -3,6 +3,27 @@ import { CategoryType, Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
 import { detectUnusualExpenses } from '@/services/notification-detector.service';
 
+type GoalTransactionMarker = {
+  goalId: string;
+  progressId: string;
+  action: 'CONTRIBUTION' | 'DEDUCTION';
+};
+
+function sanitizeUserTags(tags?: string[]) {
+  return (tags || []).filter(tag => !tag.startsWith('__pft:'));
+}
+
+function parseGoalTransactionMarker(tags: string[]): GoalTransactionMarker | null {
+  if (!tags.includes('__pft:goal-transfer')) return null;
+
+  const goalId = tags.find(tag => tag.startsWith('__pft:goal:'))?.slice('__pft:goal:'.length);
+  const progressId = tags.find(tag => tag.startsWith('__pft:goal-progress:'))?.slice('__pft:goal-progress:'.length);
+  const action = tags.find(tag => tag.startsWith('__pft:goal-action:'))?.slice('__pft:goal-action:'.length);
+
+  if (!goalId || !progressId || (action !== 'CONTRIBUTION' && action !== 'DEDUCTION')) return null;
+  return { goalId, progressId, action };
+}
+
 export async function getTransactions(userId: string, filters: TransactionFilters = {}) {
   const { 
     search, categoryId, accountId, type, dateFrom, dateTo, tags, page = 1, limit = 50, sortBy = 'createdAt_desc',
@@ -154,7 +175,7 @@ export async function createTransaction(userId: string, executorId: string, data
       amount: data.amount,
       description: data.description,
       date: new Date(data.date),
-      tags: data.tags || [],
+      tags: sanitizeUserTags(data.tags),
       notes: data.notes,
       createdById: executorId,
       updatedById: executorId,
@@ -186,6 +207,9 @@ export async function updateTransaction(userId: string, executorId: string, id: 
 }) {
   const existing = await prisma.transaction.findFirst({ where: { id, userId } });
   if (!existing) throw new Error('Transaction not found');
+  if (parseGoalTransactionMarker(existing.tags)) {
+    throw new Error('Goal transactions cannot be edited. Delete the transaction to reverse it.');
+  }
 
   // Reverse old balance change
   const oldBalanceChange = existing.type === 'INCOME' ? -Number(existing.amount) : Number(existing.amount);
@@ -203,7 +227,7 @@ export async function updateTransaction(userId: string, executorId: string, id: 
       amount: data.amount,
       description: data.description,
       date: new Date(data.date),
-      tags: data.tags || [],
+      tags: sanitizeUserTags(data.tags),
       notes: data.notes,
       updatedById: executorId,
     },
@@ -226,6 +250,34 @@ export async function deleteTransaction(userId: string, id: string) {
 
   // Reverse balance change
   const balanceChange = transaction.type === 'INCOME' ? -Number(transaction.amount) : Number(transaction.amount);
+  const goalMarker = parseGoalTransactionMarker(transaction.tags);
+
+  if (goalMarker) {
+    const goalAmountChange = goalMarker.action === 'CONTRIBUTION' ? -Number(transaction.amount) : Number(transaction.amount);
+    await prisma.$executeRaw`
+      WITH updated_goal AS (
+        UPDATE "Goal"
+        SET
+          "currentAmount" = GREATEST(0, "currentAmount" + ${goalAmountChange}),
+          "isCompleted" = GREATEST(0, "currentAmount" + ${goalAmountChange}) >= "targetAmount",
+          "updatedAt" = NOW()
+        WHERE "id" = ${goalMarker.goalId} AND "userId" = ${userId}
+      ),
+      deleted_progress AS (
+        DELETE FROM "GoalProgress"
+        WHERE "id" = ${goalMarker.progressId} AND "goalId" = ${goalMarker.goalId}
+      ),
+      updated_account AS (
+        UPDATE "Account"
+        SET "balance" = "balance" + ${balanceChange}, "updatedAt" = NOW()
+        WHERE "id" = ${transaction.accountId} AND "userId" = ${userId}
+      )
+      DELETE FROM "Transaction"
+      WHERE "id" = ${id} AND "userId" = ${userId}
+    `;
+    return true;
+  }
+
   await prisma.account.update({
     where: { id: transaction.accountId },
     data: { balance: { increment: balanceChange } },

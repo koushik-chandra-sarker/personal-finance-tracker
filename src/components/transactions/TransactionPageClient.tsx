@@ -6,6 +6,7 @@ import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { transactionSchema, type TransactionInput } from '@/lib/validations/transaction';
+import type { z } from 'zod';
 import { createTransactionAction, updateTransactionAction, deleteTransactionAction } from '@/actions/transaction.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -29,6 +30,9 @@ interface Transaction {
   updatedByName?: string | null;
 }
 
+const isInternalTag = (tag: string) => tag.startsWith('__pft:');
+const isGoalTransaction = (tx: Transaction) => tx.tags.includes('__pft:goal-transfer');
+
 interface TransactionPageClientProps {
   initialTransactions: Transaction[];
   categories: Category[];
@@ -42,6 +46,8 @@ interface TransactionPageClientProps {
   dateTo: string;
 }
 
+type TransactionFormValues = z.input<typeof transactionSchema>;
+
 export default function TransactionPageClient({
   initialTransactions, categories, accounts, total, pages, currentPage,
   totalIncome, totalExpense, dateFrom, dateTo
@@ -51,17 +57,19 @@ export default function TransactionPageClient({
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
+    ? session.user.currency
+    : 'USD';
 
-  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionInput>({
-    resolver: zodResolver(transactionSchema) as any,
+  const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionFormValues, unknown, TransactionInput>({
+    resolver: zodResolver(transactionSchema),
     defaultValues: { type: 'EXPENSE', amount: 0, tags: [], date: new Date().toISOString().split('T')[0] },
   });
 
   const selectedType = watch('type');
   const filteredCategories = categories.filter(c => c.type === selectedType);
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: TransactionInput) => {
     const formData = new FormData();
     Object.entries(data).forEach(([key, value]) => {
       if (key === 'tags') {
@@ -89,7 +97,7 @@ export default function TransactionPageClient({
 
   const handleEdit = (tx: Transaction) => {
     setEditingTransaction(tx);
-    setValue('type', tx.type as any);
+    setValue('type', tx.type === 'INCOME' ? 'INCOME' : 'EXPENSE');
     setValue('amount', Number(tx.amount));
     setValue('description', tx.description);
     setValue('accountId', tx.account.id);
@@ -213,9 +221,9 @@ export default function TransactionPageClient({
                     {tx.category.name} · {tx.account.name} · {formatDate(tx.date)}
                   </p>
                   
-                  {tx.tags.length > 0 && (
+                  {tx.tags.filter(tag => !isInternalTag(tag)).length > 0 && (
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      {tx.tags.map(tag => <Badge key={tag} variant="default">{tag}</Badge>)}
+                      {tx.tags.filter(tag => !isInternalTag(tag)).map(tag => <Badge key={tag} variant="default">{tag}</Badge>)}
                     </div>
                   )}
                   
@@ -239,13 +247,15 @@ export default function TransactionPageClient({
                   {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
                 </p>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button
-                    onClick={() => handleEdit(tx)}
-                    className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
-                    title="Edit Transaction"
-                  >
-                    <Edit2 className="h-4 w-4" />
-                  </button>
+                  {!isGoalTransaction(tx) && (
+                    <button
+                      onClick={() => handleEdit(tx)}
+                      className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
+                      title="Edit Transaction"
+                    >
+                      <Edit2 className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => handleDelete(tx.id)}
                     className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
@@ -258,13 +268,15 @@ export default function TransactionPageClient({
 
               {/* Mobile Actions */}
               <div className="sm:hidden flex items-center justify-end gap-2 pt-3 mt-1 border-t border-slate-100 dark:border-slate-700/50">
-                <button
-                  onClick={() => handleEdit(tx)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                >
-                  <Edit2 className="h-3.5 w-3.5" />
-                  Edit
-                </button>
+                {!isGoalTransaction(tx) && (
+                  <button
+                    onClick={() => handleEdit(tx)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                  >
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Edit
+                  </button>
+                )}
                 <button
                   onClick={() => handleDelete(tx.id)}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors"

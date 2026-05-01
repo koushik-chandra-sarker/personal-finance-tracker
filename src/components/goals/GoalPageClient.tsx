@@ -5,12 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { goalSchema, type GoalInput } from '@/lib/validations/goal';
+import type { z } from 'zod';
 import { Plus, Trash2, Target, DollarSign, MinusCircle, History, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { formatCurrency, getPercentage } from '@/lib/utils';
 import { formatDistanceToNow, format } from 'date-fns';
 import { createGoalAction, contributeToGoalAction, deductFromGoalAction, deleteGoalAction } from '@/actions/goal.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Loader from '@/components/ui/Loader';
@@ -30,24 +32,39 @@ interface Goal {
   progress: GoalProgress[];
 }
 
-export default function GoalPageClient({ goals }: { goals: Goal[] }) {
+interface Account {
+  id: string;
+  name: string;
+  balance: unknown;
+}
+
+type GoalFormValues = z.input<typeof goalSchema>;
+
+export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; accounts: Account[] }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [contributeGoalId, setContributeGoalId] = useState<string | null>(null);
   const [deductGoalId, setDeductGoalId] = useState<string | null>(null);
   const [historyGoalId, setHistoryGoalId] = useState<string | null>(null);
+  const [selectedAccountId, setSelectedAccountId] = useState('');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
+    ? session.user.currency
+    : 'USD';
+  const accountOptions = accounts.map((account) => ({
+    value: account.id,
+    label: `${account.name} (${formatCurrency(Number(account.balance), userCurrency)})`,
+  }));
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<GoalInput>({
-    resolver: zodResolver(goalSchema) as any,
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<GoalFormValues, unknown, GoalInput>({
+    resolver: zodResolver(goalSchema),
     defaultValues: { targetAmount: 0 },
   });
 
-  const onSubmit = async (data: any) => {
+  const onSubmit = async (data: GoalInput) => {
     const formData = new FormData();
     Object.entries(data).forEach(([k, v]) => formData.set(k, String(v)));
     startTransition(async () => {
@@ -58,30 +75,54 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
     });
   };
 
+  const resetTransferFields = () => {
+    setAmount('');
+    setDescription('');
+    setSelectedAccountId('');
+  };
+
+  const openContribute = (goalId: string) => {
+    resetTransferFields();
+    setSelectedAccountId(accounts[0]?.id || '');
+    setContributeGoalId(goalId);
+  };
+
+  const openDeduct = (goalId: string) => {
+    resetTransferFields();
+    setSelectedAccountId(accounts[0]?.id || '');
+    setDeductGoalId(goalId);
+  };
+
+  const closeTransferModal = () => {
+    setContributeGoalId(null);
+    setDeductGoalId(null);
+    resetTransferFields();
+  };
+
   const handleContribute = () => {
-    if (!contributeGoalId || !amount) return;
+    if (!contributeGoalId || !amount || !selectedAccountId) return;
     const formData = new FormData();
+    formData.set('accountId', selectedAccountId);
     formData.set('amount', amount);
     formData.set('description', description);
     startTransition(async () => {
       await contributeToGoalAction(contributeGoalId, formData);
       setContributeGoalId(null);
-      setAmount('');
-      setDescription('');
+      resetTransferFields();
       router.refresh();
     });
   };
 
   const handleDeduct = () => {
-    if (!deductGoalId || !amount) return;
+    if (!deductGoalId || !amount || !selectedAccountId) return;
     const formData = new FormData();
+    formData.set('accountId', selectedAccountId);
     formData.set('amount', amount);
     formData.set('description', description);
     startTransition(async () => {
       await deductFromGoalAction(deductGoalId, formData);
       setDeductGoalId(null);
-      setAmount('');
-      setDescription('');
+      resetTransferFields();
       router.refresh();
     });
   };
@@ -155,11 +196,11 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
                   
                   <div className="flex flex-wrap justify-center gap-2 pt-2">
                     {!goal.isCompleted && (
-                      <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setContributeGoalId(goal.id)}>
+                      <Button size="sm" variant="outline" className="h-8 px-2" disabled={accounts.length === 0} onClick={() => openContribute(goal.id)}>
                         <DollarSign className="h-3 w-3 mr-1" /> Add
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" className="h-8 px-2 text-red-500 hover:text-red-600 dark:text-red-400" onClick={() => setDeductGoalId(goal.id)}>
+                    <Button size="sm" variant="outline" className="h-8 px-2 text-red-500 hover:text-red-600 dark:text-red-400" disabled={accounts.length === 0} onClick={() => openDeduct(goal.id)}>
                       <MinusCircle className="h-3 w-3 mr-1" /> Take
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setHistoryGoalId(goal.id)}>
@@ -189,8 +230,15 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
       </Modal>
 
       {/* Contribute Modal */}
-      <Modal isOpen={!!contributeGoalId} onClose={() => { setContributeGoalId(null); setAmount(''); setDescription(''); }} title="Add Contribution">
+      <Modal isOpen={!!contributeGoalId} onClose={closeTransferModal} title="Add Contribution">
         <div className="space-y-4">
+          <Select
+            id="contributeAccount"
+            label="Account"
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            options={accountOptions}
+          />
           <Input
             id="contributeAmount"
             label="Amount"
@@ -207,13 +255,20 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Monthly saving"
           />
-          <Button onClick={handleContribute} className="w-full" isLoading={isPending}>Add Contribution</Button>
+          <Button onClick={handleContribute} className="w-full" isLoading={isPending} disabled={!amount || !selectedAccountId}>Add Contribution</Button>
         </div>
       </Modal>
 
       {/* Deduct Modal */}
-      <Modal isOpen={!!deductGoalId} onClose={() => { setDeductGoalId(null); setAmount(''); setDescription(''); }} title="Withdraw Funds">
+      <Modal isOpen={!!deductGoalId} onClose={closeTransferModal} title="Withdraw Funds">
         <div className="space-y-4">
+          <Select
+            id="deductAccount"
+            label="Account"
+            value={selectedAccountId}
+            onChange={(e) => setSelectedAccountId(e.target.value)}
+            options={accountOptions}
+          />
           <Input
             id="deductAmount"
             label="Amount"
@@ -230,7 +285,7 @@ export default function GoalPageClient({ goals }: { goals: Goal[] }) {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Unexpected expense"
           />
-          <Button onClick={handleDeduct} variant="outline" className="w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" isLoading={isPending}>Confirm Withdrawal</Button>
+          <Button onClick={handleDeduct} variant="outline" className="w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" isLoading={isPending} disabled={!amount || !selectedAccountId}>Confirm Withdrawal</Button>
         </div>
       </Modal>
 
