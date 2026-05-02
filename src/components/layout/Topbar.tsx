@@ -15,7 +15,7 @@ import {
 } from '@/actions/notification.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, DollarSign, CreditCard
+  RefreshCw, FileBarChart, Settings, X, DollarSign, CreditCard, Users, KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -32,6 +32,8 @@ const navItems = [
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/subscription', label: 'Subscription', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },
 ];
 
 type NotificationItem = {
@@ -52,6 +54,7 @@ export default function Topbar() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || session?.user?.role === 'ADMIN');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -274,7 +277,7 @@ export default function Topbar() {
               </button>
             </div>
             <nav className="space-y-1">
-              {navItems.map((item) => {
+              {visibleNavItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                   <Link

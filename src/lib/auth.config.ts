@@ -50,6 +50,7 @@ export const authConfig = {
         nextUrl.pathname.startsWith('/register') || 
         nextUrl.pathname.startsWith('/recovery-backdoor');
       const isProtectedRoute = nextUrl.pathname.startsWith('/dashboard') || 
+        nextUrl.pathname.startsWith('/admin') ||
         nextUrl.pathname.startsWith('/transactions') ||
         nextUrl.pathname.startsWith('/accounts') || 
         nextUrl.pathname.startsWith('/budgets') ||

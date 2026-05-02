@@ -2,11 +2,12 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, DollarSign, FileText,
-  CreditCard,
+  CreditCard, Users, KeyRound,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -22,11 +23,15 @@ const navItems = [
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/subscription', label: 'Subscription', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
+  const visibleNavItems = navItems.filter((item) => !item.adminOnly || session?.user?.role === 'ADMIN');
 
   return (
     <aside className={cn(
@@ -48,7 +53,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link
