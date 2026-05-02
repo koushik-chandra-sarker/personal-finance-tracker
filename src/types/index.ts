@@ -1,9 +1,35 @@
 import { type DefaultSession } from 'next-auth';
 
+export type UserRole = 'ADMIN' | 'USER';
+export type SubscriptionPlan = 'PRO';
+export type SubscriptionInterval = 'MONTHLY' | 'YEARLY';
+export type SubscriptionStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED';
+export type SubscriptionSource = 'SELF_SERVICE' | 'ADMIN_GRANT';
+
 declare module 'next-auth' {
+  interface User {
+    id: string;
+    currency?: string;
+    role?: UserRole;
+    subscriptionPlan?: SubscriptionPlan;
+    subscriptionInterval?: SubscriptionInterval | null;
+    subscriptionSource?: SubscriptionSource;
+    subscriptionStatus?: SubscriptionStatus;
+    subscriptionCurrentPeriodEnd?: string | null;
+    subscriptionCancelAtPeriodEnd?: boolean;
+  }
+
   interface Session {
     user: {
       id: string;
+      currency?: string;
+      role?: UserRole;
+      subscriptionPlan?: SubscriptionPlan;
+      subscriptionInterval?: SubscriptionInterval | null;
+      subscriptionSource?: SubscriptionSource;
+      subscriptionStatus?: SubscriptionStatus;
+      subscriptionCurrentPeriodEnd?: string | null;
+      subscriptionCancelAtPeriodEnd?: boolean;
     } & DefaultSession['user'];
   }
 }

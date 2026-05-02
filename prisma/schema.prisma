@@ -12,6 +12,7 @@ model User {
   name          String
   email         String                 @unique
   password      String
+  role          UserRole               @default(USER)
   currency      String                 @default("USD")
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
@@ -25,7 +26,31 @@ model User {
   recurringTxns RecurringTransaction[]
   joinedShares  SharedAccess[]         @relation("JoinedShares")
   ownedShares   SharedAccess[]         @relation("OwnedShares")
+  grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
+  subscription  UserSubscription?
   transactions  Transaction[]
+}
+
+model UserSubscription {
+  id                     String                @id @default(cuid())
+  userId                 String                @unique
+  plan                   SubscriptionPlan      @default(PRO)
+  interval               SubscriptionInterval?
+  source                 SubscriptionSource  @default(SELF_SERVICE)
+  status                 SubscriptionStatus    @default(ACTIVE)
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean               @default(false)
+  grantedById            String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  createdAt              DateTime              @default(now())
+  updatedAt              DateTime              @updatedAt
+  grantedBy              User?                 @relation("GrantedSubscriptions", fields: [grantedById], references: [id], onDelete: SetNull)
+  user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([plan, status])
 }
 
 model SharedAccess {
@@ -269,6 +294,32 @@ enum AccessLevel {
   NONE
   VIEW
   EDIT
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum SubscriptionPlan {
+  PRO
+}
+
+enum SubscriptionSource {
+  SELF_SERVICE
+  ADMIN_GRANT
+}
+
+enum SubscriptionInterval {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
 }
 
 enum AccountType {

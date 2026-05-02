@@ -1,0 +1,104 @@
+import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
+import type { SubscriptionPlan, UserRole } from '@prisma/client';
+
+const ROLE_RANK: Record<UserRole, number> = {
+  USER: 1,
+  ADMIN: 2,
+};
+
+const PLAN_RANK: Record<SubscriptionPlan, number> = {
+  PRO: 1,
+};
+
+export async function getCurrentUserAccess() {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      id: true,
+      role: true,
+      subscription: {
+        select: {
+          plan: true,
+          interval: true,
+          source: true,
+          status: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          cancelAtPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  if (!user) throw new Error('Unauthorized');
+  return {
+    id: user.id,
+    role: user.role,
+    subscriptionPlan: user.subscription?.plan || null,
+    subscriptionInterval: user.subscription?.interval || null,
+    subscriptionSource: user.subscription?.source || null,
+    subscriptionStatus: user.subscription?.status || 'ACTIVE',
+    subscriptionCurrentPeriodStart: user.subscription?.currentPeriodStart || null,
+    subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd || null,
+    subscriptionCancelAtPeriodEnd: user.subscription?.cancelAtPeriodEnd || false,
+  };
+}
+
+export async function requireRole(requiredRole: UserRole): Promise<void> {
+  const user = await getCurrentUserAccess();
+  if (ROLE_RANK[user.role] < ROLE_RANK[requiredRole]) {
+    throw new Error(`You need ${requiredRole} access to perform this action.`);
+  }
+}
+
+export async function requireSubscriptionPlan(userId: string, requiredPlan: SubscriptionPlan): Promise<void> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      subscription: {
+        select: { plan: true, status: true, currentPeriodEnd: true },
+      },
+    },
+  });
+
+  if (!user) throw new Error('Unauthorized');
+  if (user.role === 'ADMIN') return;
+
+  const plan = user.subscription?.plan || null;
+  const status = user.subscription?.status || 'ACTIVE';
+  const hasPlan = plan ? PLAN_RANK[plan] >= PLAN_RANK[requiredPlan] : false;
+  const isActive = status === 'ACTIVE' || status === 'TRIALING';
+  const isExpired = user.subscription?.currentPeriodEnd ? user.subscription.currentPeriodEnd < new Date() : false;
+
+  if (!hasPlan || !isActive || isExpired) {
+    throw new Error(`${requiredPlan} subscription required for this feature.`);
+  }
+}
+
+export async function hasActiveSubscription(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      subscription: {
+        select: {
+          status: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  if (!user) return false;
+  if (user.role === 'ADMIN') return true;
+  if (!user.subscription) return false;
+
+  const isActive = user.subscription.status === 'ACTIVE' || user.subscription.status === 'TRIALING';
+  const isExpired = user.subscription.currentPeriodEnd ? user.subscription.currentPeriodEnd < new Date() : false;
+  return isActive && !isExpired;
+}

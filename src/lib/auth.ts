@@ -20,13 +20,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.data.email },
+          include: { subscription: true },
         });
         if (!user) return null;
 
         const passwordMatch = await bcrypt.compare(parsed.data.password, user.password);
         if (!passwordMatch) return null;
 
-        return { id: user.id, email: user.email, name: user.name, currency: user.currency };
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          currency: user.currency,
+          role: user.role,
+          subscriptionPlan: user.subscription?.plan,
+          subscriptionInterval: user.subscription?.interval || null,
+          subscriptionSource: user.subscription?.source,
+          subscriptionStatus: user.subscription?.status || 'ACTIVE',
+          subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd?.toISOString() || null,
+          subscriptionCancelAtPeriodEnd: user.subscription?.cancelAtPeriodEnd || false,
+        };
       },
     }),
   ],

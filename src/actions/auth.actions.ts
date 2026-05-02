@@ -42,12 +42,14 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
   }
 
   const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
+  const userCount = await prisma.user.count();
 
   const user = await prisma.user.create({
     data: {
       name: parsed.data.name,
       email: parsed.data.email,
       password: hashedPassword,
+      role: userCount === 0 ? 'ADMIN' : 'USER',
     },
   });
 
