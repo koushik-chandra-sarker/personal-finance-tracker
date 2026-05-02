@@ -161,6 +161,7 @@ export default function NotesPageClient({
   userCurrency: string;
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [detailsNote, setDetailsNote] = useState<FinancialNote | null>(null);
   const [editingNote, setEditingNote] = useState<FinancialNote | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [selectedMode, setSelectedMode] = useState<NoteMode>('SIMPLE');
@@ -259,6 +260,7 @@ export default function NotesPageClient({
   };
 
   const openEditModal = (note: FinancialNote) => {
+    setDetailsNote(null);
     setEditingNote(note);
     setMessage(null);
     setSelectedMode(note.mode);
@@ -284,6 +286,10 @@ export default function NotesPageClient({
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingNote(null);
+  };
+
+  const openDetailsModal = (note: FinancialNote) => {
+    setDetailsNote(note);
   };
 
   const showMessage = (type: 'success' | 'error', text: string) => {
@@ -328,7 +334,10 @@ export default function NotesPageClient({
     startTransition(async () => {
       const result = await deleteFinancialNoteAction(id);
       showMessage(result.success ? 'success' : 'error', result.message);
-      if (result.success) router.refresh();
+      if (result.success) {
+        setDetailsNote(prev => prev?.id === id ? null : prev);
+        router.refresh();
+      }
     });
   };
 
@@ -437,128 +446,217 @@ export default function NotesPageClient({
           action={canEdit ? <Button onClick={openCreateModal}><Plus className="h-4 w-4" /> Add Note</Button> : undefined}
         />
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {filteredNotes.map((note) => {
-            const dueState = getDueState(note);
-            const isExtended = note.mode === 'EXTENDED';
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[980px] text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-400">
+                <tr>
+                  <th className="px-4 py-3 font-semibold">Note</th>
+                  <th className="px-4 py-3 font-semibold">Type</th>
+                  <th className="px-4 py-3 font-semibold">Person / Asset</th>
+                  <th className="px-4 py-3 font-semibold">Amount</th>
+                  <th className="px-4 py-3 font-semibold">Due</th>
+                  <th className="px-4 py-3 font-semibold">Status</th>
+                  <th className="px-4 py-3 font-semibold">Updated</th>
+                  {canEdit && <th className="px-4 py-3 text-right font-semibold">Actions</th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
+                {filteredNotes.map((note) => {
+                  const dueState = getDueState(note);
+                  const isExtended = note.mode === 'EXTENDED';
 
-            return (
-              <article
-                key={note.id}
-                className={cn(
-                  'rounded-2xl border bg-white dark:bg-slate-800/50 p-5 transition-all',
-                  dueState === 'overdue'
-                    ? 'border-rose-200 dark:border-rose-500/30'
-                    : dueState === 'soon'
-                      ? 'border-amber-200 dark:border-amber-500/30'
-                      : 'border-slate-200 dark:border-slate-700/50'
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant={isExtended ? 'info' : 'default'}>{isExtended ? 'Extended' : 'Simple'}</Badge>
-                      {note.status && <Badge variant={statusVariant(note.status)}>{statusLabels[note.status]}</Badge>}
-                      {dueState === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> Overdue</Badge>}
-                      {dueState === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> Due soon</Badge>}
-                    </div>
-                    <h2 className="mt-3 text-lg font-semibold text-slate-900 dark:text-white break-words">{note.title}</h2>
-                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words">{note.description}</p>
-                  </div>
-
-                  {canEdit && (
-                    <div className="flex shrink-0 gap-1">
-                      <button
-                        onClick={() => openEditModal(note)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
-                        aria-label="Edit note"
-                      >
-                        <Edit2 className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(note.id)}
-                        className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-                        aria-label="Delete note"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {isExtended && (
-                  <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                    {note.counterpartyName && (
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <HandCoins className="h-4 w-4 text-slate-400" />
-                        <span className="truncate">{note.counterpartyName}</span>
-                      </div>
-                    )}
-                    {note.valueType && (
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Package className="h-4 w-4 text-slate-400" />
-                        <span>{valueTypeLabels[note.valueType]}</span>
-                      </div>
-                    )}
-                    {note.amount !== null && (
-                      <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
-                        <Banknote className="h-4 w-4 text-emerald-500" />
-                        <span>{formatCurrency(Number(note.amount), userCurrency)}</span>
-                      </div>
-                    )}
-                    {note.assetName && (
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Package className="h-4 w-4 text-indigo-500" />
-                        <span className="truncate">{note.assetName}</span>
-                      </div>
-                    )}
-                    {note.providedDate && (
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <CalendarClock className="h-4 w-4 text-slate-400" />
-                        <span>Provided {formatDate(note.providedDate)}</span>
-                      </div>
-                    )}
-                    {note.expectedReturnDate && (
-                      <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                        <Clock3 className="h-4 w-4 text-slate-400" />
-                        <span>Expected {formatDate(note.expectedReturnDate)}</span>
-                      </div>
-                    )}
-                    {note.returnedDate && (
-                      <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
-                        <CheckCircle2 className="h-4 w-4" />
-                        <span>Returned {formatDate(note.returnedDate)}</span>
-                      </div>
-                    )}
-                    {canEdit && note.status && (
-                      <Select
-                        id={`status-${note.id}`}
-                        className="py-2"
-                        options={noteStatusOptions}
-                        value={note.status}
-                        onChange={(event) => handleStatusChange(note, event.target.value as NoteStatus)}
-                      />
-                    )}
-                  </div>
-                )}
-
-                {note.assetDetails && (
-                  <p className="mt-3 rounded-xl bg-slate-50 dark:bg-slate-900/50 p-3 text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap break-words">
-                    {note.assetDetails}
-                  </p>
-                )}
-
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap gap-1.5">
-                    {note.tags.map(tag => <Badge key={tag} variant="default">#{tag}</Badge>)}
-                  </div>
-                  <p className="text-xs text-slate-400 dark:text-slate-500">Updated {formatRelativeDate(note.updatedAt)}</p>
-                </div>
-              </article>
-            );
-          })}
+                  return (
+                    <tr
+                      key={note.id}
+                      onClick={() => openDetailsModal(note)}
+                      className={cn(
+                        'cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-white/5',
+                        dueState === 'overdue' && 'bg-rose-50/50 dark:bg-rose-500/5',
+                        dueState === 'soon' && 'bg-amber-50/50 dark:bg-amber-500/5'
+                      )}
+                    >
+                      <td className="px-4 py-3 align-top">
+                        <div className="max-w-[24rem]">
+                          <p className="font-medium text-slate-900 dark:text-white truncate">{note.title}</p>
+                          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{note.description}</p>
+                          {note.tags.length > 0 && (
+                            <div className="mt-2 flex flex-wrap gap-1">
+                              {note.tags.slice(0, 3).map(tag => <Badge key={tag} variant="default">#{tag}</Badge>)}
+                              {note.tags.length > 3 && <Badge variant="default">+{note.tags.length - 3}</Badge>}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        <div className="space-y-1.5">
+                          <Badge variant={isExtended ? 'info' : 'default'}>{isExtended ? 'Extended' : 'Simple'}</Badge>
+                          {note.valueType && <p className="text-xs text-slate-500 dark:text-slate-400">{valueTypeLabels[note.valueType]}</p>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top text-slate-600 dark:text-slate-300">
+                        <div className="max-w-[14rem] space-y-1">
+                          <p className="truncate">{note.counterpartyName || '-'}</p>
+                          {note.assetName && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{note.assetName}</p>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 align-top font-medium text-slate-900 dark:text-white">
+                        {note.amount !== null ? formatCurrency(Number(note.amount), userCurrency) : '-'}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {note.expectedReturnDate ? (
+                          <div className="space-y-1">
+                            <p className="text-slate-700 dark:text-slate-200">{formatDate(note.expectedReturnDate)}</p>
+                            {dueState === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> Overdue</Badge>}
+                            {dueState === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> Due soon</Badge>}
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top">
+                        {canEdit && note.status ? (
+                          <div onClick={(event) => event.stopPropagation()}>
+                            <Select
+                              id={`status-${note.id}`}
+                              className="py-2"
+                              options={noteStatusOptions}
+                              value={note.status}
+                              onChange={(event) => handleStatusChange(note, event.target.value as NoteStatus)}
+                            />
+                          </div>
+                        ) : note.status ? (
+                          <Badge variant={statusVariant(note.status)}>{statusLabels[note.status]}</Badge>
+                        ) : (
+                          <span className="text-slate-400">-</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 align-top text-xs text-slate-500 dark:text-slate-400">
+                        {formatRelativeDate(note.updatedAt)}
+                      </td>
+                      {canEdit && (
+                        <td className="px-4 py-3 align-top">
+                          <div className="flex justify-end gap-1">
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openEditModal(note);
+                              }}
+                              className="rounded-lg p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
+                              aria-label="Edit note"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                handleDelete(note.id);
+                              }}
+                              className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                              aria-label="Delete note"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
+
+      <Modal isOpen={!!detailsNote} onClose={() => setDetailsNote(null)} title={detailsNote?.title || 'Note Details'} className="max-w-2xl">
+        {detailsNote && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap gap-2">
+              <Badge variant={detailsNote.mode === 'EXTENDED' ? 'info' : 'default'}>{detailsNote.mode === 'EXTENDED' ? 'Extended' : 'Simple'}</Badge>
+              {detailsNote.status && <Badge variant={statusVariant(detailsNote.status)}>{statusLabels[detailsNote.status]}</Badge>}
+              {getDueState(detailsNote) === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> Overdue</Badge>}
+              {getDueState(detailsNote) === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> Due soon</Badge>}
+            </div>
+
+            <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
+              {detailsNote.description}
+            </p>
+
+            {detailsNote.mode === 'EXTENDED' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                {detailsNote.counterpartyName && (
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <HandCoins className="h-4 w-4 text-slate-400" />
+                    <span>{detailsNote.counterpartyName}</span>
+                  </div>
+                )}
+                {detailsNote.valueType && (
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <Package className="h-4 w-4 text-slate-400" />
+                    <span>{valueTypeLabels[detailsNote.valueType]}</span>
+                  </div>
+                )}
+                {detailsNote.amount !== null && (
+                  <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
+                    <Banknote className="h-4 w-4 text-emerald-500" />
+                    <span>{formatCurrency(Number(detailsNote.amount), userCurrency)}</span>
+                  </div>
+                )}
+                {detailsNote.assetName && (
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <Package className="h-4 w-4 text-indigo-500" />
+                    <span>{detailsNote.assetName}</span>
+                  </div>
+                )}
+                {detailsNote.providedDate && (
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <CalendarClock className="h-4 w-4 text-slate-400" />
+                    <span>Provided {formatDate(detailsNote.providedDate)}</span>
+                  </div>
+                )}
+                {detailsNote.expectedReturnDate && (
+                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                    <Clock3 className="h-4 w-4 text-slate-400" />
+                    <span>Expected {formatDate(detailsNote.expectedReturnDate)}</span>
+                  </div>
+                )}
+                {detailsNote.returnedDate && (
+                  <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Returned {formatDate(detailsNote.returnedDate)}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {detailsNote.assetDetails && (
+              <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
+                <p className="mb-1 font-medium text-slate-900 dark:text-white">Asset Details</p>
+                <p className="whitespace-pre-wrap break-words">{detailsNote.assetDetails}</p>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700/50">
+              <div className="flex flex-wrap gap-1.5">
+                {detailsNote.tags.map(tag => <Badge key={tag} variant="default">#{tag}</Badge>)}
+              </div>
+              <p className="text-xs text-slate-400 dark:text-slate-500">Updated {formatRelativeDate(detailsNote.updatedAt)}</p>
+            </div>
+
+            {canEdit && (
+              <div className="flex justify-end gap-2">
+                <Button type="button" variant="outline" onClick={() => openEditModal(detailsNote)}>
+                  <Edit2 className="h-4 w-4" /> Edit
+                </Button>
+                <Button type="button" variant="danger" onClick={() => handleDelete(detailsNote.id)}>
+                  <Trash2 className="h-4 w-4" /> Delete
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
 
       <Modal isOpen={isModalOpen} onClose={closeModal} title={editingNote ? 'Edit Note' : 'Add Note'} className="max-w-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
