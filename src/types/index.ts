@@ -37,6 +37,19 @@ export type TransactionFilters = {
   sortBy?: string;
 };
 
+export type FinancialNoteFilters = {
+  search?: string;
+  mode?: 'SIMPLE' | 'EXTENDED';
+  status?: 'OPEN' | 'PARTIAL' | 'RETURNED' | 'CANCELLED';
+  valueType?: 'MONEY' | 'ASSET' | 'MONEY_AND_ASSET' | 'OTHER';
+  tags?: string[];
+  dueFrom?: string;
+  dueTo?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+};
+
 export type MonthlySummary = {
   totalIncome: number;
   totalExpense: number;

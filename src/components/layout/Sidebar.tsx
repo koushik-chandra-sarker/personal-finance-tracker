@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
-  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, DollarSign
+  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, DollarSign, FileText
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -15,6 +15,7 @@ const navItems = [
   { href: '/accounts', label: 'Accounts', icon: Wallet },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },

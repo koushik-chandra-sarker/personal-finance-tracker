@@ -15,6 +15,7 @@ export const authConfig = {
         nextUrl.pathname.startsWith('/accounts') || 
         nextUrl.pathname.startsWith('/budgets') ||
         nextUrl.pathname.startsWith('/goals') || 
+        nextUrl.pathname.startsWith('/notes') ||
         nextUrl.pathname.startsWith('/recurring') ||
         nextUrl.pathname.startsWith('/reports') || 
         nextUrl.pathname.startsWith('/settings');

@@ -18,6 +18,7 @@ model User {
   accounts      Account[]
   budgets       Budget[]
   categories    Category[]
+  financialNotes FinancialNote[]
   goals         Goal[]
   notifications Notification[]
   notificationPreference NotificationPreference?
@@ -227,6 +228,33 @@ model NotificationPreference {
   user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model FinancialNote {
+  id                 String                  @id @default(cuid())
+  userId             String
+  mode               FinancialNoteMode       @default(SIMPLE)
+  title              String
+  description        String
+  tags               String[]                @default([])
+  counterpartyName   String?
+  valueType          FinancialNoteValueType?
+  amount             Decimal?                @db.Decimal(12, 2)
+  assetName          String?
+  assetDetails       String?
+  providedDate       DateTime?
+  expectedReturnDate DateTime?
+  returnedDate       DateTime?
+  status             FinancialNoteStatus?
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  createdById        String?
+  updatedById        String?
+  user               User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, expectedReturnDate])
+  @@index([userId, status])
+}
+
 enum Feature {
   TRANSACTIONS
   ACCOUNTS
@@ -234,6 +262,7 @@ enum Feature {
   GOALS
   REPORTS
   SETTINGS
+  NOTES
 }
 
 enum AccessLevel {
@@ -253,6 +282,25 @@ enum AccountType {
 enum CategoryType {
   INCOME
   EXPENSE
+}
+
+enum FinancialNoteMode {
+  SIMPLE
+  EXTENDED
+}
+
+enum FinancialNoteValueType {
+  MONEY
+  ASSET
+  MONEY_AND_ASSET
+  OTHER
+}
+
+enum FinancialNoteStatus {
+  OPEN
+  PARTIAL
+  RETURNED
+  CANCELLED
 }
 
 enum Frequency {

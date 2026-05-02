@@ -12,7 +12,7 @@ import {
   updateFeatureAccessAction 
 } from '@/actions/share.actions';
 
-const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'REPORTS', 'SETTINGS'];
+const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'NOTES', 'REPORTS', 'SETTINGS'];
 
 export default function CollaboratorsList() {
   const [collaborators, setCollaborators] = useState<any[]>([]);
