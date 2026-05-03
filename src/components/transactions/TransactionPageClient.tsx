@@ -63,7 +63,7 @@ export default function TransactionPageClient({
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionFormValues, unknown, TransactionInput>({
     resolver: zodResolver(transactionSchema),
-    defaultValues: { type: 'EXPENSE', amount: 0, tags: [], date: new Date().toISOString().split('T')[0] },
+    defaultValues: { type: 'EXPENSE', tags: [], date: new Date().toISOString().split('T')[0] },
   });
 
   const selectedType = watch('type');
