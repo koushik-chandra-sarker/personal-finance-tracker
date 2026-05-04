@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { auth, signIn } from '@/lib/auth';
 import { registerSchema, changePasswordSchema, backdoorResetSchema } from '@/lib/validations/auth';
+import { assertRecoveryBackdoorEnabled } from '@/lib/recovery-backdoor';
 import type { ActionResponse } from '@/types';
 
 const DEFAULT_CATEGORIES = [
@@ -126,6 +127,12 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
 }
 
 export async function backdoorResetPasswordAction(formData: FormData): Promise<ActionResponse> {
+  try {
+    assertRecoveryBackdoorEnabled();
+  } catch {
+    return { success: false, message: 'Recovery mode is disabled.' };
+  }
+
   const raw = {
     email: formData.get('email') as string,
     newPassword: formData.get('newPassword') as string,

@@ -13,6 +13,7 @@
 - Server Actions live in `src/actions`; they validate auth/access, parse `FormData` with Zod, call service functions, then `revalidatePath`.
 - Prisma business logic lives in `src/services`.
 - Shared helpers live in `src/lib`; common app types are in `src/types/index.ts`.
+- UI work must be mobile-compatible by default. Check small-screen layouts for stacked controls, full-width touch targets, readable cards/lists, and no horizontal overflow.
 
 ## Routes
 - Auth routes: `/login`, `/register`, `/recovery-backdoor`.

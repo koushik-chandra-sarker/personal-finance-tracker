@@ -5,8 +5,33 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
 import type { ActionResponse } from '@/types';
-import type { SubscriptionInterval, UserRole } from '@prisma/client';
+import type { Prisma, SubscriptionInterval, SubscriptionStatus, UserRole } from '@prisma/client';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
+
+export type AdminUserAccessFilter = 'all' | 'admin' | 'subscribed' | 'no_access';
+export type AdminUserSort = 'createdAt_desc' | 'createdAt_asc' | 'name_asc' | 'email_asc';
+
+export type AdminUsersQuery = {
+  q?: string;
+  role?: UserRole | 'all';
+  access?: AdminUserAccessFilter;
+  status?: SubscriptionStatus | 'MISSING' | 'all';
+  packageId?: string | 'all';
+  sort?: AdminUserSort;
+  page?: number;
+  limit?: number;
+};
+
+export type AdminUsersPageFilters = {
+  q: string;
+  role: UserRole | 'all';
+  access: AdminUserAccessFilter;
+  status: SubscriptionStatus | 'MISSING' | 'all';
+  packageId: string | 'all';
+  sort: AdminUserSort;
+  page: number;
+  limit: number;
+};
 
 export type AdminUserRow = {
   id: string;
@@ -21,6 +46,21 @@ export type AdminUserRow = {
     currentPeriodEnd: string | null;
     package: { id: string; name: string } | null;
   } | null;
+};
+
+export type AdminUsersPageResult = {
+  users: AdminUserRow[];
+  total: number;
+  page: number;
+  limit: number;
+  pages: number;
+  filters: AdminUsersPageFilters;
+  stats: {
+    totalUsers: number;
+    admins: number;
+    withAccess: number;
+    noAccess: number;
+  };
 };
 
 export type AdminSubscriptionPackageRow = SubscriptionPackageRow & {
@@ -99,6 +139,73 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function normalizeAdminUsersQuery(query: AdminUsersQuery = {}): AdminUsersPageFilters {
+  const page = Number.isInteger(query.page) && query.page && query.page > 0 ? query.page : 1;
+  const limit = Number.isInteger(query.limit) && query.limit && query.limit > 0 ? Math.min(query.limit, 100) : 20;
+  const role: UserRole | 'all' = query.role === 'ADMIN' || query.role === 'USER' ? query.role : 'all';
+  const access = query.access === 'admin' || query.access === 'subscribed' || query.access === 'no_access' ? query.access : 'all';
+  const statusValues: Array<SubscriptionStatus | 'MISSING'> = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED', 'MISSING'];
+  const status = query.status && statusValues.includes(query.status as SubscriptionStatus | 'MISSING') ? query.status : 'all';
+  const sortValues: AdminUserSort[] = ['createdAt_desc', 'createdAt_asc', 'name_asc', 'email_asc'];
+  const sort = query.sort && sortValues.includes(query.sort) ? query.sort : 'createdAt_desc';
+  const packageId = query.packageId && query.packageId !== 'all' ? query.packageId : 'all';
+
+  return {
+    q: (query.q || '').trim(),
+    role,
+    access,
+    status,
+    packageId,
+    sort,
+    page,
+    limit,
+  };
+}
+
+function buildAdminUsersWhere(filters: ReturnType<typeof normalizeAdminUsersQuery>): Prisma.UserWhereInput {
+  const and: Prisma.UserWhereInput[] = [];
+
+  if (filters.q) {
+    and.push({
+      OR: [
+        { name: { contains: filters.q, mode: 'insensitive' } },
+        { email: { contains: filters.q, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  if (filters.role !== 'all') {
+    and.push({ role: filters.role });
+  }
+
+  if (filters.access === 'admin') {
+    and.push({ role: 'ADMIN' });
+  } else if (filters.access === 'subscribed') {
+    and.push({ subscription: { isNot: null } });
+  } else if (filters.access === 'no_access') {
+    and.push({ role: 'USER', subscription: { is: null } });
+  }
+
+  if (filters.status === 'MISSING') {
+    and.push({ role: 'USER', subscription: { is: null } });
+  } else if (filters.status !== 'all') {
+    and.push({ subscription: { is: { status: filters.status } } });
+  }
+
+  if (filters.packageId !== 'all') {
+    and.push({ subscription: { is: { packageId: filters.packageId } } });
+  }
+
+  return and.length > 0 ? { AND: and } : {};
+}
+
+function buildAdminUsersOrderBy(sort: AdminUserSort): Prisma.UserOrderByWithRelationInput[] {
+  if (sort === 'createdAt_asc') return [{ createdAt: 'asc' }];
+  if (sort === 'name_asc') return [{ name: 'asc' }, { createdAt: 'desc' }];
+  if (sort === 'email_asc') return [{ email: 'asc' }, { createdAt: 'desc' }];
+  return [{ createdAt: 'desc' }];
 }
 
 function parsePackageFormData(formData: FormData): ActionResponse<{
@@ -185,6 +292,71 @@ export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
   });
 
   return users.map(serializeUser);
+}
+
+export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Promise<AdminUsersPageResult> {
+  await requireRole('ADMIN');
+
+  const filters = normalizeAdminUsersQuery(query);
+  const where = buildAdminUsersWhere(filters);
+  const orderBy = buildAdminUsersOrderBy(filters.sort);
+
+  const [total, totalUsers, admins, withAccess, noAccess] = await prisma.$transaction([
+    prisma.user.count({ where }),
+    prisma.user.count(),
+    prisma.user.count({ where: { role: 'ADMIN' } }),
+    prisma.user.count({
+      where: {
+        OR: [
+          { role: 'ADMIN' },
+          { subscription: { isNot: null } },
+        ],
+      },
+    }),
+    prisma.user.count({ where: { role: 'USER', subscription: { is: null } } }),
+  ]);
+
+  const pages = Math.max(1, Math.ceil(total / filters.limit));
+  const page = Math.min(filters.page, pages);
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      role: true,
+      createdAt: true,
+      subscription: {
+        select: {
+          source: true,
+          status: true,
+          interval: true,
+          currentPeriodEnd: true,
+          package: {
+            select: { id: true, name: true },
+          },
+        },
+      },
+    },
+    where,
+    orderBy,
+    skip: (page - 1) * filters.limit,
+    take: filters.limit,
+  });
+
+  return {
+    users: users.map(serializeUser),
+    total,
+    page,
+    limit: filters.limit,
+    pages,
+    filters,
+    stats: {
+      totalUsers,
+      admins,
+      withAccess,
+      noAccess,
+    },
+  };
 }
 
 export async function getAdminSubscriptionPackagesAction(): Promise<AdminSubscriptionPackageRow[]> {

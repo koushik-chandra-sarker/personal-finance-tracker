@@ -6,6 +6,8 @@ This note captures recommended improvements for the current user management, adm
 
 The current recovery backdoor allows password reset by email without authentication. This should be removed, disabled outside local development, or replaced with a safer flow.
 
+Status: implemented as a development-only escape hatch. `/recovery-backdoor` now redirects to `/login` unless `NODE_ENV=development` and `ENABLE_RECOVERY_BACKDOOR=true`. The server action also checks the same guard before changing any password.
+
 Recommended options:
 
 - Use signed, single-use password reset tokens with expiration.
@@ -204,4 +206,3 @@ Recommended improvements:
 7. Add session invalidation with `sessionVersion`.
 8. Split admin roles or add admin permissions.
 9. Improve collaborator invitations and presets.
-
