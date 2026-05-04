@@ -1,10 +1,13 @@
 import type { NextAuthConfig } from 'next-auth';
-import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserRole } from '@/types';
+import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@/types';
 
 type SessionUpdate = {
   id?: string;
   currency?: string;
   role?: UserRole;
+  status?: UserStatus;
+  lastLoginAt?: string | null;
+  sessionVersion?: number;
   subscriptionPlan?: SubscriptionPlan;
   subscriptionInterval?: SubscriptionInterval | null;
   subscriptionPackageId?: string | null;
@@ -16,11 +19,13 @@ type SessionUpdate = {
 
 function hasActiveSessionAccess(user?: {
   role?: UserRole;
+  status?: UserStatus;
   subscriptionPlan?: SubscriptionPlan;
   subscriptionStatus?: SubscriptionStatus;
   subscriptionCurrentPeriodEnd?: string | null;
 }) {
   if (!user) return false;
+  if (user.status && user.status !== 'ACTIVE') return false;
   if (user.role === 'ADMIN') return true;
   if (user.subscriptionPlan !== 'PRO') return false;
   if (user.subscriptionStatus !== 'ACTIVE' && user.subscriptionStatus !== 'TRIALING') return false;
@@ -83,6 +88,9 @@ export const authConfig = {
         appToken.id = user.id;
         appToken.currency = user.currency;
         appToken.role = user.role;
+        appToken.status = user.status;
+        appToken.lastLoginAt = user.lastLoginAt;
+        appToken.sessionVersion = user.sessionVersion;
         appToken.subscriptionPlan = user.subscriptionPlan;
         appToken.subscriptionInterval = user.subscriptionInterval;
         appToken.subscriptionPackageId = user.subscriptionPackageId;
@@ -94,6 +102,9 @@ export const authConfig = {
       if (trigger === "update" && session) {
         const updatedSession = session as SessionUpdate;
         if (updatedSession.currency) appToken.currency = updatedSession.currency;
+        if (updatedSession.status) appToken.status = updatedSession.status;
+        if (updatedSession.lastLoginAt !== undefined) appToken.lastLoginAt = updatedSession.lastLoginAt;
+        if (updatedSession.sessionVersion !== undefined) appToken.sessionVersion = updatedSession.sessionVersion;
         if (updatedSession.subscriptionPlan) appToken.subscriptionPlan = updatedSession.subscriptionPlan;
         if (updatedSession.subscriptionInterval !== undefined) appToken.subscriptionInterval = updatedSession.subscriptionInterval;
         if (updatedSession.subscriptionPackageId !== undefined) appToken.subscriptionPackageId = updatedSession.subscriptionPackageId;
@@ -112,6 +123,9 @@ export const authConfig = {
         session.user.id = appToken.id;
         session.user.currency = appToken.currency;
         session.user.role = appToken.role;
+        session.user.status = appToken.status;
+        session.user.lastLoginAt = appToken.lastLoginAt;
+        session.user.sessionVersion = appToken.sessionVersion;
         session.user.subscriptionPlan = appToken.subscriptionPlan;
         session.user.subscriptionInterval = appToken.subscriptionInterval;
         session.user.subscriptionPackageId = appToken.subscriptionPackageId;

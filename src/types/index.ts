@@ -1,6 +1,7 @@
 import { type DefaultSession } from 'next-auth';
 
 export type UserRole = 'ADMIN' | 'USER';
+export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'INVITED' | 'DELETED';
 export type SubscriptionPlan = 'PRO';
 export type SubscriptionInterval = 'MONTHLY' | 'YEARLY';
 export type SubscriptionStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED';
@@ -11,6 +12,9 @@ declare module 'next-auth' {
     id: string;
     currency?: string;
     role?: UserRole;
+    status?: UserStatus;
+    lastLoginAt?: string | null;
+    sessionVersion?: number;
     subscriptionPlan?: SubscriptionPlan;
     subscriptionInterval?: SubscriptionInterval | null;
     subscriptionPackageId?: string | null;
@@ -25,6 +29,9 @@ declare module 'next-auth' {
       id: string;
       currency?: string;
       role?: UserRole;
+      status?: UserStatus;
+      lastLoginAt?: string | null;
+      sessionVersion?: number;
       subscriptionPlan?: SubscriptionPlan;
       subscriptionInterval?: SubscriptionInterval | null;
       subscriptionPackageId?: string | null;

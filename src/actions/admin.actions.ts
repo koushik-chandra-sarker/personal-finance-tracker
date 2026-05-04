@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
 import type { ActionResponse } from '@/types';
-import type { Prisma, SubscriptionInterval, SubscriptionStatus, UserRole } from '@prisma/client';
+import type { Prisma, SubscriptionInterval, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
 
 export type AdminUserAccessFilter = 'all' | 'admin' | 'subscribed' | 'no_access';
@@ -14,6 +14,7 @@ export type AdminUserSort = 'createdAt_desc' | 'createdAt_asc' | 'name_asc' | 'e
 export type AdminUsersQuery = {
   q?: string;
   role?: UserRole | 'all';
+  accountStatus?: UserStatus | 'all';
   access?: AdminUserAccessFilter;
   status?: SubscriptionStatus | 'MISSING' | 'all';
   packageId?: string | 'all';
@@ -25,6 +26,7 @@ export type AdminUsersQuery = {
 export type AdminUsersPageFilters = {
   q: string;
   role: UserRole | 'all';
+  accountStatus: UserStatus | 'all';
   access: AdminUserAccessFilter;
   status: SubscriptionStatus | 'MISSING' | 'all';
   packageId: string | 'all';
@@ -38,6 +40,9 @@ export type AdminUserRow = {
   name: string;
   email: string;
   role: UserRole;
+  status: UserStatus;
+  lastLoginAt: string | null;
+  lockedUntil: string | null;
   createdAt: string;
   subscription: {
     source: 'SELF_SERVICE' | 'ADMIN_GRANT';
@@ -57,7 +62,9 @@ export type AdminUsersPageResult = {
   filters: AdminUsersPageFilters;
   stats: {
     totalUsers: number;
+    active: number;
     admins: number;
+    suspended: number;
     withAccess: number;
     noAccess: number;
   };
@@ -74,6 +81,9 @@ function serializeUser(user: {
   name: string;
   email: string;
   role: UserRole;
+  status: UserStatus;
+  lastLoginAt: Date | null;
+  lockedUntil: Date | null;
   createdAt: Date;
   subscription: {
     source: 'SELF_SERVICE' | 'ADMIN_GRANT';
@@ -86,6 +96,8 @@ function serializeUser(user: {
   return {
     ...user,
     createdAt: user.createdAt.toISOString(),
+    lastLoginAt: user.lastLoginAt?.toISOString() || null,
+    lockedUntil: user.lockedUntil?.toISOString() || null,
     subscription: user.subscription
       ? {
           ...user.subscription,
@@ -145,6 +157,8 @@ function normalizeAdminUsersQuery(query: AdminUsersQuery = {}): AdminUsersPageFi
   const page = Number.isInteger(query.page) && query.page && query.page > 0 ? query.page : 1;
   const limit = Number.isInteger(query.limit) && query.limit && query.limit > 0 ? Math.min(query.limit, 100) : 20;
   const role: UserRole | 'all' = query.role === 'ADMIN' || query.role === 'USER' ? query.role : 'all';
+  const accountStatusValues: UserStatus[] = ['ACTIVE', 'SUSPENDED', 'INVITED', 'DELETED'];
+  const accountStatus = query.accountStatus && accountStatusValues.includes(query.accountStatus as UserStatus) ? query.accountStatus : 'all';
   const access = query.access === 'admin' || query.access === 'subscribed' || query.access === 'no_access' ? query.access : 'all';
   const statusValues: Array<SubscriptionStatus | 'MISSING'> = ['ACTIVE', 'TRIALING', 'PAST_DUE', 'CANCELED', 'MISSING'];
   const status = query.status && statusValues.includes(query.status as SubscriptionStatus | 'MISSING') ? query.status : 'all';
@@ -155,6 +169,7 @@ function normalizeAdminUsersQuery(query: AdminUsersQuery = {}): AdminUsersPageFi
   return {
     q: (query.q || '').trim(),
     role,
+    accountStatus,
     access,
     status,
     packageId,
@@ -178,6 +193,10 @@ function buildAdminUsersWhere(filters: ReturnType<typeof normalizeAdminUsersQuer
 
   if (filters.role !== 'all') {
     and.push({ role: filters.role });
+  }
+
+  if (filters.accountStatus !== 'all') {
+    and.push({ status: filters.accountStatus });
   }
 
   if (filters.access === 'admin') {
@@ -274,6 +293,9 @@ export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
       name: true,
       email: true,
       role: true,
+      status: true,
+      lastLoginAt: true,
+      lockedUntil: true,
       createdAt: true,
       subscription: {
         select: {
@@ -301,10 +323,12 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
   const where = buildAdminUsersWhere(filters);
   const orderBy = buildAdminUsersOrderBy(filters.sort);
 
-  const [total, totalUsers, admins, withAccess, noAccess] = await prisma.$transaction([
+  const [total, totalUsers, active, admins, suspended, withAccess, noAccess] = await prisma.$transaction([
     prisma.user.count({ where }),
     prisma.user.count(),
+    prisma.user.count({ where: { status: 'ACTIVE' } }),
     prisma.user.count({ where: { role: 'ADMIN' } }),
+    prisma.user.count({ where: { status: 'SUSPENDED' } }),
     prisma.user.count({
       where: {
         OR: [
@@ -324,6 +348,9 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
       name: true,
       email: true,
       role: true,
+      status: true,
+      lastLoginAt: true,
+      lockedUntil: true,
       createdAt: true,
       subscription: {
         select: {
@@ -352,7 +379,9 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
     filters,
     stats: {
       totalUsers,
+      active,
       admins,
+      suspended,
       withAccess,
       noAccess,
     },
@@ -445,9 +474,49 @@ export async function updateUserRoleAction(userId: string, role: UserRole): Prom
     return { success: false, message: 'At least one admin is required.' };
   }
 
-  await prisma.user.update({ where: { id: userId }, data: { role } });
+  await prisma.user.update({ where: { id: userId }, data: { role, sessionVersion: { increment: 1 } } });
   revalidatePath('/admin/users');
   return { success: true, message: 'User role updated' };
+}
+
+export async function updateUserStatusAction(userId: string, status: UserStatus): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  await requireRole('ADMIN');
+
+  if (status !== 'ACTIVE' && status !== 'SUSPENDED') {
+    return { success: false, message: 'Only active and suspended statuses can be managed here.' };
+  }
+
+  if (userId === session.user.id && status !== 'ACTIVE') {
+    return { success: false, message: 'You cannot suspend your own account.' };
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { email: true, role: true, status: true },
+  });
+  if (!targetUser) return { success: false, message: 'User not found' };
+
+  if (targetUser.role === 'ADMIN' && targetUser.status === 'ACTIVE' && status !== 'ACTIVE') {
+    const activeAdminCount = await prisma.user.count({ where: { role: 'ADMIN', status: 'ACTIVE' } });
+    if (activeAdminCount <= 1) {
+      return { success: false, message: 'At least one active admin is required.' };
+    }
+  }
+
+  await prisma.user.update({
+    where: { id: userId },
+    data: {
+      status,
+      lockedUntil: null,
+      sessionVersion: { increment: 1 },
+    },
+  });
+
+  revalidatePath('/admin/users');
+  revalidatePath('/admin/subscriptions');
+  return { success: true, message: `${targetUser.email} ${status === 'ACTIVE' ? 'reactivated' : 'suspended'}` };
 }
 
 export async function grantUserAccessAction(formData: FormData): Promise<ActionResponse> {

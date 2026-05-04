@@ -20,6 +20,8 @@ export async function getCurrentUserAccess() {
     select: {
       id: true,
       role: true,
+      status: true,
+      lockedUntil: true,
       subscription: {
         select: {
           plan: true,
@@ -35,9 +37,12 @@ export async function getCurrentUserAccess() {
   });
 
   if (!user) throw new Error('Unauthorized');
+  if (user.status !== 'ACTIVE') throw new Error('Account is not active.');
+  if (user.lockedUntil && user.lockedUntil > new Date()) throw new Error('Account is temporarily locked.');
   return {
     id: user.id,
     role: user.role,
+    status: user.status,
     subscriptionPlan: user.subscription?.plan || null,
     subscriptionInterval: user.subscription?.interval || null,
     subscriptionSource: user.subscription?.source || null,
@@ -60,6 +65,8 @@ export async function requireSubscriptionPlan(userId: string, requiredPlan: Subs
     where: { id: userId },
     select: {
       role: true,
+      status: true,
+      lockedUntil: true,
       subscription: {
         select: { plan: true, status: true, currentPeriodEnd: true },
       },
@@ -67,6 +74,8 @@ export async function requireSubscriptionPlan(userId: string, requiredPlan: Subs
   });
 
   if (!user) throw new Error('Unauthorized');
+  if (user.status !== 'ACTIVE') throw new Error('Account is not active.');
+  if (user.lockedUntil && user.lockedUntil > new Date()) throw new Error('Account is temporarily locked.');
   if (user.role === 'ADMIN') return;
 
   const plan = user.subscription?.plan || null;
@@ -85,6 +94,8 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
     where: { id: userId },
     select: {
       role: true,
+      status: true,
+      lockedUntil: true,
       subscription: {
         select: {
           status: true,
@@ -95,6 +106,8 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
   });
 
   if (!user) return false;
+  if (user.status !== 'ACTIVE') return false;
+  if (user.lockedUntil && user.lockedUntil > new Date()) return false;
   if (user.role === 'ADMIN') return true;
   if (!user.subscription) return false;
 

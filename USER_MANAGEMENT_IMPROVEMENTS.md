@@ -60,6 +60,8 @@ Recommended improvements:
 
 Add an explicit status field to the `User` model so admins can disable access without deleting data.
 
+Status: implemented. The `User` model now has account status, last login tracking, lock metadata, and session version metadata. Admin users can filter by account status and suspend/reactivate accounts from `/admin/users`. Login and server-side access checks now reject suspended, deleted, invited, or temporarily locked accounts.
+
 Suggested enum:
 
 ```prisma

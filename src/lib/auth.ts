@@ -26,6 +26,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const passwordMatch = await bcrypt.compare(parsed.data.password, user.password);
         if (!passwordMatch) return null;
+        if (user.status !== 'ACTIVE') return null;
+        if (user.lockedUntil && user.lockedUntil > new Date()) return null;
+
+        const lastLoginAt = new Date();
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { lastLoginAt },
+        });
 
         return {
           id: user.id,
@@ -33,6 +41,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           currency: user.currency,
           role: user.role,
+          status: user.status,
+          lastLoginAt: lastLoginAt.toISOString(),
+          sessionVersion: user.sessionVersion,
           subscriptionPlan: user.subscription?.plan,
           subscriptionInterval: user.subscription?.interval || null,
           subscriptionPackageId: user.subscription?.packageId || null,

@@ -13,7 +13,12 @@ model User {
   email         String                 @unique
   password      String
   role          UserRole               @default(USER)
+  status        UserStatus             @default(ACTIVE)
   currency      String                 @default("USD")
+  lastLoginAt   DateTime?
+  emailVerifiedAt DateTime?
+  lockedUntil   DateTime?
+  sessionVersion Int                   @default(1)
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   accounts      Account[]
@@ -29,6 +34,9 @@ model User {
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
   subscription  UserSubscription?
   transactions  Transaction[]
+
+  @@index([status])
+  @@index([lastLoginAt])
 }
 
 model UserSubscription {
@@ -324,6 +332,13 @@ enum AccessLevel {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+  DELETED
 }
 
 enum SubscriptionPlan {
