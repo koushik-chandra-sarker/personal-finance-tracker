@@ -6,6 +6,52 @@ import { revalidatePath } from 'next/cache';
 import type { ActionResponse } from '@/types';
 import type { SubscriptionInterval } from '@prisma/client';
 
+export type SubscriptionPackageRow = {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  currency: string;
+  price: number;
+  interval: SubscriptionInterval;
+  trialDays: number;
+  discountLabel: string | null;
+  featureBullets: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+};
+
+function serializePackage(pkg: {
+  id: string;
+  slug: string;
+  name: string;
+  description: string;
+  currency: string;
+  price: unknown;
+  interval: SubscriptionInterval;
+  trialDays: number;
+  discountLabel: string | null;
+  featureBullets: string[];
+  isActive: boolean;
+  isFeatured: boolean;
+  sortOrder: number;
+}): SubscriptionPackageRow {
+  return {
+    ...pkg,
+    price: Number(pkg.price),
+  };
+}
+
+export async function getActiveSubscriptionPackagesAction(): Promise<SubscriptionPackageRow[]> {
+  const packages = await prisma.subscriptionPackage.findMany({
+    where: { isActive: true },
+    orderBy: [{ sortOrder: 'asc' }, { isFeatured: 'desc' }, { createdAt: 'asc' }],
+  });
+
+  return packages.map(serializePackage);
+}
+
 export async function updateCurrencyAction(currency: string): Promise<ActionResponse> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
@@ -24,9 +70,10 @@ export async function updateCurrencyAction(currency: string): Promise<ActionResp
   }
 }
 
-export async function updateSubscriptionAction(interval: SubscriptionInterval): Promise<ActionResponse<{
+export async function updateSubscriptionAction(packageId: string): Promise<ActionResponse<{
   subscriptionPlan: 'PRO';
   subscriptionInterval: SubscriptionInterval;
+  subscriptionPackageId: string;
   subscriptionSource: 'SELF_SERVICE';
   subscriptionStatus: 'ACTIVE';
   subscriptionCurrentPeriodEnd: string;
@@ -35,13 +82,14 @@ export async function updateSubscriptionAction(interval: SubscriptionInterval): 
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
 
-  if (interval !== 'MONTHLY' && interval !== 'YEARLY') {
-    return { success: false, message: 'Invalid subscription interval' };
-  }
+  const subscriptionPackage = await prisma.subscriptionPackage.findFirst({
+    where: { id: packageId, isActive: true },
+  });
+  if (!subscriptionPackage) return { success: false, message: 'Subscription package is not available' };
 
   const now = new Date();
   const currentPeriodEnd = new Date(now);
-  if (interval === 'YEARLY') {
+  if (subscriptionPackage.interval === 'YEARLY') {
     currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
   } else {
     currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
@@ -51,8 +99,9 @@ export async function updateSubscriptionAction(interval: SubscriptionInterval): 
     await prisma.userSubscription.upsert({
       where: { userId: session.user.id },
       update: {
+        packageId: subscriptionPackage.id,
         plan: 'PRO',
-        interval,
+        interval: subscriptionPackage.interval,
         source: 'SELF_SERVICE',
         status: 'ACTIVE',
         currentPeriodStart: now,
@@ -61,8 +110,9 @@ export async function updateSubscriptionAction(interval: SubscriptionInterval): 
       },
       create: {
         userId: session.user.id,
+        packageId: subscriptionPackage.id,
         plan: 'PRO',
-        interval,
+        interval: subscriptionPackage.interval,
         source: 'SELF_SERVICE',
         status: 'ACTIVE',
         currentPeriodStart: now,
@@ -74,10 +124,11 @@ export async function updateSubscriptionAction(interval: SubscriptionInterval): 
     revalidatePath('/settings');
     return {
       success: true,
-      message: `Pro ${interval.toLowerCase()} subscription activated`,
+      message: `${subscriptionPackage.name} activated`,
       data: {
         subscriptionPlan: 'PRO',
-        subscriptionInterval: interval,
+        subscriptionInterval: subscriptionPackage.interval,
+        subscriptionPackageId: subscriptionPackage.id,
         subscriptionSource: 'SELF_SERVICE',
         subscriptionStatus: 'ACTIVE',
         subscriptionCurrentPeriodEnd: currentPeriodEnd.toISOString(),

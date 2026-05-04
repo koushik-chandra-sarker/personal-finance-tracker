@@ -15,7 +15,7 @@ import {
 } from '@/actions/notification.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, DollarSign, Users, KeyRound
+  RefreshCw, FileBarChart, Settings, X, DollarSign, ChevronDown, Users, KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -31,8 +31,11 @@ const navItems = [
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },
+];
+
+const adminNavItems = [
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
 ];
 
 type NotificationItem = {
@@ -48,12 +51,14 @@ type NotificationItem = {
 export default function Topbar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  const [mobileAdminOpen, setMobileAdminOpen] = useState(() => pathname.startsWith('/admin'));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const pathname = usePathname();
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || session?.user?.role === 'ADMIN');
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const isAdminRoute = pathname.startsWith('/admin');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
 
@@ -276,7 +281,7 @@ export default function Topbar() {
               </button>
             </div>
             <nav className="space-y-1">
-              {visibleNavItems.map((item) => {
+              {navItems.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
                 return (
                   <Link
@@ -295,6 +300,50 @@ export default function Topbar() {
                   </Link>
                 );
               })}
+
+              {isAdmin && (
+                <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700/50">
+                  <button
+                    type="button"
+                    onClick={() => setMobileAdminOpen(!mobileAdminOpen)}
+                    className={cn(
+                      'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                      isAdminRoute
+                        ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                    )}
+                    aria-expanded={mobileAdminOpen}
+                  >
+                    <KeyRound className="h-5 w-5" />
+                    <span className="flex-1 text-left">Admin</span>
+                    <ChevronDown className={cn('h-4 w-4 transition-transform', mobileAdminOpen && 'rotate-180')} />
+                  </button>
+
+                  {mobileAdminOpen && (
+                    <div className="mt-1 pl-4 space-y-1">
+                      {adminNavItems.map((item) => {
+                        const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                        return (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            onClick={() => setMobileOpen(false)}
+                            className={cn(
+                              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                              isActive
+                                ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                            )}
+                          >
+                            <item.icon className="h-5 w-5" />
+                            <span>{item.label}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </nav>
           </div>
         </div>

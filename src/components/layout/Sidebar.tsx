@@ -6,7 +6,7 @@ import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
-  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, DollarSign, FileText,
+  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, DollarSign, FileText,
   Users, KeyRound,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -22,15 +22,20 @@ const navItems = [
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
-  { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },
+];
+
+const adminNavItems = [
+  { href: '/admin/users', label: 'Users', icon: Users },
+  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session } = useSession();
   const [collapsed, setCollapsed] = useState(false);
-  const visibleNavItems = navItems.filter((item) => !item.adminOnly || session?.user?.role === 'ADMIN');
+  const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'));
+  const isAdmin = session?.user?.role === 'ADMIN';
+  const isAdminRoute = pathname.startsWith('/admin');
 
   return (
     <aside className={cn(
@@ -52,7 +57,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        {visibleNavItems.map((item) => {
+        {navItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
           return (
             <Link
@@ -70,6 +75,54 @@ export default function Sidebar() {
             </Link>
           );
         })}
+
+        {isAdmin && (
+          <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700/50">
+            <button
+              type="button"
+              onClick={() => setAdminOpen(!adminOpen)}
+              className={cn(
+                'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                isAdminRoute
+                  ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+              )}
+              aria-expanded={adminOpen}
+            >
+              <KeyRound className={cn('h-5 w-5 flex-shrink-0', isAdminRoute ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+              {!collapsed && (
+                <>
+                  <span className="flex-1 text-left">Admin</span>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', adminOpen && 'rotate-180')} />
+                </>
+              )}
+            </button>
+
+            {adminOpen && (
+              <div className={cn('mt-1 space-y-1', collapsed ? '' : 'pl-4')}>
+                {adminNavItems.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      title={collapsed ? item.label : undefined}
+                      className={cn(
+                        'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
+                        isActive
+                          ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                      )}
+                    >
+                      <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+                      {!collapsed && <span>{item.label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </nav>
 
       {/* Collapse toggle */}

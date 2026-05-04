@@ -34,6 +34,7 @@ model User {
 model UserSubscription {
   id                     String                @id @default(cuid())
   userId                 String                @unique
+  packageId              String?
   plan                   SubscriptionPlan      @default(PRO)
   interval               SubscriptionInterval?
   source                 SubscriptionSource  @default(SELF_SERVICE)
@@ -47,10 +48,34 @@ model UserSubscription {
   createdAt              DateTime              @default(now())
   updatedAt              DateTime              @updatedAt
   grantedBy              User?                 @relation("GrantedSubscriptions", fields: [grantedById], references: [id], onDelete: SetNull)
+  package                SubscriptionPackage?  @relation(fields: [packageId], references: [id], onDelete: SetNull)
   user                   User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, status])
+  @@index([packageId])
   @@index([plan, status])
+}
+
+model SubscriptionPackage {
+  id             String                @id @default(cuid())
+  slug           String                @unique
+  name           String
+  description    String
+  currency       String                @default("BDT")
+  price          Decimal               @db.Decimal(12, 2)
+  interval       SubscriptionInterval
+  trialDays      Int                   @default(0)
+  discountLabel  String?
+  featureBullets String[]              @default([])
+  isActive       Boolean               @default(true)
+  isFeatured     Boolean               @default(false)
+  sortOrder      Int                   @default(0)
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  subscriptions  UserSubscription[]
+
+  @@index([isActive, sortOrder])
+  @@index([interval])
 }
 
 model SharedAccess {

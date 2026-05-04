@@ -35,6 +35,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           subscriptionPlan: user.subscription?.plan,
           subscriptionInterval: user.subscription?.interval || null,
+          subscriptionPackageId: user.subscription?.packageId || null,
           subscriptionSource: user.subscription?.source,
           subscriptionStatus: user.subscription?.status || 'ACTIVE',
           subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd?.toISOString() || null,

@@ -13,6 +13,7 @@ declare module 'next-auth' {
     role?: UserRole;
     subscriptionPlan?: SubscriptionPlan;
     subscriptionInterval?: SubscriptionInterval | null;
+    subscriptionPackageId?: string | null;
     subscriptionSource?: SubscriptionSource;
     subscriptionStatus?: SubscriptionStatus;
     subscriptionCurrentPeriodEnd?: string | null;
@@ -26,6 +27,7 @@ declare module 'next-auth' {
       role?: UserRole;
       subscriptionPlan?: SubscriptionPlan;
       subscriptionInterval?: SubscriptionInterval | null;
+      subscriptionPackageId?: string | null;
       subscriptionSource?: SubscriptionSource;
       subscriptionStatus?: SubscriptionStatus;
       subscriptionCurrentPeriodEnd?: string | null;

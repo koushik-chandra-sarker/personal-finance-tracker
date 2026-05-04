@@ -9,8 +9,10 @@ import NotificationSettings from '@/components/settings/NotificationSettings';
 import Select from '@/components/ui/Select';
 import Loader from '@/components/ui/Loader';
 import {
+  getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
   updateSubscriptionAction,
+  type SubscriptionPackageRow,
 } from '@/actions/settings.actions';
 
 import { useEffect, useState, useTransition } from 'react';
@@ -23,14 +25,11 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatCurrency } from '@/lib/utils';
-import type { SubscriptionInterval } from '@/types';
-
-const MONTHLY_PRICE = 999;
-const YEARLY_PRICE = 9990;
 
 export default function SettingsPage() {
   const { data: session, update } = useSession();
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [packages, setPackages] = useState<SubscriptionPackageRow[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isSubscriptionPending, startSubscriptionTransition] = useTransition();
@@ -42,6 +41,7 @@ export default function SettingsPage() {
   const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
   const subscriptionPlan = session?.user?.subscriptionPlan || null;
   const subscriptionInterval = session?.user?.subscriptionInterval || null;
+  const subscriptionPackageId = session?.user?.subscriptionPackageId || null;
   const subscriptionSource = session?.user?.subscriptionSource || null;
   const subscriptionStatus = session?.user?.subscriptionStatus || 'ACTIVE';
   const subscriptionPeriodEnd = session?.user?.subscriptionCurrentPeriodEnd
@@ -60,6 +60,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     getAccessibleWorkspacesAction().then(res => setActiveId(res.activeId));
+    getActiveSubscriptionPackagesAction().then(setPackages);
   }, []);
 
   const handleCurrencyChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -98,10 +99,10 @@ export default function SettingsPage() {
       });
   };
 
-  const activateSubscription = (interval: SubscriptionInterval) => {
+  const activateSubscription = (packageId: string) => {
     setSubscriptionMessage(null);
     startSubscriptionTransition(async () => {
-      const result = await updateSubscriptionAction(interval);
+      const result = await updateSubscriptionAction(packageId);
       if (result.success && result.data) {
         await update(result.data);
         setSubscriptionMessage({ type: 'success', text: result.message });
@@ -115,7 +116,15 @@ export default function SettingsPage() {
     if (isAdmin) return 'Admin access';
     if (subscriptionPlan !== 'PRO') return 'Subscription required';
     if (subscriptionSource === 'ADMIN_GRANT') return subscriptionPeriodEnd ? 'Admin granted access' : 'Admin granted unlimited access';
+    const currentPackage = packages.find((pkg) => pkg.id === subscriptionPackageId);
+    if (currentPackage) return currentPackage.name;
     return `Pro ${subscriptionInterval?.toLowerCase() || ''}`;
+  };
+
+  const isCurrentPackage = (packageId: string, interval: string) => {
+    if (subscriptionSource !== 'SELF_SERVICE') return false;
+    if (subscriptionPackageId) return subscriptionPackageId === packageId;
+    return subscriptionInterval === interval;
   };
 
   const handleTabClick = (tabId: typeof activeTab) => {
@@ -297,29 +306,40 @@ export default function SettingsPage() {
                   )}
 
                   <div className="grid md:grid-cols-2 gap-4">
-                    <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/10 p-5">
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pro Monthly</h3>
-                        {subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'MONTHLY' && <Check className="h-5 w-5 text-emerald-500" />}
+                    {packages.length === 0 ? (
+                      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 p-5 text-sm text-slate-500 dark:text-slate-400 md:col-span-2">
+                        No subscription packages are currently available.
                       </div>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white mb-4">{formatCurrency(MONTHLY_PRICE, 'BDT')}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">/mo</span></p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Continue with full access billed monthly in BDT.</p>
-                      <Button onClick={() => activateSubscription('MONTHLY')} disabled={isSubscriptionPending || (subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'MONTHLY')} className="w-full">
-                        {subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'MONTHLY' ? 'Current Monthly' : 'Choose Monthly'}
-                      </Button>
-                    </div>
-
-                    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900/30 p-5">
-                      <div className="flex items-center justify-between gap-3 mb-4">
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Pro Yearly</h3>
-                        {subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'YEARLY' && <Check className="h-5 w-5 text-emerald-500" />}
-                      </div>
-                      <p className="text-3xl font-bold text-slate-900 dark:text-white mb-4">{formatCurrency(YEARLY_PRICE, 'BDT')}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">/yr</span></p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">Continue with full access billed yearly in BDT.</p>
-                      <Button onClick={() => activateSubscription('YEARLY')} disabled={isSubscriptionPending || (subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'YEARLY')} className="w-full">
-                        {subscriptionSource === 'SELF_SERVICE' && subscriptionInterval === 'YEARLY' ? 'Current Yearly' : 'Choose Yearly'}
-                      </Button>
-                    </div>
+                    ) : packages.map((pkg) => {
+                      const currentPackage = isCurrentPackage(pkg.id, pkg.interval);
+                      return (
+                        <div key={pkg.id} className={`rounded-2xl border p-5 ${pkg.isFeatured ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900/30'}`}>
+                          <div className="flex items-center justify-between gap-3 mb-4">
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{pkg.name}</h3>
+                                {pkg.discountLabel && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">{pkg.discountLabel}</span>}
+                              </div>
+                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{pkg.description}</p>
+                            </div>
+                            {currentPackage && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
+                          </div>
+                          <p className="text-3xl font-bold text-slate-900 dark:text-white mb-4">{formatCurrency(pkg.price, pkg.currency)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
+                          {pkg.featureBullets.length > 0 && (
+                            <div className="mb-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                              {pkg.featureBullets.map((bullet) => (
+                                <p key={bullet} className="flex items-center gap-2">
+                                  <Check className="h-4 w-4 shrink-0 text-emerald-500" /> {bullet}
+                                </p>
+                              ))}
+                            </div>
+                          )}
+                          <Button onClick={() => activateSubscription(pkg.id)} disabled={isSubscriptionPending || currentPackage} className="w-full">
+                            {currentPackage ? 'Current Package' : `Choose ${pkg.interval === 'YEARLY' ? 'Yearly' : 'Monthly'}`}
+                          </Button>
+                        </div>
+                      );
+                    })}
                   </div>
 
                 </Card>

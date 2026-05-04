@@ -7,6 +7,7 @@ type SessionUpdate = {
   role?: UserRole;
   subscriptionPlan?: SubscriptionPlan;
   subscriptionInterval?: SubscriptionInterval | null;
+  subscriptionPackageId?: string | null;
   subscriptionSource?: SubscriptionSource;
   subscriptionStatus?: SubscriptionStatus;
   subscriptionCurrentPeriodEnd?: string | null;
@@ -84,6 +85,7 @@ export const authConfig = {
         appToken.role = user.role;
         appToken.subscriptionPlan = user.subscriptionPlan;
         appToken.subscriptionInterval = user.subscriptionInterval;
+        appToken.subscriptionPackageId = user.subscriptionPackageId;
         appToken.subscriptionSource = user.subscriptionSource;
         appToken.subscriptionStatus = user.subscriptionStatus;
         appToken.subscriptionCurrentPeriodEnd = user.subscriptionCurrentPeriodEnd;
@@ -94,6 +96,7 @@ export const authConfig = {
         if (updatedSession.currency) appToken.currency = updatedSession.currency;
         if (updatedSession.subscriptionPlan) appToken.subscriptionPlan = updatedSession.subscriptionPlan;
         if (updatedSession.subscriptionInterval !== undefined) appToken.subscriptionInterval = updatedSession.subscriptionInterval;
+        if (updatedSession.subscriptionPackageId !== undefined) appToken.subscriptionPackageId = updatedSession.subscriptionPackageId;
         if (updatedSession.subscriptionSource) appToken.subscriptionSource = updatedSession.subscriptionSource;
         if (updatedSession.subscriptionStatus) appToken.subscriptionStatus = updatedSession.subscriptionStatus;
         if (updatedSession.subscriptionCurrentPeriodEnd !== undefined) appToken.subscriptionCurrentPeriodEnd = updatedSession.subscriptionCurrentPeriodEnd;
@@ -111,6 +114,7 @@ export const authConfig = {
         session.user.role = appToken.role;
         session.user.subscriptionPlan = appToken.subscriptionPlan;
         session.user.subscriptionInterval = appToken.subscriptionInterval;
+        session.user.subscriptionPackageId = appToken.subscriptionPackageId;
         session.user.subscriptionSource = appToken.subscriptionSource;
         session.user.subscriptionStatus = appToken.subscriptionStatus;
         session.user.subscriptionCurrentPeriodEnd = appToken.subscriptionCurrentPeriodEnd;
