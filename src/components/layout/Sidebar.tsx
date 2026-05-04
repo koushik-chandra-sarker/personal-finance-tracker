@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, DollarSign, FileText,
-  CreditCard, Users, KeyRound,
+  Users, KeyRound,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -21,7 +21,6 @@ const navItems = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
-  { href: '/subscription', label: 'Subscription', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },

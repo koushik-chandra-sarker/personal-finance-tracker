@@ -15,7 +15,7 @@ import {
 } from '@/actions/notification.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, DollarSign, CreditCard, Users, KeyRound
+  RefreshCw, FileBarChart, Settings, X, DollarSign, Users, KeyRound
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -30,7 +30,6 @@ const navItems = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
-  { href: '/subscription', label: 'Subscription', icon: CreditCard },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/admin/users', label: 'Users', icon: Users, adminOnly: true },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound, adminOnly: true },
