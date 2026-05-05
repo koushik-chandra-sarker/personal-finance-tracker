@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createTypeConfigAction, updateTypeConfigAction, deleteTypeConfigAction } from '@/actions/investment-type.actions';
 import { Plus, Trash2, Edit3, Settings2, ArrowLeft } from 'lucide-react';
@@ -31,7 +32,13 @@ type TypeConfig = {
 };
 
 export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { typeConfigs: TypeConfig[] }) {
+  const router = useRouter();
   const [configs, setConfigs] = useState(initialConfigs);
+  
+  useEffect(() => {
+    setConfigs(initialConfigs);
+  }, [initialConfigs]);
+
   const [showForm, setShowForm] = useState(false);
   const [editingConfig, setEditingConfig] = useState<TypeConfig | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +50,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       const result = await createTypeConfigAction(formData);
       if (result.success) {
         setShowForm(false);
-        window.location.reload();
+        router.refresh();
       }
       return result;
     } finally { setLoading(false); }
@@ -55,7 +62,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       const result = await updateTypeConfigAction(id, formData);
       if (result.success) {
         setEditingConfig(null);
-        window.location.reload();
+        router.refresh();
       }
       return result;
     } finally { setLoading(false); }
@@ -67,7 +74,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       const result = await deleteTypeConfigAction(id);
       if (result.success) {
         setDeleteId(null);
-        window.location.reload();
+        router.refresh();
       } else {
         alert(result.message);
       }

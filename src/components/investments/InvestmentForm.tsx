@@ -67,7 +67,6 @@ export default function InvestmentForm({ typeConfigs, accounts, investment, curr
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[75vh] overflow-y-auto custom-scrollbar">
-          {message && <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 rounded-xl px-4 py-2">{message}</p>}
 
           {/* Type selector */}
           <div>
@@ -216,6 +215,8 @@ export default function InvestmentForm({ typeConfigs, accounts, investment, curr
             <textarea name="notes" rows={2} defaultValue={investment?.notes || ''}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 resize-none" />
           </div>
+
+          {message && <p className="text-sm text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-500/10 rounded-xl px-4 py-2">{message}</p>}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}

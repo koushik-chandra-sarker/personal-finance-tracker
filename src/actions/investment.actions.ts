@@ -18,6 +18,13 @@ export async function getInvestmentsAction(filters?: {
   return investmentService.getInvestments(userId, filters);
 }
 
+export async function getInvestmentByIdAction(id: string) {
+  const userId = await getEffectiveUserId();
+  await validateAccess('INVESTMENTS', 'VIEW');
+  const data = await investmentService.getInvestmentById(userId, id);
+  return JSON.parse(JSON.stringify(data));
+}
+
 export async function getTypeConfigsAction() {
   const userId = await getEffectiveUserId();
   return typeService.getTypeConfigs(userId);
@@ -112,6 +119,51 @@ export async function recordReturnAction(investmentId: string, formData: FormDat
   await investmentService.recordReturn(userId, executorId, investmentId, parsed.data);
   revalidatePath('/investments');
   return { success: true, message: 'Return recorded' };
+}
+
+export async function addFundsAction(investmentId: string, formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('INVESTMENTS', 'EDIT');
+
+  const amount = Number(formData.get('amount'));
+  const accountId = formData.get('accountId') as string;
+  const description = formData.get('description') as string | undefined;
+
+  if (!amount || amount <= 0) return { success: false, message: 'Invalid amount' };
+  if (!accountId) return { success: false, message: 'Account is required' };
+
+  try {
+    await investmentService.addFunds(userId, executorId, investmentId, accountId, amount, description);
+    revalidatePath('/investments');
+    return { success: true, message: 'Funds added successfully' };
+  } catch (error: any) {
+    return { success: false, message: error.message || 'Failed to add funds' };
+  }
+}
+
+export async function recordValuationAction(investmentId: string, formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('INVESTMENTS', 'EDIT');
+
+  const value = Number(formData.get('value'));
+  const date = formData.get('date') as string;
+
+  if (value < 0) return { success: false, message: 'Invalid value' };
+  if (!date) return { success: false, message: 'Date is required' };
+
+  try {
+    await investmentService.recordValuation(userId, executorId, investmentId, { value, date });
+    revalidatePath('/investments');
+    return { success: true, message: 'Valuation recorded' };
+  } catch (error: any) {
+    return { success: false, message: error.message || 'Failed to record valuation' };
+  }
 }
 
 export async function getPortfolioSummaryAction() {

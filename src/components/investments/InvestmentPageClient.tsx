@@ -1,8 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, recordReturnAction } from '@/actions/investment.actions';
+import { 
+  createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, 
+  recordReturnAction, addFundsAction, recordValuationAction 
+} from '@/actions/investment.actions';
 import {
   TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X,
   Landmark, Banknote, PiggyBank, BarChart3, Coins, Building2, Shield,
@@ -60,7 +64,14 @@ export default function InvestmentPageClient({
   investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[];
   summary: Summary; allocation: Allocation[]; currency: string;
 }) {
+  const router = useRouter();
   const [investments, setInvestments] = useState(initial);
+  
+  // Sync state with props when router.refresh() fetches new data
+  useEffect(() => {
+    setInvestments(initial);
+  }, [initial]);
+  
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [viewingInvestment, setViewingInvestment] = useState<Investment | null>(null);
@@ -84,7 +95,7 @@ export default function InvestmentPageClient({
       const result = await createInvestmentAction(formData);
       if (result.success) {
         setShowForm(false);
-        window.location.reload();
+        router.refresh();
       }
       return result;
     } finally { setLoading(false); }
@@ -96,7 +107,7 @@ export default function InvestmentPageClient({
       const result = await updateInvestmentAction(id, formData);
       if (result.success) {
         setEditingInvestment(null);
-        window.location.reload();
+        router.refresh();
       }
       return result;
     } finally { setLoading(false); }
@@ -107,7 +118,7 @@ export default function InvestmentPageClient({
     try {
       await deleteInvestmentAction(id);
       setDeleteId(null);
-      window.location.reload();
+      router.refresh();
     } finally { setLoading(false); }
   };
 
@@ -115,7 +126,25 @@ export default function InvestmentPageClient({
     setLoading(true);
     try {
       const result = await recordReturnAction(investmentId, formData);
-      if (result.success) window.location.reload();
+      if (result.success) router.refresh();
+      return result;
+    } finally { setLoading(false); }
+  };
+
+  const handleAddFunds = async (investmentId: string, formData: FormData) => {
+    setLoading(true);
+    try {
+      const result = await addFundsAction(investmentId, formData);
+      if (result.success) router.refresh();
+      return result;
+    } finally { setLoading(false); }
+  };
+
+  const handleRecordValuation = async (investmentId: string, formData: FormData) => {
+    setLoading(true);
+    try {
+      const result = await recordValuationAction(investmentId, formData);
+      if (result.success) router.refresh();
       return result;
     } finally { setLoading(false); }
   };
@@ -326,9 +355,12 @@ export default function InvestmentPageClient({
       {viewingInvestment && (
         <InvestmentDetail
           investment={viewingInvestment}
+          accounts={accounts}
           currency={currency}
           loading={loading}
           onRecordReturn={(fd) => handleRecordReturn(viewingInvestment.id, fd)}
+          onAddFunds={(fd) => handleAddFunds(viewingInvestment.id, fd)}
+          onRecordValuation={(fd) => handleRecordValuation(viewingInvestment.id, fd)}
           onClose={() => setViewingInvestment(null)}
         />
       )}

@@ -1,4 +1,22 @@
 import { prisma } from '@/lib/prisma';
+import { randomUUID } from 'crypto';
+import type { Investment } from '@prisma/client';
+
+async function getInvestmentTransferCategoryId(userId: string, executorId: string, type: 'INCOME' | 'EXPENSE') {
+  const isIncome = type === 'INCOME';
+  const name = isIncome ? 'Investment Sales & Returns' : 'Investments & DPS';
+  const icon = isIncome ? 'trending-up' : 'piggy-bank';
+  const color = isIncome ? '#10b981' : '#6366f1';
+
+  const [category] = await prisma.$queryRaw<Array<{ id: string }>>`
+    INSERT INTO "Category" ("id", "userId", "name", "type", "icon", "color", "isDefault", "createdAt", "createdById", "updatedById")
+    VALUES (${randomUUID()}, ${userId}, ${name}, ${type}::"CategoryType", ${icon}, ${color}, true, NOW(), ${executorId}, ${executorId})
+    ON CONFLICT ("userId", "name", "type") DO UPDATE SET "name" = EXCLUDED."name"
+    RETURNING "id"
+  `;
+
+  return category.id;
+}
 
 export async function getInvestments(userId: string, filters?: {
   typeConfigId?: string;
@@ -72,15 +90,61 @@ export async function createInvestment(userId: string, executorId: string, data:
   });
   if (!typeConfig) throw new Error('Invalid investment type');
 
+  const investmentId = randomUUID();
+
   if (data.linkedAccountId) {
     const account = await prisma.account.findFirst({
       where: { id: data.linkedAccountId, userId, isActive: true },
+      select: { id: true, balance: true },
     });
     if (!account) throw new Error('Linked account not found');
+    if (Number(account.balance) < data.investedAmount) throw new Error('Insufficient account balance');
+
+    const categoryId = await getInvestmentTransferCategoryId(userId, executorId, 'EXPENSE');
+    const transactionId = randomUUID();
+    const cleanDescription = `Initial investment in ${data.name}`;
+
+    const [investment] = await prisma.$queryRaw<Investment[]>`
+      WITH inserted_inv AS (
+        INSERT INTO "Investment" (
+          "id", "userId", "typeConfigId", "name", "institutionName", "accountNumber",
+          "investedAmount", "currentValue", "interestRate", "returnFrequency",
+          "purchaseDate", "maturityDate", "linkedAccountId", "monthlyInstallment",
+          "quantity", "avgBuyPrice", "notes", "color", "icon",
+          "createdAt", "updatedAt", "createdById", "updatedById"
+        ) VALUES (
+          ${investmentId}, ${userId}, ${data.typeConfigId}, ${data.name}, ${data.institutionName || null}, ${data.accountNumber || null},
+          ${data.investedAmount}, ${data.currentValue}, ${data.interestRate ?? null}, ${data.returnFrequency ? data.returnFrequency + '::"ReturnFrequency"' : null},
+          ${new Date(data.purchaseDate)}, ${data.maturityDate ? new Date(data.maturityDate) : null}, ${data.linkedAccountId}, ${data.monthlyInstallment ?? null},
+          ${data.quantity ?? null}, ${data.avgBuyPrice ?? null}, ${data.notes || null}, ${data.color || typeConfig.color}, ${data.icon || typeConfig.icon},
+          NOW(), NOW(), ${executorId}, ${executorId}
+        )
+        RETURNING *
+      ),
+      inserted_transaction AS (
+        INSERT INTO "Transaction" ("id", "userId", "accountId", "categoryId", "type", "amount", "description", "date", "tags", "isRecurring", "createdAt", "updatedAt", "createdById", "updatedById")
+        SELECT
+          ${transactionId}, ${userId}, ${data.linkedAccountId}, ${categoryId}, 'EXPENSE'::"CategoryType", ${data.investedAmount}, ${cleanDescription}, ${new Date(data.purchaseDate)}, ARRAY[]::text[], false, NOW(), NOW(), ${executorId}, ${executorId}
+        RETURNING "id"
+      ),
+      updated_account AS (
+        UPDATE "Account"
+        SET "balance" = "balance" - ${data.investedAmount}, "updatedById" = ${executorId}, "updatedAt" = NOW()
+        WHERE "id" = ${data.linkedAccountId} AND "userId" = ${userId}
+        RETURNING "id"
+      )
+      SELECT inserted_inv.* FROM inserted_inv, inserted_transaction, updated_account
+    `;
+
+    return prisma.investment.findUnique({
+      where: { id: investment.id },
+      include: { typeConfig: true },
+    });
   }
 
   return prisma.investment.create({
     data: {
+      id: investmentId,
       userId,
       typeConfigId: data.typeConfigId,
       name: data.name,
@@ -92,7 +156,7 @@ export async function createInvestment(userId: string, executorId: string, data:
       returnFrequency: data.returnFrequency as never,
       purchaseDate: new Date(data.purchaseDate),
       maturityDate: data.maturityDate ? new Date(data.maturityDate) : null,
-      linkedAccountId: data.linkedAccountId || null,
+      linkedAccountId: null,
       monthlyInstallment: data.monthlyInstallment ?? null,
       quantity: data.quantity ?? null,
       avgBuyPrice: data.avgBuyPrice ?? null,
@@ -114,6 +178,7 @@ export async function updateInvestment(userId: string, executorId: string, id: s
   currentValue?: number;
   interestRate?: number;
   returnFrequency?: string;
+  purchaseDate?: string;
   maturityDate?: string;
   linkedAccountId?: string;
   monthlyInstallment?: number;
@@ -133,6 +198,7 @@ export async function updateInvestment(userId: string, executorId: string, id: s
       ...data,
       returnFrequency: data.returnFrequency as never,
       status: data.status as never,
+      purchaseDate: data.purchaseDate ? new Date(data.purchaseDate) : undefined,
       maturityDate: data.maturityDate ? new Date(data.maturityDate) : undefined,
       updatedById: executorId,
     },
@@ -144,6 +210,78 @@ export async function deleteInvestment(userId: string, id: string) {
   const investment = await prisma.investment.findFirst({ where: { id, userId } });
   if (!investment) throw new Error('Investment not found');
   await prisma.investment.delete({ where: { id } });
+  return true;
+}
+
+export async function addFunds(
+  userId: string,
+  executorId: string,
+  id: string,
+  accountId: string,
+  amount: number,
+  description?: string
+) {
+  const investment = await prisma.investment.findFirst({ where: { id, userId } });
+  if (!investment) throw new Error('Investment not found');
+
+  const account = await prisma.account.findFirst({ where: { id: accountId, userId, isActive: true }, select: { id: true, balance: true } });
+  if (!account) throw new Error('Account not found');
+
+  if (Number(account.balance) < amount) throw new Error('Insufficient account balance');
+
+  const cleanDescription = description?.trim() || `Deposit to ${investment.name}`;
+  const newInvestedAmount = Number(investment.investedAmount) + amount;
+  const newCurrentValue = Number(investment.currentValue) + amount;
+  const categoryId = await getInvestmentTransferCategoryId(userId, executorId, 'EXPENSE');
+  const transactionId = randomUUID();
+
+  const [updatedInvestment] = await prisma.$queryRaw<Investment[]>`
+    WITH updated_inv AS (
+      UPDATE "Investment"
+      SET "investedAmount" = ${newInvestedAmount}, "currentValue" = ${newCurrentValue}, "updatedById" = ${executorId}, "updatedAt" = NOW()
+      WHERE "id" = ${id} AND "userId" = ${userId}
+      RETURNING *
+    ),
+    inserted_transaction AS (
+      INSERT INTO "Transaction" ("id", "userId", "accountId", "categoryId", "type", "amount", "description", "date", "tags", "isRecurring", "createdAt", "updatedAt", "createdById", "updatedById")
+      SELECT
+        ${transactionId}, ${userId}, ${accountId}, ${categoryId}, 'EXPENSE'::"CategoryType", ${amount}, ${cleanDescription}, NOW(), ARRAY[]::text[], false, NOW(), NOW(), ${executorId}, ${executorId}
+      RETURNING "id"
+    ),
+    updated_account AS (
+      UPDATE "Account"
+      SET "balance" = "balance" - ${amount}, "updatedById" = ${executorId}, "updatedAt" = NOW()
+      WHERE "id" = ${accountId} AND "userId" = ${userId}
+      RETURNING "id"
+    )
+    SELECT updated_inv.* FROM updated_inv, inserted_transaction, updated_account
+  `;
+  if (!updatedInvestment) throw new Error('Investment not found');
+
+  return updatedInvestment;
+}
+
+export async function recordValuation(userId: string, executorId: string, id: string, data: {
+  value: number;
+  date: string;
+}) {
+  const investment = await prisma.investment.findFirst({ where: { id, userId } });
+  if (!investment) throw new Error('Investment not found');
+
+  await prisma.$transaction([
+    prisma.investmentValuation.create({
+      data: {
+        investmentId: id,
+        value: data.value,
+        date: new Date(data.date),
+      },
+    }),
+    prisma.investment.update({
+      where: { id },
+      data: { currentValue: data.value, updatedById: executorId },
+    }),
+  ]);
+
   return true;
 }
 
