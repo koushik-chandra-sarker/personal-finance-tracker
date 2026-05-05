@@ -26,6 +26,8 @@ model User {
   categories    Category[]
   financialNotes FinancialNote[]
   goals         Goal[]
+  investments   Investment[]
+  investmentTypeConfigs InvestmentTypeConfig[]
   notifications Notification[]
   notificationPreference NotificationPreference?
   recurringTxns RecurringTransaction[]
@@ -147,6 +149,7 @@ model Account {
   updatedById  String?
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  investments  Investment[]
 
   @@index([userId])
 }
@@ -339,6 +342,7 @@ enum Feature {
   ACCOUNTS
   BUDGETS
   GOALS
+  INVESTMENTS
   REPORTS
   SETTINGS
   NOTES
@@ -434,6 +438,8 @@ enum NotificationType {
   BUDGET_ALERT
   GOAL_DEADLINE
   GOAL_REACHED
+  INVESTMENT_MATURITY
+  INVESTMENT_RETURN_DUE
   UNUSUAL_EXPENSE
   LOW_BALANCE
   RECURRING_CREATED
@@ -452,7 +458,127 @@ enum NotificationSource {
   RECURRING_TRANSACTION
   BUDGET
   GOAL
+  INVESTMENT
   TRANSACTION
   ACCOUNT
   SYSTEM
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  MATURED
+  SOLD
+  CANCELLED
+}
+
+enum ReturnFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  AT_MATURITY
+  ON_SALE
+}
+
+model InvestmentTypeConfig {
+  id              String       @id @default(cuid())
+  userId          String?
+  slug            String
+  name            String
+  description     String?
+  icon            String       @default("trending-up")
+  color           String       @default("#6366f1")
+  isSystem        Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+
+  hasInterestRate       Boolean @default(false)
+  hasReturnFrequency    Boolean @default(false)
+  hasMaturityDate       Boolean @default(true)
+  hasMonthlyInstallment Boolean @default(false)
+  hasQuantity           Boolean @default(false)
+  hasInstitution        Boolean @default(true)
+  hasAccountNumber      Boolean @default(true)
+
+  returnTypes     String[]     @default([])
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments     Investment[]
+
+  @@unique([userId, slug])
+  @@index([userId, isActive])
+}
+
+model Investment {
+  id                 String             @id @default(cuid())
+  userId             String
+  typeConfigId       String
+  name               String
+  status             InvestmentStatus   @default(ACTIVE)
+  institutionName    String?
+  accountNumber      String?
+
+  investedAmount     Decimal            @db.Decimal(14, 2)
+  currentValue       Decimal            @db.Decimal(14, 2)
+  interestRate       Decimal?           @db.Decimal(6, 3)
+  returnFrequency    ReturnFrequency?
+
+  purchaseDate       DateTime
+  maturityDate       DateTime?
+  soldDate           DateTime?
+
+  linkedAccountId    String?
+
+  monthlyInstallment Decimal?           @db.Decimal(14, 2)
+
+  quantity           Decimal?           @db.Decimal(14, 4)
+  avgBuyPrice        Decimal?           @db.Decimal(14, 4)
+
+  notes              String?
+  color              String             @default("#6366f1")
+  icon               String             @default("trending-up")
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  createdById        String?
+  updatedById        String?
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  typeConfig         InvestmentTypeConfig @relation(fields: [typeConfigId], references: [id])
+  linkedAccount      Account?           @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
+  returns            InvestmentReturn[]
+  valuations         InvestmentValuation[]
+
+  @@index([userId, typeConfigId])
+  @@index([userId, status])
+  @@index([userId, maturityDate])
+}
+
+model InvestmentReturn {
+  id            String     @id @default(cuid())
+  investmentId  String
+  amount        Decimal    @db.Decimal(14, 2)
+  type          String
+  description   String?
+  date          DateTime
+  createdAt     DateTime   @default(now())
+
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, date])
+}
+
+model InvestmentValuation {
+  id            String     @id @default(cuid())
+  investmentId  String
+  value         Decimal    @db.Decimal(14, 2)
+  date          DateTime
+  createdAt     DateTime   @default(now())
+
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, date])
 }
