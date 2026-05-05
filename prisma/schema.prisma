@@ -32,11 +32,31 @@ model User {
   joinedShares  SharedAccess[]         @relation("JoinedShares")
   ownedShares   SharedAccess[]         @relation("OwnedShares")
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
+  sentInvites    UserInvite[]           @relation("SentUserInvites")
   subscription  UserSubscription?
   transactions  Transaction[]
 
   @@index([status])
   @@index([lastLoginAt])
+}
+
+model UserInvite {
+  id          String               @id @default(cuid())
+  email       String
+  role        UserRole             @default(USER)
+  packageId   String?
+  tokenHash   String               @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  invitedBy   User?                @relation("SentUserInvites", fields: [invitedById], references: [id], onDelete: SetNull)
+  package     SubscriptionPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+  @@index([acceptedAt])
 }
 
 model UserSubscription {
@@ -80,6 +100,7 @@ model SubscriptionPackage {
   sortOrder      Int                   @default(0)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
+  invites        UserInvite[]
   subscriptions  UserSubscription[]
 
   @@index([isActive, sortOrder])

@@ -7,6 +7,7 @@ import { requireRole } from '@/lib/rbac';
 import type { ActionResponse } from '@/types';
 import type { Prisma, SubscriptionInterval, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
+import { createHash, randomBytes } from 'crypto';
 
 export type AdminUserAccessFilter = 'all' | 'admin' | 'subscribed' | 'no_access';
 export type AdminUserSort = 'createdAt_desc' | 'createdAt_asc' | 'name_asc' | 'email_asc';
@@ -76,6 +77,30 @@ export type AdminSubscriptionPackageRow = SubscriptionPackageRow & {
   subscriptionCount: number;
 };
 
+export type AdminInviteResult = {
+  email: string;
+  inviteUrl: string;
+  expiresAt: string;
+};
+
+export type AdminUserInviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';
+
+export type AdminUserInviteRow = {
+  id: string;
+  email: string;
+  role: UserRole;
+  status: AdminUserInviteStatus;
+  package: { id: string; name: string } | null;
+  invitedBy: { name: string; email: string } | null;
+  expiresAt: string;
+  acceptedAt: string | null;
+  createdAt: string;
+};
+
+function hashInviteToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 function serializeUser(user: {
   id: string;
   name: string;
@@ -142,6 +167,35 @@ function serializeAdminPackage(pkg: {
     createdAt: pkg.createdAt.toISOString(),
     updatedAt: pkg.updatedAt.toISOString(),
     subscriptionCount: pkg._count.subscriptions,
+  };
+}
+
+function serializeAdminInvite(invite: {
+  id: string;
+  email: string;
+  role: UserRole;
+  expiresAt: Date;
+  acceptedAt: Date | null;
+  createdAt: Date;
+  package: { id: string; name: string } | null;
+  invitedBy: { name: string; email: string } | null;
+}): AdminUserInviteRow {
+  const status: AdminUserInviteStatus = invite.acceptedAt
+    ? 'ACCEPTED'
+    : invite.expiresAt < new Date()
+      ? 'EXPIRED'
+      : 'PENDING';
+
+  return {
+    id: invite.id,
+    email: invite.email,
+    role: invite.role,
+    status,
+    package: invite.package,
+    invitedBy: invite.invitedBy,
+    expiresAt: invite.expiresAt.toISOString(),
+    acceptedAt: invite.acceptedAt?.toISOString() || null,
+    createdAt: invite.createdAt.toISOString(),
   };
 }
 
@@ -403,6 +457,31 @@ export async function getAdminSubscriptionPackagesAction(): Promise<AdminSubscri
   return packages.map(serializeAdminPackage);
 }
 
+export async function getAdminUserInvitesAction(): Promise<AdminUserInviteRow[]> {
+  await requireRole('ADMIN');
+
+  const invites = await prisma.userInvite.findMany({
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      expiresAt: true,
+      acceptedAt: true,
+      createdAt: true,
+      package: {
+        select: { id: true, name: true },
+      },
+      invitedBy: {
+        select: { name: true, email: true },
+      },
+    },
+    orderBy: { createdAt: 'desc' },
+    take: 20,
+  });
+
+  return invites.map(serializeAdminInvite);
+}
+
 export async function createSubscriptionPackageAction(formData: FormData): Promise<ActionResponse> {
   await requireRole('ADMIN');
 
@@ -452,6 +531,63 @@ export async function setSubscriptionPackageActiveAction(packageId: string, isAc
   revalidatePath('/subscription');
   revalidatePath('/settings');
   return { success: true, message: `${pkg.name} ${isActive ? 'activated' : 'deactivated'}` };
+}
+
+export async function createUserInviteAction(formData: FormData): Promise<ActionResponse<AdminInviteResult>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  await requireRole('ADMIN');
+
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const role = String(formData.get('role') || 'USER') as UserRole;
+  const packageId = String(formData.get('packageId') || '').trim() || null;
+  const expiresInDays = Number(formData.get('expiresInDays') || 7);
+
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, message: 'A valid email is required' };
+  }
+  if (role !== 'ADMIN' && role !== 'USER') {
+    return { success: false, message: 'Invalid invite role' };
+  }
+  if (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 30) {
+    return { success: false, message: 'Invite expiry must be between 1 and 30 days' };
+  }
+
+  const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (existingUser) {
+    return { success: false, message: 'A user with this email already exists' };
+  }
+
+  if (packageId) {
+    const pkg = await prisma.subscriptionPackage.findFirst({ where: { id: packageId, isActive: true }, select: { id: true } });
+    if (!pkg) return { success: false, message: 'Selected package is not available' };
+  }
+
+  const token = randomBytes(32).toString('base64url');
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + expiresInDays);
+
+  await prisma.userInvite.create({
+    data: {
+      email,
+      role,
+      packageId: role === 'ADMIN' ? null : packageId,
+      tokenHash: hashInviteToken(token),
+      expiresAt,
+      invitedById: session.user.id,
+    },
+  });
+
+  revalidatePath('/admin/users');
+  return {
+    success: true,
+    message: `Invite created for ${email}`,
+    data: {
+      email,
+      inviteUrl: `/register?invite=${encodeURIComponent(token)}`,
+      expiresAt: expiresAt.toISOString(),
+    },
+  };
 }
 
 export async function updateUserRoleAction(userId: string, role: UserRole): Promise<ActionResponse> {

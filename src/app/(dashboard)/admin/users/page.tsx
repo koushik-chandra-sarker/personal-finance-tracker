@@ -1,4 +1,4 @@
-import { getAdminSubscriptionPackagesAction, getAdminUsersPageAction, type AdminUsersQuery } from '@/actions/admin.actions';
+import { getAdminSubscriptionPackagesAction, getAdminUserInvitesAction, getAdminUsersPageAction, type AdminUsersQuery } from '@/actions/admin.actions';
 import UserManagementClient from '@/components/admin/UserManagementClient';
 import { requireRole } from '@/lib/rbac';
 import type { SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
@@ -48,10 +48,11 @@ export default async function AdminUsersPage({
   await requireRole('ADMIN');
   const resolvedSearchParams = await searchParams;
   const query = parseAdminUsersQuery(resolvedSearchParams);
-  const [usersPage, packages] = await Promise.all([
+  const [usersPage, packages, invites] = await Promise.all([
     getAdminUsersPageAction(query),
     getAdminSubscriptionPackagesAction(),
+    getAdminUserInvitesAction(),
   ]);
 
-  return <UserManagementClient usersPage={usersPage} packages={packages} />;
+  return <UserManagementClient usersPage={usersPage} packages={packages} invites={invites} />;
 }
