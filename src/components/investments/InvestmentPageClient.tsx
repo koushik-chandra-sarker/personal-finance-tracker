@@ -260,29 +260,39 @@ export default function InvestmentPageClient({
         </div>
       </div>
 
-      {/* Summary Cards */}
+      {/* Summary Cards - Minimalist Design */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'Total Invested', value: summary.totalInvested, icon: Wallet, gradient: 'from-blue-500 to-cyan-500' },
-          { label: 'Current Value', value: summary.totalCurrentValue, icon: TrendingUp, gradient: 'from-emerald-500 to-teal-500' },
-          { label: 'Total Returns', value: summary.totalReturns, icon: ArrowUpRight, gradient: 'from-amber-500 to-orange-500' },
+          { label: 'Total Invested', value: summary.totalInvested, icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50/50 dark:bg-blue-500/10' },
+          { label: 'Current Value', value: summary.totalCurrentValue, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50/50 dark:bg-emerald-500/10' },
+          { label: 'Total Returns', value: summary.totalReturns, icon: ArrowUpRight, color: 'text-amber-500', bg: 'bg-amber-50/50 dark:bg-amber-500/10' },
           {
             label: 'Gain/Loss', value: summary.unrealisedGainLoss,
             icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
-            gradient: summary.unrealisedGainLoss >= 0 ? 'from-emerald-500 to-green-500' : 'from-rose-500 to-red-500',
+            color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+            bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50/50 dark:bg-emerald-500/10' : 'bg-rose-50/50 dark:bg-rose-500/10',
             suffix: ` (${gainLossPercent}%)`
           },
         ].map((card) => (
-          <div key={card.label} className="relative overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4 sm:p-5">
-            <div className={cn('absolute top-0 right-0 w-20 h-20 rounded-bl-[4rem] opacity-10 bg-gradient-to-br', card.gradient)} />
-            <div className={cn('w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br text-white mb-3', card.gradient)}>
-              <card.icon className="h-5 w-5" />
+          <div key={card.label} className="group flex flex-col p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-300">
+            <div className="flex items-start justify-between mb-4">
+              <div className={cn('p-2.5 rounded-xl transition-colors duration-300', card.bg)}>
+                <card.icon className={cn('h-5 w-5', card.color)} />
+              </div>
             </div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</p>
-            <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-1">
-              {formatCurrency(Math.abs(card.value), currency)}
-              {card.suffix && <span className="text-xs font-medium ml-1">{card.suffix}</span>}
-            </p>
+            <div>
+              <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{card.label}</p>
+              <div className="flex items-baseline gap-1.5 flex-wrap">
+                <p className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">
+                  {formatCurrency(Math.abs(card.value), currency)}
+                </p>
+                {card.suffix && (
+                  <span className={cn('text-[11px] font-bold', card.color)}>
+                    {card.suffix}
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
         ))}
       </div>
