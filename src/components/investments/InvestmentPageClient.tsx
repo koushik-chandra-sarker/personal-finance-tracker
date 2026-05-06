@@ -11,7 +11,7 @@ import {
   TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X, 
   ChevronDown, ArrowUpRight, ArrowDownRight, Wallet, History,
   Calendar, Info, AlertCircle, CheckCircle2, Landmark, Banknote, PiggyBank,
-  BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2
+  BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2, RefreshCw
 } from 'lucide-react';
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
@@ -176,12 +176,17 @@ export default function InvestmentPageClient({
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track your portfolio &amp; returns</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link
-            href="/investments/types"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all"
+          <button
+            onClick={() => {
+              setLoading(true);
+              router.push('/investments/types');
+            }}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all disabled:opacity-70"
           >
-            <Settings2 className="h-4 w-4" /> Manage Types
-          </Link>
+            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+            Manage Types
+          </button>
           <button
             onClick={() => { setEditingInvestment(null); setShowForm(true); }}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all"

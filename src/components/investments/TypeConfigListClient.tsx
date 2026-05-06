@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 import { createTypeConfigAction, updateTypeConfigAction, deleteTypeConfigAction } from '@/actions/investment-type.actions';
-import { Plus, Trash2, Edit3, Settings2, ArrowLeft } from 'lucide-react';
+import { Plus, Trash2, Edit3, Settings2, ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import TypeConfigForm from './TypeConfigForm';
 import {
@@ -86,9 +86,16 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <Link href="/investments" className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 transition-colors">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
+          <button
+            onClick={() => {
+              setLoading(true);
+              router.push('/investments');
+            }}
+            disabled={loading}
+            className="p-2 -ml-2 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 text-slate-500 transition-colors disabled:opacity-50"
+          >
+            {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <ArrowLeft className="h-5 w-5" />}
+          </button>
           <div>
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Investment Types</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage instruments and their fields</p>

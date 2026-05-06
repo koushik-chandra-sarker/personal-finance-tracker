@@ -147,13 +147,13 @@ export default function SanchayapatraCalculator({
 
           {isCustomRate && (
             <div className="animate-in fade-in duration-200">
-              <label className="block text-xs font-semibold text-indigo-600 mb-1.5 uppercase">Manual Rate (%)</label>
+              <label className="block text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1.5 uppercase">Manual Rate (%)</label>
               <input 
                 type="number" 
                 step="0.01"
                 value={customRate} 
                 onChange={(e) => setCustomRate(Number(e.target.value))}
-                className="w-full px-4 py-2 border border-indigo-200 bg-indigo-50/30 text-sm font-bold text-indigo-700 rounded-lg outline-none"
+                className="w-full px-4 py-2 border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/30 dark:bg-indigo-500/10 text-sm font-bold text-indigo-700 dark:text-indigo-300 rounded-lg outline-none"
               />
             </div>
           )}
