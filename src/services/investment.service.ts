@@ -402,7 +402,7 @@ export async function closeInvestment(userId: string, executorId: string, id: st
 
   // If there's a final value and a linked account, create a transaction for the payout
   if (data.finalValue > 0 && data.linkedAccountId) {
-    const categoryId = await getOrCreateInvestmentCategory(userId, 'INCOME');
+    const categoryId = await getInvestmentTransferCategoryId(userId, executorId, 'INCOME');
 
     return prisma.$queryRaw`
       WITH updated_inv AS (

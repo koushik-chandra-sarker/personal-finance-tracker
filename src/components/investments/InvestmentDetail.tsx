@@ -28,7 +28,10 @@ const FREQ_LABELS: Record<string, string> = {
   YEARLY: 'Yearly', AT_MATURITY: 'At Maturity', ON_SALE: 'On Sale',
 };
 
-export default function InvestmentDetail({ investment: initialInvestment, accounts, currency, loading, onRecordReturn, onAddFunds, onRecordValuation, onClose }: {
+export default function InvestmentDetail({ 
+  investment: initialInvestment, accounts, currency, loading, 
+  onRecordReturn, onAddFunds, onRecordValuation, onCloseInvestment, onClose 
+}: {
   investment: Investment;
   accounts: Account[];
   currency: string;
