@@ -8,16 +8,15 @@ import {
   recordReturnAction, addFundsAction, recordValuationAction, closeInvestmentAction 
 } from '@/actions/investment.actions';
 import { 
-  TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X, 
-  ChevronDown, ArrowUpRight, ArrowDownRight, Wallet, History,
-  Calendar, Info, AlertCircle, CheckCircle2, Landmark, Banknote, PiggyBank,
+  TrendingUp, Plus, Search, Trash2, Edit3,
+  ChevronDown, ArrowUpRight, ArrowDownRight, Wallet,
+  Landmark, Banknote, PiggyBank,
   BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2, RefreshCw
 } from 'lucide-react';
-import { 
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
-  Cell, PieChart, Pie, LineChart, Line, AreaChart, Area
+import {
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Cell, PieChart, Pie, AreaChart, Area
 } from 'recharts';
-import Link from 'next/link';
 import InvestmentForm from './InvestmentForm';
 import InvestmentDetail from './InvestmentDetail';
 import MaturityTimeline from './MaturityTimeline';
@@ -47,6 +46,24 @@ type Investment = {
 
 type Allocation = { typeConfigId: string; name: string; color: string; total: number; percentage: number };
 type Summary = { totalInvested: number; totalCurrentValue: number; totalReturns: number; unrealisedGainLoss: number; activeCount: number };
+type MaturityInvestment = {
+  id: string;
+  name: string;
+  maturityDate: string | null;
+  investedAmount: number | string;
+  typeConfig: { name: string; color: string; icon: string };
+};
+type SanchayapatraConfig = {
+  id: string;
+  type: string;
+  name: string;
+  description?: string | null;
+  rate: number | string;
+  taxThreshold: number | string;
+  taxRateBelow: number | string;
+  taxRateAbove: number | string;
+  payoutFrequency: string;
+};
 
 const ICON_MAP: Record<string, React.ElementType> = {
   'landmark': Landmark, 'banknote': Banknote, 'piggy-bank': PiggyBank,
@@ -66,8 +83,8 @@ const STATUS_STYLES: Record<string, string> = {
 export default function InvestmentPageClient({
   investments: initial, typeConfigs, accounts, sanchayapatraConfigs, summary, allocation, maturities, growthData, currency,
 }: {
-  investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: any[];
-  summary: Summary; allocation: Allocation[]; maturities: any[]; growthData: { name: string; value: number }[]; currency: string;
+  investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: SanchayapatraConfig[];
+  summary: Summary; allocation: Allocation[]; maturities: MaturityInvestment[]; growthData: { name: string; value: number }[]; currency: string;
 }) {
   const router = useRouter();
   const [investments, setInvestments] = useState(initial);
@@ -243,7 +260,7 @@ export default function InvestmentPageClient({
                     fontSize: '12px'
                   }}
                   itemStyle={{ color: isDark ? '#ffffff' : '#0f172a' }}
-                  formatter={(value: any) => [formatCurrency(value, currency), 'Total Value']}
+                  formatter={(value: unknown) => [formatCurrency(Number(value), currency), 'Total Value']}
                 />
                 <Area 
                   type="monotone" 
@@ -453,9 +470,9 @@ export default function InvestmentPageClient({
           accounts={accounts}
           currency={currency}
           loading={loading}
-          onRecordReturn={handleRecordReturn}
-          onAddFunds={handleAddFunds}
-          onRecordValuation={handleRecordValuation}
+          onRecordReturn={(fd) => handleRecordReturn(viewingInvestment.id, fd)}
+          onAddFunds={(fd) => handleAddFunds(viewingInvestment.id, fd)}
+          onRecordValuation={(fd) => handleRecordValuation(viewingInvestment.id, fd)}
           onCloseInvestment={handleCloseInvestment}
           onClose={() => setViewingInvestment(null)}
         />

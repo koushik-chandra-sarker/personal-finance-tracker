@@ -8,6 +8,10 @@ import * as typeService from '@/services/investment-type.service';
 import type { ActionResponse } from '@/types';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function getInvestmentsAction(filters?: {
   typeConfigId?: string;
   status?: string;
@@ -132,15 +136,15 @@ export async function addFundsAction(investmentId: string, formData: FormData): 
   const accountId = formData.get('accountId') as string;
   const description = formData.get('description') as string | undefined;
 
-  if (!amount || amount <= 0) return { success: false, message: 'Invalid amount' };
+  if (!Number.isFinite(amount) || amount <= 0) return { success: false, message: 'Invalid amount' };
   if (!accountId) return { success: false, message: 'Account is required' };
 
   try {
     await investmentService.addFunds(userId, executorId, investmentId, accountId, amount, description);
     revalidatePath('/investments');
     return { success: true, message: 'Funds added successfully' };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to add funds' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to add funds') };
   }
 }
 
@@ -154,15 +158,15 @@ export async function recordValuationAction(investmentId: string, formData: Form
   const value = Number(formData.get('value'));
   const date = formData.get('date') as string;
 
-  if (value < 0) return { success: false, message: 'Invalid value' };
+  if (!Number.isFinite(value) || value < 0) return { success: false, message: 'Invalid value' };
   if (!date) return { success: false, message: 'Date is required' };
 
   try {
     await investmentService.recordValuation(userId, executorId, investmentId, { value, date });
     revalidatePath('/investments');
     return { success: true, message: 'Valuation recorded' };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to record valuation' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to record valuation') };
   }
 }
 
@@ -198,15 +202,17 @@ export async function closeInvestmentAction(id: string, formData: FormData): Pro
   const description = formData.get('description') as string || undefined;
 
   if (!status || !closeDate) return { success: false, message: 'Status and date are required' };
+  if (!['MATURED', 'SOLD', 'CANCELLED'].includes(status)) return { success: false, message: 'Invalid closing status' };
+  if (!Number.isFinite(finalValue) || finalValue < 0) return { success: false, message: 'Invalid final value' };
 
   try {
     await investmentService.closeInvestment(userId, executorId, id, {
       status, closeDate, finalValue, linkedAccountId, description
     });
     revalidatePath('/investments');
+    revalidatePath('/dashboard');
     return { success: true, message: `Investment marked as ${status.toLowerCase()}` };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to update status' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to update status') };
   }
 }
-

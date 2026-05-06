@@ -1,25 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
-
-type NotificationType =
-  | 'BILL_REMINDER'
-  | 'BUDGET_ALERT'
-  | 'GOAL_DEADLINE'
-  | 'GOAL_REACHED'
-  | 'UNUSUAL_EXPENSE'
-  | 'LOW_BALANCE'
-  | 'RECURRING_CREATED'
-  | 'INSIGHT'
-  | 'SYSTEM';
-
-type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL' | 'SUCCESS';
-type NotificationSource =
-  | 'RECURRING_TRANSACTION'
-  | 'BUDGET'
-  | 'GOAL'
-  | 'TRANSACTION'
-  | 'ACCOUNT'
-  | 'SYSTEM';
+import { Prisma, type NotificationSeverity, type NotificationSource, type NotificationType } from '@prisma/client';
 
 type CreateNotificationData = {
   title: string;

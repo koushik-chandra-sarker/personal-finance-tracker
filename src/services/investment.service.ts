@@ -223,6 +223,7 @@ export async function addFunds(
 ) {
   const investment = await prisma.investment.findFirst({ where: { id, userId } });
   if (!investment) throw new Error('Investment not found');
+  if (investment.status !== 'ACTIVE') throw new Error('Only active investments can receive additional funds');
 
   const account = await prisma.account.findFirst({ where: { id: accountId, userId, isActive: true }, select: { id: true, balance: true } });
   if (!account) throw new Error('Account not found');
@@ -267,6 +268,7 @@ export async function recordValuation(userId: string, executorId: string, id: st
 }) {
   const investment = await prisma.investment.findFirst({ where: { id, userId } });
   if (!investment) throw new Error('Investment not found');
+  if (investment.status !== 'ACTIVE') throw new Error('Only active investments can receive valuation updates');
 
   await prisma.$transaction([
     prisma.investmentValuation.create({
@@ -293,6 +295,7 @@ export async function recordReturn(userId: string, executorId: string, investmen
 }) {
   const investment = await prisma.investment.findFirst({ where: { id: investmentId, userId } });
   if (!investment) throw new Error('Investment not found');
+  if (investment.status !== 'ACTIVE') throw new Error('Only active investments can record returns');
 
   const ret = await prisma.investmentReturn.create({
     data: {
@@ -396,12 +399,20 @@ export async function closeInvestment(userId: string, executorId: string, id: st
     include: { typeConfig: true },
   });
   if (!investment) throw new Error('Investment not found');
+  if (investment.status !== 'ACTIVE') throw new Error('Investment is already closed');
+  if (data.finalValue < 0) throw new Error('Final value cannot be negative');
 
   const cleanDescription = data.description || `${data.status}: ${investment.name}`;
-  const transactionId = `tx_${Math.random().toString(36).substring(2, 11)}`;
+  const transactionId = randomUUID();
 
   // If there's a final value and a linked account, create a transaction for the payout
   if (data.finalValue > 0 && data.linkedAccountId) {
+    const account = await prisma.account.findFirst({
+      where: { id: data.linkedAccountId, userId, isActive: true },
+      select: { id: true },
+    });
+    if (!account) throw new Error('Payout account not found');
+
     const categoryId = await getInvestmentTransferCategoryId(userId, executorId, 'INCOME');
 
     return prisma.$queryRaw`
@@ -473,7 +484,7 @@ export async function getPortfolioGrowth(userId: string) {
         const valuationsBefore = inv.valuations.filter(v => new Date(v.date) <= monthEnd);
         if (valuationsBefore.length > 0) {
           const latestValuation = valuationsBefore.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-          totalValue += Number(latestValuation.amount);
+          totalValue += Number(latestValuation.value);
         } else {
           // If no valuations, use original invested amount
           totalValue += Number(inv.investedAmount);
@@ -489,5 +500,3 @@ export async function getPortfolioGrowth(userId: string) {
 
   return growth;
 }
-
-
