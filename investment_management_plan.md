@@ -332,10 +332,10 @@ investment-type.service.ts
 - [ ] Growth line chart on portfolio page
 
 ### Phase 4 — Notifications & Maturity *(~1-2 days)*
-- [ ] Maturity notification detector
-- [ ] DPS installment reminder
-- [ ] Maturity timeline component
-- [ ] Mark-as-matured / sold workflow
+- [x] Maturity notification detector
+- [x] DPS installment reminder
+- [x] Maturity timeline component
+- [x] Mark-as-matured / sold workflow
 
 ### Phase 5 — Advanced Features *(~2-3 days)*
 - [ ] Sanchayapatra profit calculator

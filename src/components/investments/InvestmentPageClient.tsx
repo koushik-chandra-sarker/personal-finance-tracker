@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { 
   createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, 
-  recordReturnAction, addFundsAction, recordValuationAction 
+  recordReturnAction, addFundsAction, recordValuationAction, closeInvestmentAction 
 } from '@/actions/investment.actions';
 import {
   TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X,
@@ -16,6 +16,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import Link from 'next/link';
 import InvestmentForm from './InvestmentForm';
 import InvestmentDetail from './InvestmentDetail';
+import MaturityTimeline from './MaturityTimeline';
 
 type TypeConfig = {
   id: string; slug: string; name: string; description?: string | null;
@@ -59,10 +60,10 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function InvestmentPageClient({
-  investments: initial, typeConfigs, accounts, summary, allocation, currency,
+  investments: initial, typeConfigs, accounts, summary, allocation, maturities, currency,
 }: {
   investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[];
-  summary: Summary; allocation: Allocation[]; currency: string;
+  summary: Summary; allocation: Allocation[]; maturities: any[]; currency: string;
 }) {
   const router = useRouter();
   const [investments, setInvestments] = useState(initial);
@@ -139,11 +140,19 @@ export default function InvestmentPageClient({
       return result;
     } finally { setLoading(false); }
   };
-
   const handleRecordValuation = async (investmentId: string, formData: FormData) => {
     setLoading(true);
     try {
       const result = await recordValuationAction(investmentId, formData);
+      if (result.success) router.refresh();
+      return result;
+    } finally { setLoading(false); }
+  };
+
+  const handleCloseInvestment = async (id: string, formData: FormData) => {
+    setLoading(true);
+    try {
+      const result = await closeInvestmentAction(id, formData);
       if (result.success) router.refresh();
       return result;
     } finally { setLoading(false); }
@@ -358,9 +367,10 @@ export default function InvestmentPageClient({
           accounts={accounts}
           currency={currency}
           loading={loading}
-          onRecordReturn={(fd) => handleRecordReturn(viewingInvestment.id, fd)}
-          onAddFunds={(fd) => handleAddFunds(viewingInvestment.id, fd)}
-          onRecordValuation={(fd) => handleRecordValuation(viewingInvestment.id, fd)}
+          onRecordReturn={handleRecordReturn}
+          onAddFunds={handleAddFunds}
+          onRecordValuation={handleRecordValuation}
+          onCloseInvestment={handleCloseInvestment}
           onClose={() => setViewingInvestment(null)}
         />
       )}
@@ -381,6 +391,17 @@ export default function InvestmentPageClient({
           </div>
         </div>
       )}
+      {/* Bottom Grid for Charts and Timeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
+        <MaturityTimeline investments={maturities} currency={currency} />
+        
+        {/* We can add a growth chart here later in Phase 5 */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 flex flex-col items-center justify-center text-center">
+          <TrendingUp className="h-8 w-8 text-slate-300 mb-2" />
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Portfolio Growth</h3>
+          <p className="text-xs text-slate-500 mt-1 max-w-[200px]">Historical growth chart visualization will be implemented in Phase 5.</p>
+        </div>
+      </div>
     </div>
   );
 }

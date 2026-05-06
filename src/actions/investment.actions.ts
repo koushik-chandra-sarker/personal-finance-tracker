@@ -183,3 +183,30 @@ export async function getUpcomingMaturitiesAction() {
   await validateAccess('INVESTMENTS', 'VIEW');
   return investmentService.getUpcomingMaturities(userId);
 }
+
+export async function closeInvestmentAction(id: string, formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('INVESTMENTS', 'EDIT');
+
+  const status = formData.get('status') as 'MATURED' | 'SOLD' | 'CANCELLED';
+  const closeDate = formData.get('closeDate') as string;
+  const finalValue = Number(formData.get('finalValue'));
+  const linkedAccountId = formData.get('linkedAccountId') as string || undefined;
+  const description = formData.get('description') as string || undefined;
+
+  if (!status || !closeDate) return { success: false, message: 'Status and date are required' };
+
+  try {
+    await investmentService.closeInvestment(userId, executorId, id, {
+      status, closeDate, finalValue, linkedAccountId, description
+    });
+    revalidatePath('/investments');
+    return { success: true, message: `Investment marked as ${status.toLowerCase()}` };
+  } catch (error: any) {
+    return { success: false, message: error.message || 'Failed to update status' };
+  }
+}
+

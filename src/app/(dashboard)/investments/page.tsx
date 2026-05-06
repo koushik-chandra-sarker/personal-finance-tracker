@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getInvestments, getPortfolioSummary, getPortfolioAllocation } from '@/services/investment.service';
+import { getInvestments, getPortfolioSummary, getPortfolioAllocation, getUpcomingMaturities } from '@/services/investment.service';
 import { getTypeConfigs } from '@/services/investment-type.service';
 import { getAccounts } from '@/services/account.service';
 import InvestmentPageClient from '@/components/investments/InvestmentPageClient';
@@ -12,12 +12,13 @@ export default async function InvestmentsPage() {
   const userId = await getEffectiveUserId();
   await validateAccess('INVESTMENTS', 'VIEW');
 
-  const [investments, typeConfigs, accounts, summary, allocation] = await Promise.all([
+  const [investments, typeConfigs, accounts, summary, allocation, maturities] = await Promise.all([
     getInvestments(userId),
     getTypeConfigs(userId),
     getAccounts(userId),
     getPortfolioSummary(userId),
     getPortfolioAllocation(userId),
+    getUpcomingMaturities(userId),
   ]);
 
   return (
@@ -27,6 +28,7 @@ export default async function InvestmentsPage() {
       accounts={JSON.parse(JSON.stringify(accounts))}
       summary={JSON.parse(JSON.stringify(summary))}
       allocation={JSON.parse(JSON.stringify(allocation))}
+      maturities={JSON.parse(JSON.stringify(maturities))}
       currency={session.user.currency || 'BDT'}
     />
   );

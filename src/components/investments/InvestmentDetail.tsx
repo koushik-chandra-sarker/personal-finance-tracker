@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { X, ArrowUpRight, ArrowDownRight, Plus, Calendar, Building2, Hash, TrendingUp, PiggyBank, RefreshCw } from 'lucide-react';
+import { X, ArrowUpRight, ArrowDownRight, Plus, Calendar, Building2, Hash, TrendingUp, PiggyBank, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { ActionResponse } from '@/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getInvestmentByIdAction } from '@/actions/investment.actions';
@@ -36,6 +36,7 @@ export default function InvestmentDetail({ investment: initialInvestment, accoun
   onRecordReturn: (fd: FormData) => Promise<ActionResponse>;
   onAddFunds: (fd: FormData) => Promise<ActionResponse>;
   onRecordValuation: (fd: FormData) => Promise<ActionResponse>;
+  onCloseInvestment: (id: string, fd: FormData) => Promise<ActionResponse>;
   onClose: () => void;
 }) {
   const [investment, setInvestment] = useState<Investment>(initialInvestment);
@@ -45,6 +46,7 @@ export default function InvestmentDetail({ investment: initialInvestment, accoun
   const [showReturnForm, setShowReturnForm] = useState(false);
   const [showFundsForm, setShowFundsForm] = useState(false);
   const [showValuationForm, setShowValuationForm] = useState(false);
+  const [showCloseForm, setShowCloseForm] = useState(false);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
@@ -92,6 +94,18 @@ export default function InvestmentDetail({ investment: initialInvestment, accoun
     if (result.success) {
       setShowValuationForm(false);
       getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as any)).catch(console.error);
+    }
+    else setMessage(result.message);
+  };
+
+  const handleClose = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessage('');
+    const fd = new FormData(e.currentTarget);
+    const result = await onCloseInvestment(investment.id, fd);
+    if (result.success) {
+      setShowCloseForm(false);
+      onClose(); // Close the modal after selling/maturing
     }
     else setMessage(result.message);
   };
@@ -239,6 +253,50 @@ export default function InvestmentDetail({ investment: initialInvestment, accoun
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => setShowFundsForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
                     <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : 'Add Funds'}</button>
+                  </div>
+                </form>
+              )}
+
+              {investment.status === 'ACTIVE' && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-700/50">
+                  <button onClick={() => setShowCloseForm(!showCloseForm)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-500" /> Mark as Matured / Sell
+                  </button>
+                </div>
+              )}
+
+              {showCloseForm && (
+                <form onSubmit={handleClose} className="space-y-3 p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-500/5 border border-emerald-100 dark:border-emerald-500/20">
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Update the status when the investment matures or is sold. This will record a final payout if a value and account are provided.</p>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <select name="status" required className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
+                      <option value="MATURED">Matured</option>
+                      <option value="SOLD">Sold</option>
+                      <option value="CANCELLED">Cancelled</option>
+                    </select>
+                    <input name="closeDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
+                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <input name="finalValue" type="number" step="0.01" required placeholder="Final Payout Value" defaultValue={current}
+                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+                    <select name="linkedAccountId" defaultValue={investment.linkedAccountId || ''}
+                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
+                      <option value="">No payout to account</option>
+                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                    </select>
+                  </div>
+
+                  <input name="description" placeholder="Closing note (optional)"
+                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+
+                  {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
+                  
+                  <div className="flex gap-2 pt-1">
+                    <button type="button" onClick={() => setShowCloseForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
+                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Processing...' : 'Confirm Close'}</button>
                   </div>
                 </form>
               )}

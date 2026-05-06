@@ -383,3 +383,64 @@ export async function getUpcomingMaturities(userId: string, daysAhead: number = 
     orderBy: { maturityDate: 'asc' },
   });
 }
+
+export async function closeInvestment(userId: string, executorId: string, id: string, data: {
+  status: 'MATURED' | 'SOLD' | 'CANCELLED';
+  closeDate: string;
+  finalValue: number;
+  linkedAccountId?: string;
+  description?: string;
+}) {
+  const investment = await prisma.investment.findFirst({
+    where: { id, userId },
+    include: { typeConfig: true },
+  });
+  if (!investment) throw new Error('Investment not found');
+
+  const cleanDescription = data.description || `${data.status}: ${investment.name}`;
+  const transactionId = `tx_${Math.random().toString(36).substring(2, 11)}`;
+
+  // If there's a final value and a linked account, create a transaction for the payout
+  if (data.finalValue > 0 && data.linkedAccountId) {
+    const categoryId = await getOrCreateInvestmentCategory(userId, 'INCOME');
+
+    return prisma.$queryRaw`
+      WITH updated_inv AS (
+        UPDATE "Investment"
+        SET 
+          "status" = ${data.status}::"InvestmentStatus",
+          "currentValue" = ${data.finalValue},
+          "soldDate" = ${new Date(data.closeDate)},
+          "updatedById" = ${executorId},
+          "updatedAt" = NOW()
+        WHERE "id" = ${id} AND "userId" = ${userId}
+        RETURNING "id"
+      ),
+      inserted_transaction AS (
+        INSERT INTO "Transaction" ("id", "userId", "accountId", "categoryId", "type", "amount", "description", "date", "tags", "isRecurring", "createdAt", "updatedAt", "createdById", "updatedById")
+        SELECT
+          ${transactionId}, ${userId}, ${data.linkedAccountId}, ${categoryId}, 'INCOME'::"CategoryType", ${data.finalValue}, ${cleanDescription}, ${new Date(data.closeDate)}, ARRAY[]::text[], false, NOW(), NOW(), ${executorId}, ${executorId}
+        RETURNING "id"
+      ),
+      updated_account AS (
+        UPDATE "Account"
+        SET "balance" = "balance" + ${data.finalValue}, "updatedById" = ${executorId}, "updatedAt" = NOW()
+        WHERE "id" = ${data.linkedAccountId} AND "userId" = ${userId}
+        RETURNING "id"
+      )
+      SELECT updated_inv.* FROM updated_inv, inserted_transaction, updated_account
+    `;
+  }
+
+  // Otherwise just update the status
+  return prisma.investment.update({
+    where: { id },
+    data: {
+      status: data.status,
+      currentValue: data.finalValue,
+      soldDate: new Date(data.closeDate),
+      updatedById: executorId,
+    },
+  });
+}
+

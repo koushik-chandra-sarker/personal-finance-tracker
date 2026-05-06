@@ -10,6 +10,8 @@ type DetectorCounts = {
   goalDeadlines: number;
   unusualExpenses: number;
   lowBalances: number;
+  investmentMaturities: number;
+  dpsReminders: number;
 };
 
 function emptyCounts(): DetectorCounts {
@@ -19,6 +21,8 @@ function emptyCounts(): DetectorCounts {
     goalDeadlines: 0,
     unusualExpenses: 0,
     lowBalances: 0,
+    investmentMaturities: 0,
+    dpsReminders: 0,
   };
 }
 
@@ -233,6 +237,98 @@ export async function detectLowBalances(userId: string, now = new Date()) {
   return created;
 }
 
+export async function detectInvestmentMaturities(userId: string, now = new Date()) {
+  const preferences = await getOrCreateNotificationPreferences(userId);
+  if (!preferences.investmentMaturityEnabled) return 0;
+
+  const from = startOfDay(now);
+  const to = endOfDay(addDays(now, preferences.investmentReminderDaysBefore));
+
+  const investments = await prisma.investment.findMany({
+    where: {
+      userId,
+      status: 'ACTIVE',
+      maturityDate: { gte: from, lte: to },
+    },
+    include: { typeConfig: true },
+    orderBy: { maturityDate: 'asc' },
+  });
+
+  let created = 0;
+  for (const inv of investments) {
+    if (!inv.maturityDate) continue;
+    
+    const daysUntil = differenceInCalendarDays(inv.maturityDate, now);
+    const result = await createNotificationOnce(userId, {
+      title: `${inv.name} maturing soon`,
+      message: `${inv.typeConfig.name} investment is maturing on ${formatDate(inv.maturityDate)}.`,
+      type: 'INVESTMENT_MATURITY',
+      severity: daysUntil <= 2 ? 'CRITICAL' : 'WARNING',
+      sourceType: 'INVESTMENT',
+      sourceId: inv.id,
+      dedupeKey: `inv-maturity:${inv.id}:${dayKey(inv.maturityDate)}:${preferences.investmentReminderDaysBefore}`,
+      actionUrl: '/investments',
+    });
+    if (result.created) created++;
+  }
+
+  return created;
+}
+
+export async function detectDPSReminders(userId: string, now = new Date()) {
+  const preferences = await getOrCreateNotificationPreferences(userId);
+  if (!preferences.dpsReminderEnabled) return 0;
+
+  // We check for investments with monthly installments (DPS)
+  const dpsInvestments = await prisma.investment.findMany({
+    where: {
+      userId,
+      status: 'ACTIVE',
+      typeConfig: { hasMonthlyInstallment: true },
+      monthlyInstallment: { gt: 0 },
+    },
+    include: { typeConfig: true },
+  });
+
+  let created = 0;
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+
+  for (const inv of dpsInvestments) {
+    // Check if a payment has already been recorded this month
+    const thisMonthPayment = await prisma.transaction.findFirst({
+      where: {
+        userId,
+        description: { contains: inv.name, mode: 'insensitive' },
+        date: {
+          gte: startOfDay(new Date(currentYear, currentMonth, 1)),
+          lte: endOfDay(new Date(currentYear, currentMonth + 1, 0)),
+        },
+      },
+    });
+
+    if (!thisMonthPayment) {
+      // Payment missing for this month
+      // We'll set a reminder if it's past the 5th of the month
+      if (now.getDate() >= 5) {
+        const result = await createNotificationOnce(userId, {
+          title: `DPS payment due: ${inv.name}`,
+          message: `Your monthly installment of ${inv.monthlyInstallment} is due this month.`,
+          type: 'INVESTMENT_RETURN_DUE',
+          severity: now.getDate() >= 10 ? 'CRITICAL' : 'WARNING',
+          sourceType: 'INVESTMENT',
+          sourceId: inv.id,
+          dedupeKey: `dps-due:${inv.id}:${currentYear}-${currentMonth}`,
+          actionUrl: '/investments',
+        });
+        if (result.created) created++;
+      }
+    }
+  }
+
+  return created;
+}
+
 export async function runNotificationDetectors(userId?: string, now = new Date()) {
   const users = userId
     ? [{ id: userId }]
@@ -245,6 +341,8 @@ export async function runNotificationDetectors(userId?: string, now = new Date()
     totals.goalDeadlines += await detectGoalDeadlines(user.id, now);
     totals.unusualExpenses += await detectUnusualExpenses(user.id);
     totals.lowBalances += await detectLowBalances(user.id, now);
+    totals.investmentMaturities += await detectInvestmentMaturities(user.id, now);
+    totals.dpsReminders += await detectDPSReminders(user.id, now);
   }
 
   return totals;
