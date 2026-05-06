@@ -38,6 +38,7 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
   const [showCalculator, setShowCalculator] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState('');
+  const [investedAmount, setInvestedAmount] = useState<number | ''>(investment?.investedAmount ? Number(investment.investedAmount) : '');
   const calcRef = useRef<HTMLDivElement>(null);
 
   const selectedType = typeConfigs.find((t) => t.id === selectedTypeId);
@@ -116,7 +117,8 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
             <div>
               <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Invested Amount *</label>
               <input name="investedAmount" type="number" step="0.01" required
-                defaultValue={investment ? Number(investment.investedAmount) : ''}
+                value={investedAmount}
+                onChange={(e) => setInvestedAmount(e.target.value === '' ? '' : Number(e.target.value))}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
             </div>
             <div>
@@ -247,7 +249,11 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
 
           {showCalculator && selectedType?.slug === 'govt_savings' && (
             <div ref={calcRef} className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
-              <SanchayapatraCalculator currency={currency} systemConfigs={sanchayapatraConfigs} />
+              <SanchayapatraCalculator 
+                currency={currency} 
+                systemConfigs={sanchayapatraConfigs} 
+                initialAmount={investedAmount === '' ? 0 : Number(investedAmount)} 
+              />
             </div>
           )}
         </form>
