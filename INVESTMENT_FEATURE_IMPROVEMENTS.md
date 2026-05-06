@@ -199,12 +199,13 @@ Status: implemented on 2026-05-06.
 ### Phase 1: Reconcile Cashflow Correctly
 
 Priority: high.
+Status: implemented on 2026-05-06.
 
-- Add an investment cashflow model or stable transaction links/tags.
-- Link generated buy, add-funds, return, sale, maturity, tax, and fee transactions to the investment.
-- Make return recording optionally or requiredly deposit to an account.
-- Split close payout into principal and gain/loss.
-- Restrict deletes when linked financial history exists.
+- [x] Add an investment cashflow model and stable transaction links/tags.
+- [x] Link generated buy, add-funds, return, sale, and maturity/close transactions to the investment. Tax and fee types are now modeled for the next reporting pass.
+- [x] Require return recording to deposit into a selected account and create the matching income transaction.
+- [x] Split close payout cashflows into principal and realized gain/loss.
+- [x] Restrict deletes when linked financial history exists.
 
 ### Phase 2: Make DPS And Sanchayapatra Operational
 

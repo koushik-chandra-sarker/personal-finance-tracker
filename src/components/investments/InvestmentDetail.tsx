@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { X, ArrowUpRight, ArrowDownRight, Plus, Calendar, Building2, Hash, TrendingUp, PiggyBank, RefreshCw, CheckCircle2 } from 'lucide-react';
+import { X, ArrowUpRight, Plus, Calendar, Building2, Hash, TrendingUp, PiggyBank, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { ActionResponse } from '@/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getInvestmentByIdAction } from '@/actions/investment.actions';
@@ -54,7 +54,7 @@ export default function InvestmentDetail({
 
   useEffect(() => {
     getInvestmentByIdAction(initialInvestment.id).then((data) => {
-      setInvestment(data as any);
+      setInvestment(data as Investment);
       setIsLoadingData(false);
     }).catch(console.error);
   }, [initialInvestment.id]);
@@ -72,7 +72,7 @@ export default function InvestmentDetail({
     const result = await onRecordReturn(fd);
     if (result.success) {
       setShowReturnForm(false);
-      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as any)).catch(console.error);
+      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as Investment)).catch(console.error);
     }
     else setMessage(result.message);
   };
@@ -84,7 +84,7 @@ export default function InvestmentDetail({
     const result = await onAddFunds(fd);
     if (result.success) {
       setShowFundsForm(false);
-      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as any)).catch(console.error);
+      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as Investment)).catch(console.error);
     }
     else setMessage(result.message);
   };
@@ -96,7 +96,7 @@ export default function InvestmentDetail({
     const result = await onRecordValuation(fd);
     if (result.success) {
       setShowValuationForm(false);
-      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as any)).catch(console.error);
+      getInvestmentByIdAction(initialInvestment.id).then((data) => setInvestment(data as Investment)).catch(console.error);
     }
     else setMessage(result.message);
   };
@@ -380,6 +380,7 @@ export default function InvestmentDetail({
 
               {showReturnForm && (
                 <form onSubmit={handleReturn} className="space-y-3 mb-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700/50">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Return payments are deposited into the selected account.</p>
                   <div className="grid grid-cols-2 gap-3">
                     <input name="amount" type="number" step="0.01" required placeholder="Amount"
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
@@ -391,8 +392,15 @@ export default function InvestmentDetail({
                       ))}
                     </select>
                   </div>
-                  <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
-                    className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+                  <div className="grid grid-cols-2 gap-3">
+                    <select name="accountId" required defaultValue={investment.linkedAccountId || ''}
+                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
+                      <option value="">Deposit Account...</option>
+                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency)})</option>)}
+                    </select>
+                    <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
+                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+                  </div>
                   <input name="description" placeholder="Description (optional)"
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}

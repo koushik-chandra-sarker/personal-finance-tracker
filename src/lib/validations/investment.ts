@@ -39,6 +39,7 @@ export const investmentSchema = z.object({
 export const investmentReturnSchema = z.object({
   amount: z.coerce.number().positive('Amount must be positive'),
   type: z.string().min(1, 'Return type is required'),
+  accountId: z.string().min(1, 'Deposit account is required'),
   description: z.string().optional(),
   date: z.string().min(1, 'Date is required'),
 });

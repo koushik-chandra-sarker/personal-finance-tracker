@@ -98,9 +98,14 @@ export async function updateInvestmentAction(id: string, formData: FormData): Pr
 export async function deleteInvestmentAction(id: string): Promise<ActionResponse> {
   const userId = await getEffectiveUserId();
   await validateAccess('INVESTMENTS', 'EDIT');
-  await investmentService.deleteInvestment(userId, id);
-  revalidatePath('/investments');
-  return { success: true, message: 'Investment deleted' };
+  try {
+    await investmentService.deleteInvestment(userId, id);
+    revalidatePath('/investments');
+    revalidatePath('/dashboard');
+    return { success: true, message: 'Investment deleted' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to delete investment') };
+  }
 }
 
 export async function recordReturnAction(investmentId: string, formData: FormData): Promise<ActionResponse> {
@@ -113,6 +118,7 @@ export async function recordReturnAction(investmentId: string, formData: FormDat
   const raw = {
     amount: formData.get('amount') as string,
     type: formData.get('type') as string,
+    accountId: formData.get('accountId') as string,
     description: formData.get('description') as string,
     date: formData.get('date') as string,
   };
@@ -120,9 +126,14 @@ export async function recordReturnAction(investmentId: string, formData: FormDat
   const parsed = investmentReturnSchema.safeParse(raw);
   if (!parsed.success) return { success: false, message: 'Validation failed' };
 
-  await investmentService.recordReturn(userId, executorId, investmentId, parsed.data);
-  revalidatePath('/investments');
-  return { success: true, message: 'Return recorded' };
+  try {
+    await investmentService.recordReturn(userId, executorId, investmentId, parsed.data);
+    revalidatePath('/investments');
+    revalidatePath('/dashboard');
+    return { success: true, message: 'Return recorded and deposited' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to record return') };
+  }
 }
 
 export async function addFundsAction(investmentId: string, formData: FormData): Promise<ActionResponse> {
@@ -142,6 +153,7 @@ export async function addFundsAction(investmentId: string, formData: FormData): 
   try {
     await investmentService.addFunds(userId, executorId, investmentId, accountId, amount, description);
     revalidatePath('/investments');
+    revalidatePath('/dashboard');
     return { success: true, message: 'Funds added successfully' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to add funds') };

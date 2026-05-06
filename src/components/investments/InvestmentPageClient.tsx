@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { 
@@ -87,12 +87,15 @@ export default function InvestmentPageClient({
   summary: Summary; allocation: Allocation[]; maturities: MaturityInvestment[]; growthData: { name: string; value: number }[]; currency: string;
 }) {
   const router = useRouter();
+  const [isPendingRefresh, startRefreshTransition] = useTransition();
   const [investments, setInvestments] = useState(initial);
   const [mounted, setMounted] = useState(false);
+  const [isRefreshingData, setIsRefreshingData] = useState(false);
   
   useEffect(() => {
     setMounted(true);
     setInvestments(initial);
+    setIsRefreshingData(false);
   }, [initial]);
   
   const [showForm, setShowForm] = useState(false);
@@ -103,7 +106,16 @@ export default function InvestmentPageClient({
   const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteMessage, setDeleteMessage] = useState('');
   const isDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
+  const showRefreshLoader = (isRefreshingData || isPendingRefresh) && !showForm && !viewingInvestment && !deleteId;
+
+  const refreshInvestmentData = () => {
+    setIsRefreshingData(true);
+    startRefreshTransition(() => {
+      router.refresh();
+    });
+  };
 
   const filtered = investments.filter((inv) => {
     if (search && !inv.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -119,7 +131,7 @@ export default function InvestmentPageClient({
       const result = await createInvestmentAction(formData);
       if (result.success) {
         setShowForm(false);
-        router.refresh();
+        refreshInvestmentData();
       }
       return result;
     } finally { setLoading(false); }
@@ -131,7 +143,7 @@ export default function InvestmentPageClient({
       const result = await updateInvestmentAction(id, formData);
       if (result.success) {
         setEditingInvestment(null);
-        router.refresh();
+        refreshInvestmentData();
       }
       return result;
     } finally { setLoading(false); }
@@ -139,10 +151,15 @@ export default function InvestmentPageClient({
 
   const handleDelete = async (id: string) => {
     setLoading(true);
+    setDeleteMessage('');
     try {
-      await deleteInvestmentAction(id);
-      setDeleteId(null);
-      router.refresh();
+      const result = await deleteInvestmentAction(id);
+      if (result.success) {
+        setDeleteId(null);
+        refreshInvestmentData();
+      } else {
+        setDeleteMessage(result.message);
+      }
     } finally { setLoading(false); }
   };
 
@@ -150,7 +167,7 @@ export default function InvestmentPageClient({
     setLoading(true);
     try {
       const result = await recordReturnAction(investmentId, formData);
-      if (result.success) router.refresh();
+      if (result.success) refreshInvestmentData();
       return result;
     } finally { setLoading(false); }
   };
@@ -159,7 +176,7 @@ export default function InvestmentPageClient({
     setLoading(true);
     try {
       const result = await addFundsAction(investmentId, formData);
-      if (result.success) router.refresh();
+      if (result.success) refreshInvestmentData();
       return result;
     } finally { setLoading(false); }
   };
@@ -167,7 +184,7 @@ export default function InvestmentPageClient({
     setLoading(true);
     try {
       const result = await recordValuationAction(investmentId, formData);
-      if (result.success) router.refresh();
+      if (result.success) refreshInvestmentData();
       return result;
     } finally { setLoading(false); }
   };
@@ -176,7 +193,7 @@ export default function InvestmentPageClient({
     setLoading(true);
     try {
       const result = await closeInvestmentAction(id, formData);
-      if (result.success) router.refresh();
+      if (result.success) refreshInvestmentData();
       return result;
     } finally { setLoading(false); }
   };
@@ -186,6 +203,13 @@ export default function InvestmentPageClient({
 
   return (
     <div className="space-y-6">
+      {showRefreshLoader && (
+        <div role="status" aria-live="polite" className="fixed right-4 top-20 z-40 flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/10 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-slate-100">
+          <RefreshCw className="h-4 w-4 animate-spin text-indigo-500" />
+          Updating investments...
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -434,7 +458,7 @@ export default function InvestmentPageClient({
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                         <button onClick={() => setViewingInvestment(inv)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="View"><Eye className="h-4 w-4" /></button>
                         <button onClick={() => { setEditingInvestment(inv); setShowForm(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Edit"><Edit3 className="h-4 w-4" /></button>
-                        <button onClick={() => setDeleteId(inv.id)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400" title="Delete"><Trash2 className="h-4 w-4" /></button>
+                        <button onClick={() => { setDeleteId(inv.id); setDeleteMessage(''); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400" title="Delete"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </div>
 
@@ -483,9 +507,10 @@ export default function InvestmentPageClient({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-700/50 shadow-2xl">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Investment?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">This will permanently delete this investment and all its returns.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Only investments without linked financial history can be deleted.</p>
+            {deleteMessage && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2 mt-3">{deleteMessage}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => { setDeleteId(null); setDeleteMessage(''); }} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
               <button onClick={() => handleDelete(deleteId)} disabled={loading}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition-colors">
                 {loading ? 'Deleting...' : 'Delete'}

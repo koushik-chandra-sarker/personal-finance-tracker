@@ -150,6 +150,7 @@ model Account {
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
   investments  Investment[]
+  investmentCashflows InvestmentCashflow[]
 
   @@index([userId])
 }
@@ -192,6 +193,7 @@ model Transaction {
   account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investmentCashflows InvestmentCashflow[]
 
   @@index([userId, date])
   @@index([userId, categoryId])
@@ -483,6 +485,17 @@ enum ReturnFrequency {
   ON_SALE
 }
 
+enum InvestmentCashflowType {
+  BUY
+  ADD_FUNDS
+  RETURN
+  TAX
+  FEE
+  SALE
+  MATURITY_PAYOUT
+  REVERSAL
+}
+
 model InvestmentTypeConfig {
   id              String       @id @default(cuid())
   userId          String?
@@ -554,6 +567,7 @@ model Investment {
   linkedAccount      Account?           @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
   returns            InvestmentReturn[]
   valuations         InvestmentValuation[]
+  cashflows          InvestmentCashflow[]
 
   @@index([userId, typeConfigId])
   @@index([userId, status])
@@ -585,6 +599,32 @@ model InvestmentValuation {
 
   @@index([investmentId, date])
 }
+
+model InvestmentCashflow {
+  id              String                 @id @default(cuid())
+  investmentId    String
+  transactionId   String?
+  accountId       String?
+  type            InvestmentCashflowType
+  amount          Decimal                @db.Decimal(14, 2)
+  principalAmount Decimal                @default(0) @db.Decimal(14, 2)
+  returnAmount    Decimal                @default(0) @db.Decimal(14, 2)
+  taxAmount       Decimal                @default(0) @db.Decimal(14, 2)
+  date            DateTime
+  description     String?
+  createdAt       DateTime               @default(now())
+  createdById     String?
+
+  investment  Investment   @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([investmentId, date])
+  @@index([transactionId])
+  @@index([accountId])
+  @@index([type, date])
+}
+
 model SanchayapatraConfig {
   id               String   @id @default(cuid())
   type             String   @unique // poribar, pensioner, 3monthly, 5year
