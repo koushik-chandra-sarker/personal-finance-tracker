@@ -1,7 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, ChevronDown } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { X, ChevronDown, Calculator } from 'lucide-react';
+import SanchayapatraCalculator from './SanchayapatraCalculator';
 import type { ActionResponse } from '@/types';
 
 type TypeConfig = {
@@ -26,16 +27,18 @@ const FREQ_OPTIONS = [
   { value: 'AT_MATURITY', label: 'At Maturity' }, { value: 'ON_SALE', label: 'On Sale' },
 ];
 
-export default function InvestmentForm({ typeConfigs, accounts, investment, currency, loading, onSubmit, onClose }: {
-  typeConfigs: TypeConfig[]; accounts: Account[]; investment: Investment;
+export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraConfigs, investment, currency, loading, onSubmit, onClose }: {
+  typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: any[]; investment: Investment;
   currency: string; loading: boolean;
   onSubmit: (fd: FormData) => Promise<ActionResponse>;
   onClose: () => void;
 }) {
   const isEdit = !!investment;
   const [selectedTypeId, setSelectedTypeId] = useState(investment?.typeConfigId || '');
+  const [showCalculator, setShowCalculator] = useState(false);
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [message, setMessage] = useState('');
+  const calcRef = useRef<HTMLDivElement>(null);
 
   const selectedType = typeConfigs.find((t) => t.id === selectedTypeId);
 
@@ -130,7 +133,20 @@ export default function InvestmentForm({ typeConfigs, accounts, investment, curr
             <div className="grid grid-cols-2 gap-3">
               {selectedType.hasInterestRate && (
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Interest Rate (%)</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                    Interest Rate (%)
+                    {selectedType?.slug === 'govt_savings' && (
+                      <button type="button" onClick={() => {
+                        setShowCalculator(!showCalculator);
+                        if (!showCalculator) {
+                          setTimeout(() => calcRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100);
+                        }
+                      }} 
+                        className="text-[10px] text-indigo-500 hover:underline flex items-center gap-1">
+                        <Calculator className="h-3 w-3" /> Calc
+                      </button>
+                    )}
+                  </label>
                   <input name="interestRate" type="number" step="0.001"
                     defaultValue={investment?.interestRate ? Number(investment.interestRate) : ''}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
@@ -228,6 +244,12 @@ export default function InvestmentForm({ typeConfigs, accounts, investment, curr
               {loading ? 'Saving...' : isEdit ? 'Update' : 'Create'}
             </button>
           </div>
+
+          {showCalculator && selectedType?.slug === 'govt_savings' && (
+            <div ref={calcRef} className="mt-6 border-t border-slate-200 dark:border-slate-700 pt-6">
+              <SanchayapatraCalculator currency={currency} systemConfigs={sanchayapatraConfigs} />
+            </div>
+          )}
         </form>
       </div>
     </div>

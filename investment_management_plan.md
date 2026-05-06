@@ -338,10 +338,10 @@ investment-type.service.ts
 - [x] Mark-as-matured / sold workflow
 
 ### Phase 5 — Advanced Features *(~2-3 days)*
-- [ ] Sanchayapatra profit calculator
-- [ ] Reports page integration (annual returns, tax summary)
-- [ ] Shared access (INVESTMENTS feature permission)
-- [ ] Dashboard widget (top investments, upcoming maturities)
+- [x] Sanchayapatra profit calculator
+- [x] Reports page integration (annual returns, tax summary)
+- [x] Shared access (INVESTMENTS feature permission)
+- [x] Dashboard widget (top investments, upcoming maturities)
 
 ---
 

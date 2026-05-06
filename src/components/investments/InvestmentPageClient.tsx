@@ -7,12 +7,16 @@ import {
   createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, 
   recordReturnAction, addFundsAction, recordValuationAction, closeInvestmentAction 
 } from '@/actions/investment.actions';
-import {
-  TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X,
-  Landmark, Banknote, PiggyBank, BarChart3, Coins, Building2, Shield,
-  ScrollText, FileText, ChevronDown, ArrowUpRight, ArrowDownRight, Wallet, Eye, Settings2
+import { 
+  TrendingUp, TrendingDown, Plus, Search, Filter, Trash2, Edit3, X, 
+  ChevronDown, ArrowUpRight, ArrowDownRight, Wallet, History,
+  Calendar, Info, AlertCircle, CheckCircle2, Landmark, Banknote, PiggyBank,
+  BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, 
+  Cell, PieChart, Pie, LineChart, Line, AreaChart, Area
+} from 'recharts';
 import Link from 'next/link';
 import InvestmentForm from './InvestmentForm';
 import InvestmentDetail from './InvestmentDetail';
@@ -60,16 +64,17 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 export default function InvestmentPageClient({
-  investments: initial, typeConfigs, accounts, summary, allocation, maturities, currency,
+  investments: initial, typeConfigs, accounts, sanchayapatraConfigs, summary, allocation, maturities, growthData, currency,
 }: {
-  investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[];
-  summary: Summary; allocation: Allocation[]; maturities: any[]; currency: string;
+  investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: any[];
+  summary: Summary; allocation: Allocation[]; maturities: any[]; growthData: { name: string; value: number }[]; currency: string;
 }) {
   const router = useRouter();
   const [investments, setInvestments] = useState(initial);
+  const [mounted, setMounted] = useState(false);
   
-  // Sync state with props when router.refresh() fetches new data
   useEffect(() => {
+    setMounted(true);
     setInvestments(initial);
   }, [initial]);
   
@@ -81,6 +86,7 @@ export default function InvestmentPageClient({
   const [filterStatus, setFilterStatus] = useState('');
   const [loading, setLoading] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const isDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
 
   const filtered = investments.filter((inv) => {
     if (search && !inv.name.toLowerCase().includes(search.toLowerCase()) &&
@@ -182,6 +188,70 @@ export default function InvestmentPageClient({
           >
             <Plus className="h-4 w-4" /> Add Investment
           </button>
+        </div>
+      </div>
+
+      {/* Portfolio Performance Chart */}
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Portfolio Growth</h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total portfolio valuation over the last 12 months</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Net Worth</span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="h-[300px] w-full">
+          {mounted && (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={growthData}>
+                <defs>
+                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#e2e8f0'} />
+                <XAxis 
+                  dataKey="name" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
+                  dy={10}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
+                  tickFormatter={(v) => formatCurrency(v, currency).split('.')[0]}
+                />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor: isDark ? '#1e293b' : '#ffffff', 
+                    border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                    borderRadius: '12px',
+                    fontSize: '12px'
+                  }}
+                  itemStyle={{ color: isDark ? '#ffffff' : '#0f172a' }}
+                  formatter={(value: any) => [formatCurrency(value, currency), 'Total Value']}
+                />
+                <Area 
+                  type="monotone" 
+                  dataKey="value" 
+                  stroke="#6366f1" 
+                  strokeWidth={3}
+                  fillOpacity={1} 
+                  fill="url(#growthGradient)" 
+                  animationDuration={1500}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </div>
       </div>
 
@@ -352,6 +422,7 @@ export default function InvestmentPageClient({
         <InvestmentForm
           typeConfigs={typeConfigs}
           accounts={accounts}
+          sanchayapatraConfigs={sanchayapatraConfigs}
           investment={editingInvestment}
           currency={currency}
           loading={loading}

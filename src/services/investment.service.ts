@@ -444,3 +444,50 @@ export async function closeInvestment(userId: string, executorId: string, id: st
   });
 }
 
+export async function getPortfolioGrowth(userId: string) {
+  const now = new Date();
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+    return {
+      date: d,
+      month: d.toLocaleString('default', { month: 'short' }),
+      year: d.getFullYear(),
+      totalValue: 0,
+    };
+  });
+
+  const investments = await prisma.investment.findMany({
+    where: { userId },
+    include: { valuations: true },
+  });
+
+  // For each month, calculate total value
+  const growth = months.map(m => {
+    const monthEnd = new Date(m.year, m.date.getMonth() + 1, 0, 23, 59, 59);
+    
+    let totalValue = 0;
+    for (const inv of investments) {
+      // If investment was purchased before or during this month
+      if (new Date(inv.purchaseDate) <= monthEnd) {
+        // Find the latest valuation before this monthEnd
+        const valuationsBefore = inv.valuations.filter(v => new Date(v.date) <= monthEnd);
+        if (valuationsBefore.length > 0) {
+          const latestValuation = valuationsBefore.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+          totalValue += Number(latestValuation.amount);
+        } else {
+          // If no valuations, use original invested amount
+          totalValue += Number(inv.investedAmount);
+        }
+      }
+    }
+
+    return {
+      name: m.month,
+      value: totalValue,
+    };
+  });
+
+  return growth;
+}
+
+

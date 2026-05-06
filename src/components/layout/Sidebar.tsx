@@ -28,6 +28,7 @@ const navItems = [
 const adminNavItems = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
+  { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
 ];
 
 export default function Sidebar() {

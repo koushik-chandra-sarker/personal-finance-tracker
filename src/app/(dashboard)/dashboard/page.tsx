@@ -4,6 +4,7 @@ import { getMonthlySummary, getCategoryBreakdown, getMonthlyTrend, getRecentTran
 import { getBudgets } from '@/services/budget.service';
 import { getTotalBalance } from '@/services/account.service';
 import { getSpendingInsights } from '@/services/insight.service';
+import { getPortfolioSummary, getUpcomingMaturities } from '@/services/investment.service';
 import { getCurrentMonthYear, getMonthName } from '@/lib/utils';
 import SummaryCards from '@/components/dashboard/SummaryCards';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
@@ -11,6 +12,7 @@ import CategoryPieChart from '@/components/dashboard/CategoryPieChart';
 import RecentTransactions from '@/components/dashboard/RecentTransactions';
 import BudgetOverview from '@/components/dashboard/BudgetOverview';
 import InsightsWidget from '@/components/dashboard/InsightsWidget';
+import PortfolioWidget from '@/components/dashboard/PortfolioWidget';
 import MonthYearPicker from '@/components/dashboard/MonthYearPicker';
 import { getEffectiveUserId } from '@/lib/access';
 
@@ -33,7 +35,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const year = Number.isInteger(parsedYear) ? parsedYear : current.year;
   const periodLabel = `${getMonthName(month)} ${year}`;
 
-  const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights] = await Promise.all([
+  const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights, summary_portfolio, maturities] = await Promise.all([
     getMonthlySummary(userId, month, year),
     getCategoryBreakdown(userId, month, year),
     getMonthlyTrend(userId, 6),
@@ -41,6 +43,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getBudgets(userId, month, year),
     getTotalBalance(userId),
     getSpendingInsights(userId),
+    getPortfolioSummary(userId),
+    getUpcomingMaturities(userId),
   ]);
 
   const userCurrency = (session.user as { currency?: string }).currency || 'USD';
@@ -70,6 +74,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
           <RecentTransactions transactions={recentTx} currency={userCurrency} />
         </div>
         <div className="space-y-6">
+          <PortfolioWidget 
+            summary={JSON.parse(JSON.stringify(summary_portfolio))} 
+            upcomingMaturities={JSON.parse(JSON.stringify(maturities))} 
+            currency={userCurrency} 
+          />
           <BudgetOverview budgets={budgets} currency={userCurrency} />
           <InsightsWidget insights={insights} />
         </div>

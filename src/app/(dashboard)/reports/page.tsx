@@ -1,6 +1,6 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getMonthlyTrendRange, getCategoryBreakdownRange } from '@/services/report.service';
+import { getMonthlyTrendRange, getCategoryBreakdownRange, getInvestmentReportRange } from '@/services/report.service';
 import { prisma } from '@/lib/prisma';
 import ReportsPageClient from '@/components/reports/ReportsPageClient';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
@@ -25,7 +25,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   const startDate = new Date(fromYear, fromMonth - 1, 1);
   const endDate = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
 
-  const [trend, breakdown, transactions] = await Promise.all([
+  const [trend, breakdown, transactions, investmentReport] = await Promise.all([
     getMonthlyTrendRange(userId, fromMonth, fromYear, toMonth, toYear),
     getCategoryBreakdownRange(userId, fromMonth, fromYear, toMonth, toYear),
     prisma.transaction.findMany({
@@ -37,6 +37,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       orderBy: { date: 'desc' },
       take: 500,
     }),
+    getInvestmentReportRange(userId, fromMonth, fromYear, toMonth, toYear),
   ]);
 
   return (
@@ -44,6 +45,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       trend={trend}
       breakdown={breakdown}
       transactions={JSON.parse(JSON.stringify(transactions))}
+      investmentReport={JSON.parse(JSON.stringify(investmentReport))}
       fromMonth={fromMonth}
       fromYear={fromYear}
       toMonth={toMonth}

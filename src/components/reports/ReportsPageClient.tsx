@@ -8,7 +8,7 @@ import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, R
 import type { MonthlyTrend, CategoryBreakdown } from '@/types';
 import { formatCurrency } from '@/lib/utils';
 import Button from '@/components/ui/Button';
-import { Download, FileBarChart, Calendar, Loader2 } from 'lucide-react';
+import { Download, FileBarChart, Calendar, Loader2, TrendingUp, Wallet, ArrowUpRight, PieChart as PieChartIcon } from 'lucide-react';
 
 const MONTHS = [
   { value: 1, label: 'Jan' }, { value: 2, label: 'Feb' }, { value: 3, label: 'Mar' },
@@ -30,9 +30,16 @@ interface ReportsPageClientProps {
   fromYear: number;
   toMonth: number;
   toYear: number;
+  investmentReport: {
+    totalReturnAmount: number;
+    returnsByType: Record<string, number>;
+    returnsByInvType: Record<string, number>;
+    investmentCount: number;
+    activeInvestmentCount: number;
+  };
 }
 
-export default function ReportsPageClient({ trend, breakdown, transactions, fromMonth, fromYear, toMonth, toYear }: ReportsPageClientProps) {
+export default function ReportsPageClient({ trend, breakdown, transactions, investmentReport, fromMonth, fromYear, toMonth, toYear }: ReportsPageClientProps) {
   const { theme, resolvedTheme } = useTheme();
   const { data: session } = useSession();
   const userCurrency = (session?.user as any)?.currency || 'USD';
@@ -275,6 +282,107 @@ export default function ReportsPageClient({ trend, breakdown, transactions, from
             </table>
           </div>
         )}
+      </div>
+
+      {/* Investment Summary Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Investment Returns</h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Returns realized during this period</p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
+              <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold">Total Realized Returns</p>
+                <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{formatCurrency(investmentReport.totalReturnAmount, userCurrency)}</p>
+              </div>
+              
+              <div className="space-y-2">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-1">Returns by Type</p>
+                {Object.entries(investmentReport.returnsByType).length === 0 ? (
+                  <p className="text-xs text-slate-500 italic px-1">No returns recorded in this range</p>
+                ) : (
+                  Object.entries(investmentReport.returnsByType).map(([type, amount]) => (
+                    <div key={type} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                      <span className="text-xs text-slate-600 dark:text-slate-400 capitalize">{type.toLowerCase().replace('_', ' ')}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{formatCurrency(amount, userCurrency)}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider font-bold px-1">Returns by Asset Class</p>
+              <div className="space-y-2">
+                {Object.entries(investmentReport.returnsByInvType).length === 0 ? (
+                  <p className="text-xs text-slate-500 italic px-1">No returns recorded in this range</p>
+                ) : (
+                  Object.entries(investmentReport.returnsByInvType).map(([type, amount]) => (
+                    <div key={type} className="space-y-1.5">
+                      <div className="flex items-center justify-between text-[10px]">
+                        <span className="text-slate-500 dark:text-slate-400">{type}</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(amount, userCurrency)}</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-indigo-500 rounded-full" 
+                          style={{ width: `${(amount / (investmentReport.totalReturnAmount || 1)) * 100}%` }} 
+                        />
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6 flex flex-col">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <Wallet className="h-4 w-4 text-indigo-500" />
+            Portfolio Health
+          </h3>
+          
+          <div className="flex-1 flex flex-col justify-center space-y-6">
+            <div className="text-center">
+              <p className="text-3xl font-black text-slate-900 dark:text-white">{investmentReport.activeInvestmentCount}</p>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Active Investments</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-center">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{investmentReport.investmentCount}</p>
+                <p className="text-[10px] text-slate-400 uppercase">Total</p>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-center">
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{investmentReport.investmentCount - investmentReport.activeInvestmentCount}</p>
+                <p className="text-[10px] text-slate-400 uppercase">Matured</p>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-500/5 border border-indigo-100 dark:border-indigo-500/20">
+              <div className="flex items-start gap-3">
+                <div className="p-2 rounded-lg bg-white dark:bg-slate-800 shadow-sm shrink-0">
+                  <ArrowUpRight className="h-4 w-4 text-indigo-500" />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">Tax Summary</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    Estimated source tax on returns: {formatCurrency(investmentReport.totalReturnAmount * 0.05, userCurrency)} (5%)
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
