@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { AlertTriangle, Bell, CheckCircle2, FileText, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
-import { useState, useRef, useEffect } from 'react';
+import { type ElementType, useState, useRef, useEffect } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -13,19 +13,35 @@ import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from '@/actions/notification.actions';
+import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, DollarSign, ChevronDown, Users, KeyRound
+  RefreshCw, FileBarChart, Settings, X, DollarSign, ChevronDown, Users, KeyRound, TrendingUp
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
 
-const navItems = [
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ElementType;
+};
+
+const primaryNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/accounts', label: 'Accounts', icon: Wallet },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
+];
+
+const investmentNavItems: NavItem[] = [
+  { href: '/investments', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/investments/portfolio', label: 'Portfolio', icon: Wallet },
+  { href: '/investments/types', label: 'Types', icon: Settings },
+];
+
+const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
@@ -33,16 +49,29 @@ const navItems = [
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
-const adminNavItems = [
+const adminNavItems: NavItem[] = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
+  { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
 ];
+
+function isActiveRoute(pathname: string, href: string) {
+  return pathname === href || pathname.startsWith(href + '/');
+}
+
+function isActiveInvestmentRoute(pathname: string, href: string) {
+  if (href === '/investments') return pathname === href;
+  return isActiveRoute(pathname, href);
+}
 
 type NotificationItem = {
   id: string;
   title: string;
   message: string;
+  type: string;
   severity: string;
+  sourceType: string | null;
+  sourceId: string | null;
   actionUrl: string | null;
   isRead: boolean;
   createdAt: string;
@@ -52,12 +81,16 @@ export default function Topbar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
+  const [mobileInvestmentsOpen, setMobileInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [mobileAdminOpen, setMobileAdminOpen] = useState(() => pathname.startsWith('/admin'));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
+  const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
   const isAdmin = session?.user?.role === 'ADMIN';
+  const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -119,6 +152,31 @@ export default function Topbar() {
     await markNotificationReadAction(id);
     await fetchNotifications();
     setNotificationOpen(false);
+  };
+
+  const handlePayDpsReminder = async (notification: NotificationItem) => {
+    if (!notification.sourceId) return;
+
+    setPayingNotificationId(notification.id);
+    setNotificationActionMessage((current) => ({ ...current, [notification.id]: '' }));
+
+    try {
+      const result = await payDpsInstallmentAction(notification.sourceId);
+      if (result.success) {
+        await markNotificationReadAction(notification.id);
+        setNotificationActionMessage((current) => ({ ...current, [notification.id]: result.message }));
+      } else {
+        setNotificationActionMessage((current) => ({ ...current, [notification.id]: result.message }));
+      }
+      await fetchNotifications();
+    } catch (error) {
+      setNotificationActionMessage((current) => ({
+        ...current,
+        [notification.id]: error instanceof Error ? error.message : 'Failed to pay installment',
+      }));
+    } finally {
+      setPayingNotificationId(null);
+    }
   };
 
   const severityStyle: Record<string, string> = {
@@ -203,6 +261,10 @@ export default function Topbar() {
                   ) : (
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.map((notification) => {
+                        const isDpsReminder = notification.type === 'INVESTMENT_RETURN_DUE'
+                          && notification.sourceType === 'INVESTMENT'
+                          && Boolean(notification.sourceId);
+                        const actionMessage = notificationActionMessage[notification.id];
                         const content = (
                           <div className={cn(
                             'flex gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/5 transition-colors',
@@ -215,10 +277,51 @@ export default function Topbar() {
                               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{notification.title}</p>
                               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{notification.message}</p>
                               <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt)}</p>
+                              {isDpsReminder && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      void handlePayDpsReminder(notification);
+                                    }}
+                                    disabled={payingNotificationId === notification.id}
+                                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                                  >
+                                    {payingNotificationId === notification.id ? 'Paying...' : 'Pay'}
+                                  </button>
+                                  {notification.actionUrl && (
+                                    <Link
+                                      href={notification.actionUrl}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        void handleNotificationClick(notification.id);
+                                      }}
+                                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                                    >
+                                      Open
+                                    </Link>
+                                  )}
+                                </div>
+                              )}
+                              {actionMessage && (
+                                <p className="mt-2 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-700/60 dark:text-slate-300">
+                                  {actionMessage}
+                                </p>
+                              )}
                             </div>
                             {!notification.isRead && <span className="mt-2 h-2 w-2 rounded-full bg-indigo-500 flex-shrink-0" />}
                           </div>
                         );
+
+                        if (isDpsReminder) {
+                          return (
+                            <div key={notification.id}>
+                              {content}
+                            </div>
+                          );
+                        }
 
                         return notification.actionUrl ? (
                           <Link key={notification.id} href={notification.actionUrl} onClick={() => handleNotificationClick(notification.id)}>
@@ -268,7 +371,7 @@ export default function Topbar() {
       {mobileOpen && (
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/60 dark:bg-black/60" onClick={() => setMobileOpen(false)} />
-          <div className="absolute left-0 top-0 h-full w-72 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/50 p-4">
+          <div className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/50 p-4">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
@@ -281,8 +384,70 @@ export default function Topbar() {
               </button>
             </div>
             <nav className="space-y-1">
-              {navItems.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+              {primaryNavItems.map((item) => {
+                const isActive = isActiveRoute(pathname, item.href);
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMobileOpen(false)}
+                    className={cn(
+                      'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                      isActive
+                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                    )}
+                  >
+                    <item.icon className="h-5 w-5" />
+                    <span>{item.label}</span>
+                  </Link>
+                );
+              })}
+
+              <div>
+                <button
+                  type="button"
+                  onClick={() => setMobileInvestmentsOpen(!mobileInvestmentsOpen)}
+                  className={cn(
+                    'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                    isInvestmentsRoute
+                      ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                  )}
+                  aria-expanded={mobileInvestmentsOpen}
+                >
+                  <TrendingUp className="h-5 w-5" />
+                  <span className="flex-1 text-left">Investments</span>
+                  <ChevronDown className={cn('h-4 w-4 transition-transform', mobileInvestmentsOpen && 'rotate-180')} />
+                </button>
+
+                {mobileInvestmentsOpen && (
+                  <div className="mt-1 pl-4 space-y-1">
+                    {investmentNavItems.map((item) => {
+                      const isActive = isActiveInvestmentRoute(pathname, item.href);
+                      return (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          onClick={() => setMobileOpen(false)}
+                          className={cn(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
+                            isActive
+                              ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                          )}
+                        >
+                          <item.icon className="h-5 w-5" />
+                          <span>{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {secondaryNavItems.map((item) => {
+                const isActive = isActiveRoute(pathname, item.href);
                 return (
                   <Link
                     key={item.href}
@@ -322,7 +487,7 @@ export default function Topbar() {
                   {mobileAdminOpen && (
                     <div className="mt-1 pl-4 space-y-1">
                       {adminNavItems.map((item) => {
-                        const isActive = pathname === item.href || pathname.startsWith(item.href + '/');
+                        const isActive = isActiveRoute(pathname, item.href);
                         return (
                           <Link
                             key={item.href}

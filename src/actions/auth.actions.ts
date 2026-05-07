@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { createHash } from 'crypto';
 import { auth, signIn } from '@/lib/auth';
 import { registerSchema, changePasswordSchema, backdoorResetSchema } from '@/lib/validations/auth';
 import { assertRecoveryBackdoorEnabled } from '@/lib/recovery-backdoor';
@@ -24,12 +25,17 @@ const DEFAULT_CATEGORIES = [
   { name: 'Other Expense', type: 'EXPENSE' as const, icon: 'minus-circle', color: '#78716c' },
 ];
 
+function hashInviteToken(token: string) {
+  return createHash('sha256').update(token).digest('hex');
+}
+
 export async function registerUser(formData: FormData): Promise<ActionResponse> {
   const raw = {
     name: formData.get('name') as string,
     email: formData.get('email') as string,
     password: formData.get('password') as string,
     confirmPassword: formData.get('confirmPassword') as string,
+    inviteToken: String(formData.get('inviteToken') || '').trim() || undefined,
   };
 
   const parsed = registerSchema.safeParse(raw);
@@ -44,38 +50,94 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
 
   const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
   const userCount = await prisma.user.count();
+  const invite = parsed.data.inviteToken
+    ? await prisma.userInvite.findUnique({
+        where: { tokenHash: hashInviteToken(parsed.data.inviteToken) },
+      })
+    : null;
 
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.data.name,
-      email: parsed.data.email,
-      password: hashedPassword,
-      role: userCount === 0 ? 'ADMIN' : 'USER',
-    },
-  });
+  if (userCount > 0) {
+    if (!invite) {
+      return { success: false, message: 'A valid invite is required to create an account.' };
+    }
+    if (invite.acceptedAt) {
+      return { success: false, message: 'This invite has already been used.' };
+    }
+    if (invite.expiresAt < new Date()) {
+      return { success: false, message: 'This invite has expired.' };
+    }
+    if (invite.email.toLowerCase() !== parsed.data.email.toLowerCase()) {
+      return { success: false, message: 'This invite was issued for a different email address.' };
+    }
+  }
 
-  // Create default categories
-  await prisma.category.createMany({
-    data: DEFAULT_CATEGORIES.map((cat) => ({
-      userId: user.id,
-      name: cat.name,
-      type: cat.type,
-      icon: cat.icon,
-      color: cat.color,
-      isDefault: true,
-    })),
-  });
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name: parsed.data.name,
+        email: parsed.data.email.toLowerCase(),
+        password: hashedPassword,
+        role: userCount === 0 ? 'ADMIN' : invite?.role || 'USER',
+        status: 'ACTIVE',
+        emailVerifiedAt: invite ? new Date() : null,
+      },
+    });
 
-  // Create default cash account
-  await prisma.account.create({
-    data: {
-      userId: user.id,
-      name: 'Cash',
-      type: 'CASH',
-      balance: 0,
-      color: '#10b981',
-      icon: 'wallet',
-    },
+    await tx.category.createMany({
+      data: DEFAULT_CATEGORIES.map((cat) => ({
+        userId: user.id,
+        name: cat.name,
+        type: cat.type,
+        icon: cat.icon,
+        color: cat.color,
+        isDefault: true,
+      })),
+    });
+
+    await tx.account.create({
+      data: {
+        userId: user.id,
+        name: 'Cash',
+        type: 'CASH',
+        balance: 0,
+        color: '#10b981',
+        icon: 'wallet',
+      },
+    });
+
+    if (invite) {
+      const now = new Date();
+      await tx.userInvite.update({
+        where: { id: invite.id },
+        data: { acceptedAt: now },
+      });
+
+      if (invite.packageId) {
+        const subscriptionPackage = await tx.subscriptionPackage.findUnique({ where: { id: invite.packageId } });
+        if (subscriptionPackage) {
+          const currentPeriodEnd = new Date(now);
+          if (subscriptionPackage.interval === 'YEARLY') {
+            currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+          } else {
+            currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+          }
+
+          await tx.userSubscription.create({
+            data: {
+              userId: user.id,
+              packageId: subscriptionPackage.id,
+              plan: 'PRO',
+              interval: subscriptionPackage.interval,
+              source: 'ADMIN_GRANT',
+              status: 'ACTIVE',
+              currentPeriodStart: now,
+              currentPeriodEnd,
+              grantedById: invite.invitedById,
+            },
+          });
+        }
+      }
+    }
   });
 
   return { success: true, message: 'Account created successfully' };

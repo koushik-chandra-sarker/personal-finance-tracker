@@ -118,6 +118,54 @@ export async function getRecentTransactions(userId: string, limit: number = 5) {
     where: { userId },
     include: { category: true, account: true },
     orderBy: { date: 'desc' },
-    take: limit,
   });
 }
+
+export async function getInvestmentReportRange(
+  userId: string,
+  startMonth: number, startYear: number,
+  endMonth: number, endYear: number
+) {
+  const startDate = new Date(startYear, startMonth - 1, 1);
+  const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+
+  const [returns, valuations, investments] = await Promise.all([
+    prisma.investmentReturn.findMany({
+      where: { investment: { userId }, date: { gte: startDate, lte: endDate } },
+      include: { investment: { include: { typeConfig: true } } },
+    }),
+    prisma.investmentValuation.findMany({
+      where: { investment: { userId }, date: { gte: startDate, lte: endDate } },
+      include: { investment: { include: { typeConfig: true } } },
+    }),
+    prisma.investment.findMany({
+      where: { userId },
+      include: { typeConfig: true },
+    })
+  ]);
+
+  const totalReturnAmount = returns.reduce((sum, r) => sum + Number(r.amount), 0);
+  
+  // Group returns by type
+  const returnsByType = returns.reduce((acc, r) => {
+    const type = r.type;
+    acc[type] = (acc[type] || 0) + Number(r.amount);
+    return acc;
+  }, {} as Record<string, number>);
+
+  // Group returns by investment type
+  const returnsByInvType = returns.reduce((acc, r) => {
+    const type = r.investment.typeConfig.name;
+    acc[type] = (acc[type] || 0) + Number(r.amount);
+    return acc;
+  }, {} as Record<string, number>);
+
+  return {
+    totalReturnAmount,
+    returnsByType,
+    returnsByInvType,
+    investmentCount: investments.length,
+    activeInvestmentCount: investments.filter(i => i.status === 'ACTIVE').length,
+  };
+}
+

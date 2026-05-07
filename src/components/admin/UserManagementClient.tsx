@@ -10,10 +10,13 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Loader from '@/components/ui/Loader';
 import Select from '@/components/ui/Select';
+import UserInvitePanel from '@/components/admin/UserInvitePanel';
+import UserInviteList from '@/components/admin/UserInviteList';
 import {
   updateUserStatusAction,
   updateUserRoleAction,
   type AdminSubscriptionPackageRow,
+  type AdminUserInviteRow,
   type AdminUsersPageResult,
 } from '@/actions/admin.actions';
 import type { UserRole, UserStatus } from '@prisma/client';
@@ -21,6 +24,7 @@ import type { UserRole, UserStatus } from '@prisma/client';
 interface UserManagementClientProps {
   usersPage: AdminUsersPageResult;
   packages: AdminSubscriptionPackageRow[];
+  invites: AdminUserInviteRow[];
 }
 
 const roleOptions = [
@@ -171,7 +175,7 @@ function SummaryCard({
   );
 }
 
-export default function UserManagementClient({ usersPage, packages }: UserManagementClientProps) {
+export default function UserManagementClient({ usersPage, packages, invites }: UserManagementClientProps) {
   const router = useRouter();
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [updatingUserId, setUpdatingUserId] = useState<string | null>(null);
@@ -273,9 +277,15 @@ export default function UserManagementClient({ usersPage, packages }: UserManage
     <div className="space-y-6">
       <Loader show={isNavigationPending || isRolePending} message={loaderMessage} />
 
-      <div className="min-w-0">
-        <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">User Management</h1>
-        <p className="text-sm text-slate-500 dark:text-slate-400">Search, filter, and manage account roles and access status.</p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">User Management</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Search, filter, and manage account roles and access status.</p>
+        </div>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+          <UserInviteList invites={invites} />
+          <UserInvitePanel packages={packages} />
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

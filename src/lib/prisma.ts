@@ -4,7 +4,13 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
+  return Boolean(client && 'investmentCashflow' in client);
+}
+
+// During next dev, Prisma can be regenerated while the old client instance is
+// still cached on globalThis. Replace that stale instance after schema changes.
+export const prisma = hasCurrentPrismaDelegates(globalForPrisma.prisma) ? globalForPrisma.prisma! : new PrismaClient({
   transactionOptions: {
     maxWait: 10000,
     timeout: 20000,

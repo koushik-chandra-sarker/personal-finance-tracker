@@ -10,6 +10,8 @@ type DetectorCounts = {
   goalDeadlines: number;
   unusualExpenses: number;
   lowBalances: number;
+  investmentMaturities: number;
+  dpsReminders: number;
 };
 
 function emptyCounts(): DetectorCounts {
@@ -19,11 +21,72 @@ function emptyCounts(): DetectorCounts {
     goalDeadlines: 0,
     unusualExpenses: 0,
     lowBalances: 0,
+    investmentMaturities: 0,
+    dpsReminders: 0,
   };
 }
 
 function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
+}
+
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}`;
+}
+
+function clampDueDay(value?: number | null) {
+  if (!Number.isFinite(Number(value))) return 5;
+  return Math.min(31, Math.max(1, Math.trunc(Number(value))));
+}
+
+function getInstallmentDueDate(year: number, month: number, dueDay?: number | null) {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return startOfDay(new Date(year, month, Math.min(clampDueDay(dueDay), lastDay)));
+}
+
+function getFirstInstallmentDueDate(purchaseDate: Date, dueDay?: number | null) {
+  const purchaseDay = startOfDay(purchaseDate);
+  let dueDate = getInstallmentDueDate(purchaseDate.getFullYear(), purchaseDate.getMonth(), dueDay);
+  if (dueDate < purchaseDay) {
+    dueDate = getInstallmentDueDate(purchaseDate.getFullYear(), purchaseDate.getMonth() + 1, dueDay);
+  }
+  return dueDate;
+}
+
+function getNextInstallmentDueDate(dueDate: Date, dueDay?: number | null) {
+  return getInstallmentDueDate(dueDate.getFullYear(), dueDate.getMonth() + 1, dueDay);
+}
+
+function getPaidInstallmentMonthKeys(cashflows: Array<{
+  type: string;
+  date: Date;
+  installmentDueDate?: Date | null;
+}>) {
+  return new Set(
+    cashflows
+      .filter((cashflow) => cashflow.type === 'INSTALLMENT' || cashflow.type === 'ADD_FUNDS')
+      .map((cashflow) => monthKey(cashflow.installmentDueDate || cashflow.date))
+  );
+}
+
+function getUnpaidInstallmentDueDates(investment: {
+  purchaseDate: Date;
+  installmentDueDay?: number | null;
+  cashflows: Array<{ type: string; date: Date; installmentDueDate?: Date | null }>;
+}, now: Date) {
+  const today = startOfDay(now);
+  const paidMonthKeys = getPaidInstallmentMonthKeys(investment.cashflows);
+  const unpaidDueDates: Date[] = [];
+  let dueDate = getFirstInstallmentDueDate(investment.purchaseDate, investment.installmentDueDay);
+  let guard = 0;
+
+  while (dueDate <= today && guard < 360) {
+    if (!paidMonthKeys.has(monthKey(dueDate))) unpaidDueDates.push(dueDate);
+    dueDate = getNextInstallmentDueDate(dueDate, investment.installmentDueDay);
+    guard++;
+  }
+
+  return unpaidDueDates;
 }
 
 export async function detectUpcomingBills(userId: string, now = new Date()) {
@@ -233,6 +296,98 @@ export async function detectLowBalances(userId: string, now = new Date()) {
   return created;
 }
 
+export async function detectInvestmentMaturities(userId: string, now = new Date()) {
+  const preferences = await getOrCreateNotificationPreferences(userId);
+  if (!preferences.investmentMaturityEnabled) return 0;
+
+  const from = startOfDay(now);
+  const to = endOfDay(addDays(now, preferences.investmentReminderDaysBefore));
+
+  const investments = await prisma.investment.findMany({
+    where: {
+      userId,
+      status: 'ACTIVE',
+      maturityDate: { gte: from, lte: to },
+    },
+    include: { typeConfig: true },
+    orderBy: { maturityDate: 'asc' },
+  });
+
+  let created = 0;
+  for (const inv of investments) {
+    if (!inv.maturityDate) continue;
+    
+    const daysUntil = differenceInCalendarDays(inv.maturityDate, now);
+    const result = await createNotificationOnce(userId, {
+      title: `${inv.name} maturing soon`,
+      message: `${inv.typeConfig.name} investment is maturing on ${formatDate(inv.maturityDate)}.`,
+      type: 'INVESTMENT_MATURITY',
+      severity: daysUntil <= 2 ? 'CRITICAL' : 'WARNING',
+      sourceType: 'INVESTMENT',
+      sourceId: inv.id,
+      dedupeKey: `inv-maturity:${inv.id}:${dayKey(inv.maturityDate)}:${preferences.investmentReminderDaysBefore}`,
+      actionUrl: '/investments',
+    });
+    if (result.created) created++;
+  }
+
+  return created;
+}
+
+export async function detectDPSReminders(userId: string, now = new Date()) {
+  const preferences = await getOrCreateNotificationPreferences(userId);
+  if (!preferences.dpsReminderEnabled) return 0;
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
+  const dpsInvestments = await prisma.investment.findMany({
+    where: {
+      userId,
+      status: 'ACTIVE',
+      typeConfig: { hasMonthlyInstallment: true },
+      monthlyInstallment: { gt: 0 },
+    },
+    include: {
+      typeConfig: true,
+      cashflows: {
+        where: { type: { in: ['INSTALLMENT', 'ADD_FUNDS'] } },
+        select: { type: true, date: true, installmentDueDate: true },
+      },
+    },
+  });
+
+  let created = 0;
+
+  for (const inv of dpsInvestments) {
+    const unpaidDueDates = getUnpaidInstallmentDueDates(inv, now);
+    if (unpaidDueDates.length === 0) continue;
+
+    const dueDate = unpaidDueDates[0];
+    const missedDueDates = unpaidDueDates.filter((date) => date < startOfDay(now));
+    const daysLate = Math.max(0, differenceInCalendarDays(now, dueDate));
+    await prisma.investment.updateMany({
+      where: { id: inv.id, userId },
+      data: {
+        missedInstallmentCount: missedDueDates.length,
+        lastMissedInstallmentOn: missedDueDates[0] || null,
+      },
+    });
+
+    const result = await createNotificationOnce(userId, {
+      title: `DPS payment due: ${inv.name}`,
+      message: `${unpaidDueDates.length} installment${unpaidDueDates.length > 1 ? 's are' : ' is'} unpaid. Next due: ${formatCurrency(Number(inv.monthlyInstallment), user?.currency || 'BDT')} on ${formatDate(dueDate, 'MMM d')}.`,
+      type: 'INVESTMENT_RETURN_DUE',
+      severity: daysLate >= 5 ? 'CRITICAL' : 'WARNING',
+      sourceType: 'INVESTMENT',
+      sourceId: inv.id,
+      dedupeKey: `dps-due:${inv.id}:${monthKey(dueDate)}`,
+      actionUrl: `/investments/portfolio?payInstallment=${inv.id}`,
+    });
+    if (result.created) created++;
+  }
+
+  return created;
+}
+
 export async function runNotificationDetectors(userId?: string, now = new Date()) {
   const users = userId
     ? [{ id: userId }]
@@ -245,6 +400,8 @@ export async function runNotificationDetectors(userId?: string, now = new Date()
     totals.goalDeadlines += await detectGoalDeadlines(user.id, now);
     totals.unusualExpenses += await detectUnusualExpenses(user.id);
     totals.lowBalances += await detectLowBalances(user.id, now);
+    totals.investmentMaturities += await detectInvestmentMaturities(user.id, now);
+    totals.dpsReminders += await detectDPSReminders(user.id, now);
   }
 
   return totals;

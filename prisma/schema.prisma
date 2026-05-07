@@ -26,17 +26,39 @@ model User {
   categories    Category[]
   financialNotes FinancialNote[]
   goals         Goal[]
+  investments   Investment[]
+  investmentTypeConfigs InvestmentTypeConfig[]
   notifications Notification[]
   notificationPreference NotificationPreference?
   recurringTxns RecurringTransaction[]
   joinedShares  SharedAccess[]         @relation("JoinedShares")
   ownedShares   SharedAccess[]         @relation("OwnedShares")
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
+  sentInvites    UserInvite[]           @relation("SentUserInvites")
   subscription  UserSubscription?
   transactions  Transaction[]
 
   @@index([status])
   @@index([lastLoginAt])
+}
+
+model UserInvite {
+  id          String               @id @default(cuid())
+  email       String
+  role        UserRole             @default(USER)
+  packageId   String?
+  tokenHash   String               @unique
+  expiresAt   DateTime
+  acceptedAt  DateTime?
+  invitedById String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  invitedBy   User?                @relation("SentUserInvites", fields: [invitedById], references: [id], onDelete: SetNull)
+  package     SubscriptionPackage? @relation(fields: [packageId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([expiresAt])
+  @@index([acceptedAt])
 }
 
 model UserSubscription {
@@ -80,6 +102,7 @@ model SubscriptionPackage {
   sortOrder      Int                   @default(0)
   createdAt      DateTime              @default(now())
   updatedAt      DateTime              @updatedAt
+  invites        UserInvite[]
   subscriptions  UserSubscription[]
 
   @@index([isActive, sortOrder])
@@ -126,6 +149,8 @@ model Account {
   updatedById  String?
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  investments  Investment[]
+  investmentCashflows InvestmentCashflow[]
 
   @@index([userId])
 }
@@ -168,6 +193,7 @@ model Transaction {
   account     Account      @relation(fields: [accountId], references: [id], onDelete: Cascade)
   category    Category     @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investmentCashflows InvestmentCashflow[]
 
   @@index([userId, date])
   @@index([userId, categoryId])
@@ -281,6 +307,9 @@ model NotificationPreference {
   unusualExpenseMinAmount  Decimal  @default(50.00) @db.Decimal(12, 2)
   lowBalanceEnabled        Boolean  @default(true)
   lowBalanceThreshold      Decimal  @default(100.00) @db.Decimal(12, 2)
+  investmentMaturityEnabled Boolean  @default(true)
+  investmentReminderDaysBefore Int      @default(7)
+  dpsReminderEnabled       Boolean  @default(true)
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
   user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -318,6 +347,7 @@ enum Feature {
   ACCOUNTS
   BUDGETS
   GOALS
+  INVESTMENTS
   REPORTS
   SETTINGS
   NOTES
@@ -413,6 +443,8 @@ enum NotificationType {
   BUDGET_ALERT
   GOAL_DEADLINE
   GOAL_REACHED
+  INVESTMENT_MATURITY
+  INVESTMENT_RETURN_DUE
   UNUSUAL_EXPENSE
   LOW_BALANCE
   RECURRING_CREATED
@@ -431,7 +463,188 @@ enum NotificationSource {
   RECURRING_TRANSACTION
   BUDGET
   GOAL
+  INVESTMENT
   TRANSACTION
   ACCOUNT
   SYSTEM
+}
+
+enum InvestmentStatus {
+  ACTIVE
+  MATURED
+  SOLD
+  CANCELLED
+}
+
+enum ReturnFrequency {
+  MONTHLY
+  QUARTERLY
+  HALF_YEARLY
+  YEARLY
+  AT_MATURITY
+  ON_SALE
+}
+
+enum InvestmentCashflowType {
+  BUY
+  ADD_FUNDS
+  INSTALLMENT
+  RETURN
+  TAX
+  FEE
+  SALE
+  MATURITY_PAYOUT
+  REVERSAL
+}
+
+model InvestmentTypeConfig {
+  id              String       @id @default(cuid())
+  userId          String?
+  slug            String
+  name            String
+  description     String?
+  icon            String       @default("trending-up")
+  color           String       @default("#6366f1")
+  isSystem        Boolean      @default(false)
+  isActive        Boolean      @default(true)
+  sortOrder       Int          @default(0)
+
+  hasInterestRate       Boolean @default(false)
+  hasReturnFrequency    Boolean @default(false)
+  hasMaturityDate       Boolean @default(true)
+  hasMonthlyInstallment Boolean @default(false)
+  hasQuantity           Boolean @default(false)
+  hasInstitution        Boolean @default(true)
+  hasAccountNumber      Boolean @default(true)
+
+  returnTypes     String[]     @default([])
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  user            User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments     Investment[]
+
+  @@unique([userId, slug])
+  @@index([userId, isActive])
+}
+
+model Investment {
+  id                 String             @id @default(cuid())
+  userId             String
+  typeConfigId       String
+  name               String
+  status             InvestmentStatus   @default(ACTIVE)
+  institutionName    String?
+  accountNumber      String?
+
+  investedAmount     Decimal            @db.Decimal(14, 2)
+  currentValue       Decimal            @db.Decimal(14, 2)
+  interestRate       Decimal?           @db.Decimal(6, 3)
+  returnFrequency    ReturnFrequency?
+
+  purchaseDate       DateTime
+  maturityDate       DateTime?
+  soldDate           DateTime?
+
+  linkedAccountId    String?
+
+  monthlyInstallment Decimal?           @db.Decimal(14, 2)
+  installmentDueDay  Int?
+  missedInstallmentCount Int            @default(0)
+  lastMissedInstallmentOn DateTime?
+  lastInstallmentPaidOn DateTime?
+
+  quantity           Decimal?           @db.Decimal(14, 4)
+  avgBuyPrice        Decimal?           @db.Decimal(14, 4)
+
+  notes              String?
+  color              String             @default("#6366f1")
+  icon               String             @default("trending-up")
+  sanchayapatraConfigId String?
+
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  createdById        String?
+  updatedById        String?
+
+  user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  typeConfig         InvestmentTypeConfig @relation(fields: [typeConfigId], references: [id])
+  linkedAccount      Account?           @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
+  sanchayapatraConfig SanchayapatraConfig? @relation(fields: [sanchayapatraConfigId], references: [id], onDelete: SetNull)
+  returns            InvestmentReturn[]
+  valuations         InvestmentValuation[]
+  cashflows          InvestmentCashflow[]
+
+  @@index([userId, typeConfigId])
+  @@index([userId, status])
+  @@index([userId, maturityDate])
+  @@index([sanchayapatraConfigId])
+}
+
+model InvestmentReturn {
+  id            String     @id @default(cuid())
+  investmentId  String
+  amount        Decimal    @db.Decimal(14, 2)
+  type          String
+  description   String?
+  date          DateTime
+  createdAt     DateTime   @default(now())
+
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, date])
+}
+
+model InvestmentValuation {
+  id            String     @id @default(cuid())
+  investmentId  String
+  value         Decimal    @db.Decimal(14, 2)
+  date          DateTime
+  createdAt     DateTime   @default(now())
+
+  investment    Investment @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+
+  @@index([investmentId, date])
+}
+
+model InvestmentCashflow {
+  id              String                 @id @default(cuid())
+  investmentId    String
+  transactionId   String?
+  accountId       String?
+  type            InvestmentCashflowType
+  amount          Decimal                @db.Decimal(14, 2)
+  principalAmount Decimal                @default(0) @db.Decimal(14, 2)
+  returnAmount    Decimal                @default(0) @db.Decimal(14, 2)
+  taxAmount       Decimal                @default(0) @db.Decimal(14, 2)
+  date            DateTime
+  installmentDueDate DateTime?
+  description     String?
+  createdAt       DateTime               @default(now())
+  createdById     String?
+
+  investment  Investment   @relation(fields: [investmentId], references: [id], onDelete: Cascade)
+  transaction Transaction? @relation(fields: [transactionId], references: [id], onDelete: SetNull)
+  account     Account?     @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([investmentId, date])
+  @@index([transactionId])
+  @@index([accountId])
+  @@index([type, date])
+  @@index([investmentId, installmentDueDate])
+}
+
+model SanchayapatraConfig {
+  id               String   @id @default(cuid())
+  type             String   @unique // poribar, pensioner, 3monthly, 5year
+  name             String
+  description      String?
+  rate             Decimal  @db.Decimal(5, 2)
+  taxThreshold     Decimal  @db.Decimal(12, 2) @default(500000)
+  taxRateBelow     Decimal  @db.Decimal(5, 2) @default(5)
+  taxRateAbove     Decimal  @db.Decimal(5, 2) @default(10)
+  payoutFrequency  String   // MONTHLY, QUARTERLY, AT_MATURITY
+  updatedAt        DateTime @updatedAt
+  investments      Investment[]
 }

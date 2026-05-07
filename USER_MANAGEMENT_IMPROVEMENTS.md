@@ -94,6 +94,8 @@ Use cases:
 
 For an admin-managed subscription app, invites can provide better control than open registration.
 
+Status: implemented. Admins can now create invites from a dedicated modal opened by the Invite User button on `/admin/users`. The admin page also has a View Invites button that opens a recent invite modal with pending, accepted, and expired states. Each invite stores a hashed token, target email, role, optional subscription package, expiration, accepted timestamp, and inviter. Registration accepts invite links through `/register?invite=...`; after the first user exists, new registration requires a valid, unexpired invite for the same email. The current implementation returns a copyable invite link instead of sending email automatically.
+
 Recommended flow:
 
 1. Admin creates an invite for an email.
