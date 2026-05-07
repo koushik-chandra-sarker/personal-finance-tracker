@@ -11,7 +11,7 @@ import {
   TrendingUp, Plus, Search, Trash2, Edit3,
   ChevronDown, ArrowUpRight, ArrowDownRight, Wallet,
   Landmark, Banknote, PiggyBank,
-  BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2, RefreshCw
+  BarChart3, Coins, Building2, Shield, ScrollText, FileText, Eye, Settings2, RefreshCw, X, Calendar
 } from 'lucide-react';
 import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -46,6 +46,8 @@ type Investment = {
 
 type Allocation = { typeConfigId: string; name: string; color: string; total: number; percentage: number };
 type Summary = { totalInvested: number; totalCurrentValue: number; totalReturns: number; unrealisedGainLoss: number; activeCount: number };
+type InvestmentView = 'dashboard' | 'portfolio';
+type InvestmentRouteTarget = 'dashboard' | 'portfolio' | 'types';
 type MaturityInvestment = {
   id: string;
   name: string;
@@ -80,23 +82,37 @@ const STATUS_STYLES: Record<string, string> = {
   CANCELLED: 'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400',
 };
 
+const STATUS_FILTERS = [
+  { value: 'ACTIVE', label: 'Active' },
+  { value: 'MATURED', label: 'Matured' },
+  { value: 'SOLD', label: 'Sold' },
+  { value: 'CANCELLED', label: 'Cancelled' },
+];
+
+function formatSignedCurrency(value: number, currency: string) {
+  return `${value >= 0 ? '+' : '-'}${formatCurrency(Math.abs(value), currency)}`;
+}
+
 export default function InvestmentPageClient({
-  investments: initial, typeConfigs, accounts, sanchayapatraConfigs, summary, allocation, maturities, growthData, currency,
+  investments: initial, typeConfigs, accounts, sanchayapatraConfigs, summary, allocation, maturities, growthData, currency, view = 'dashboard',
 }: {
   investments: Investment[]; typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: SanchayapatraConfig[];
   summary: Summary; allocation: Allocation[]; maturities: MaturityInvestment[]; growthData: { name: string; value: number }[]; currency: string;
+  view?: InvestmentView;
 }) {
   const router = useRouter();
   const [isPendingRefresh, startRefreshTransition] = useTransition();
   const [investments, setInvestments] = useState(initial);
   const [mounted, setMounted] = useState(false);
   const [isRefreshingData, setIsRefreshingData] = useState(false);
+  const [navigatingTo, setNavigatingTo] = useState<InvestmentRouteTarget | null>(null);
   
   useEffect(() => {
     setMounted(true);
     setInvestments(initial);
     setIsRefreshingData(false);
-  }, [initial]);
+    setNavigatingTo(null);
+  }, [initial, view]);
   
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
@@ -109,12 +125,29 @@ export default function InvestmentPageClient({
   const [deleteMessage, setDeleteMessage] = useState('');
   const isDark = typeof window !== 'undefined' && document.documentElement.classList.contains('dark');
   const showRefreshLoader = (isRefreshingData || isPendingRefresh) && !showForm && !viewingInvestment && !deleteId;
+  const isDashboardView = view === 'dashboard';
+  const isPortfolioView = view === 'portfolio';
+  const HeaderIcon = isPortfolioView ? Wallet : TrendingUp;
+  const pageTitle = isPortfolioView ? 'Portfolio' : 'Investments Dashboard';
+  const pageDescription = isPortfolioView
+    ? 'Search, filter, and manage each investment position.'
+    : 'Track performance, allocation, returns, and upcoming maturities.';
+  const portfolioRouteTarget: InvestmentRouteTarget = isPortfolioView ? 'dashboard' : 'portfolio';
+  const portfolioRouteHref = isPortfolioView ? '/investments' : '/investments/portfolio';
+  const isRouteNavigationPending = navigatingTo !== null;
+  const isPortfolioRouteLoading = navigatingTo === portfolioRouteTarget;
+  const isTypesRouteLoading = navigatingTo === 'types';
 
   const refreshInvestmentData = () => {
     setIsRefreshingData(true);
     startRefreshTransition(() => {
       router.refresh();
     });
+  };
+
+  const handleRouteNavigation = (target: InvestmentRouteTarget, href: string) => {
+    setNavigatingTo(target);
+    router.push(href);
   };
 
   const filtered = investments.filter((inv) => {
@@ -124,6 +157,14 @@ export default function InvestmentPageClient({
     if (filterStatus && inv.status !== filterStatus) return false;
     return true;
   });
+  const hasActiveFilters = Boolean(search || filterType || filterStatus);
+  const selectedTypeName = typeConfigs.find((type) => type.id === filterType)?.name;
+  const selectedStatusLabel = STATUS_FILTERS.find((status) => status.value === filterStatus)?.label;
+  const clearPortfolioFilters = () => {
+    setSearch('');
+    setFilterType('');
+    setFilterStatus('');
+  };
 
   const handleCreate = async (formData: FormData) => {
     setLoading(true);
@@ -200,6 +241,98 @@ export default function InvestmentPageClient({
 
   const gainLossPercent = summary.totalInvested > 0
     ? ((summary.unrealisedGainLoss / summary.totalInvested) * 100).toFixed(1) : '0.0';
+  const activeCount = investments.filter((inv) => inv.status === 'ACTIVE').length;
+  const totalPositions = investments.length;
+  const returnRate = summary.totalInvested > 0
+    ? ((summary.totalReturns / summary.totalInvested) * 100).toFixed(1)
+    : '0.0';
+  const topAllocation = allocation.reduce<Allocation | undefined>((top, item) => {
+    if (!top || item.total > top.total) return item;
+    return top;
+  }, undefined);
+  const nextMaturity = maturities.find((inv) => inv.maturityDate);
+  const summaryCards: Array<{
+    label: string;
+    value: string;
+    detail: string;
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+  }> = [
+    {
+      label: 'Current Value',
+      value: formatCurrency(summary.totalCurrentValue, currency),
+      detail: `${formatCurrency(summary.totalInvested, currency)} invested`,
+      icon: TrendingUp,
+      color: 'text-emerald-600 dark:text-emerald-400',
+      bg: 'bg-emerald-50 dark:bg-emerald-500/10',
+    },
+    {
+      label: 'Gain/Loss',
+      value: formatSignedCurrency(summary.unrealisedGainLoss, currency),
+      detail: `${gainLossPercent}% unrealized`,
+      icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
+      color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-rose-50 dark:bg-rose-500/10',
+    },
+    {
+      label: 'Realized Returns',
+      value: formatCurrency(summary.totalReturns, currency),
+      detail: `${returnRate}% of invested`,
+      icon: Wallet,
+      color: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-50 dark:bg-sky-500/10',
+    },
+    {
+      label: 'Positions',
+      value: String(totalPositions),
+      detail: `${activeCount} active`,
+      icon: BarChart3,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+    },
+  ];
+  const portfolioCards: Array<{
+    label: string;
+    value: string;
+    detail: string;
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+  }> = [
+    {
+      label: 'Total value',
+      value: formatCurrency(summary.totalCurrentValue, currency),
+      detail: `${formatCurrency(summary.totalInvested, currency)} invested`,
+      icon: Wallet,
+      color: 'text-slate-900 dark:text-white',
+      bg: 'bg-slate-100 dark:bg-slate-700/50',
+    },
+    {
+      label: 'Gain/loss',
+      value: formatSignedCurrency(summary.unrealisedGainLoss, currency),
+      detail: `${gainLossPercent}% unrealized`,
+      icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
+      color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
+      bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-rose-50 dark:bg-rose-500/10',
+    },
+    {
+      label: 'Returns',
+      value: formatCurrency(summary.totalReturns, currency),
+      detail: `${returnRate}% of invested`,
+      icon: TrendingUp,
+      color: 'text-sky-600 dark:text-sky-400',
+      bg: 'bg-sky-50 dark:bg-sky-500/10',
+    },
+    {
+      label: 'Positions',
+      value: `${activeCount}/${totalPositions}`,
+      detail: 'active positions',
+      icon: BarChart3,
+      color: 'text-amber-600 dark:text-amber-400',
+      bg: 'bg-amber-50 dark:bg-amber-500/10',
+    },
+  ];
 
   return (
     <div className="space-y-6">
@@ -210,268 +343,397 @@ export default function InvestmentPageClient({
         </div>
       )}
 
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Investments</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Track your portfolio &amp; returns</p>
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+              <HeaderIcon className="h-5 w-5" />
+            </span>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{pageTitle}</h1>
+          </div>
+          <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{pageDescription}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
+              {activeCount} active
+            </span>
+            {topAllocation && (
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
+                Top: {topAllocation.name} {topAllocation.percentage}%
+              </span>
+            )}
+            {nextMaturity?.maturityDate && (
+              <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
+                Next maturity {formatDate(nextMaturity.maturityDate)}
+              </span>
+            )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <button
-            onClick={() => {
-              setLoading(true);
-              router.push('/investments/types');
-            }}
-            disabled={loading}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-sm font-semibold hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all disabled:opacity-70"
+            onClick={() => handleRouteNavigation(portfolioRouteTarget, portfolioRouteHref)}
+            disabled={loading || isRouteNavigationPending}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60 sm:w-auto"
           >
-            {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
+            {isPortfolioRouteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : isPortfolioView ? <BarChart3 className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
+            {isPortfolioView ? 'Dashboard' : 'Portfolio'}
+          </button>
+          <button
+            onClick={() => handleRouteNavigation('types', '/investments/types')}
+            disabled={loading || isRouteNavigationPending}
+            className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60 sm:w-auto"
+          >
+            {isTypesRouteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
             Manage Types
           </button>
           <button
             onClick={() => { setEditingInvestment(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all"
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition-colors hover:bg-indigo-700 sm:w-auto"
           >
             <Plus className="h-4 w-4" /> Add Investment
           </button>
         </div>
       </div>
 
-      {/* Portfolio Performance Chart */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Portfolio Growth</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Total portfolio valuation over the last 12 months</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-              <span className="text-[10px] font-medium text-slate-500 uppercase tracking-wider">Net Worth</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="h-[300px] w-full">
-          {mounted && (
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={growthData}>
-                <defs>
-                  <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#e2e8f0'} />
-                <XAxis 
-                  dataKey="name" 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
-                  dy={10}
-                />
-                <YAxis 
-                  axisLine={false} 
-                  tickLine={false} 
-                  tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
-                  tickFormatter={(v) => formatCurrency(v, currency).split('.')[0]}
-                />
-                <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: isDark ? '#1e293b' : '#ffffff', 
-                    border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
-                    borderRadius: '12px',
-                    fontSize: '12px'
-                  }}
-                  itemStyle={{ color: isDark ? '#ffffff' : '#0f172a' }}
-                  formatter={(value: unknown) => [formatCurrency(Number(value), currency), 'Total Value']}
-                />
-                <Area 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="#6366f1" 
-                  strokeWidth={3}
-                  fillOpacity={1} 
-                  fill="url(#growthGradient)" 
-                  animationDuration={1500}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          )}
-        </div>
-      </div>
-
-      {/* Summary Cards - Minimalist Design */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        {[
-          { label: 'Total Invested', value: summary.totalInvested, icon: Wallet, color: 'text-blue-500', bg: 'bg-blue-50/50 dark:bg-blue-500/10' },
-          { label: 'Current Value', value: summary.totalCurrentValue, icon: TrendingUp, color: 'text-emerald-500', bg: 'bg-emerald-50/50 dark:bg-emerald-500/10' },
-          { label: 'Total Returns', value: summary.totalReturns, icon: ArrowUpRight, color: 'text-amber-500', bg: 'bg-amber-50/50 dark:bg-amber-500/10' },
-          {
-            label: 'Gain/Loss', value: summary.unrealisedGainLoss,
-            icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
-            color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
-            bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50/50 dark:bg-emerald-500/10' : 'bg-rose-50/50 dark:bg-rose-500/10',
-            suffix: ` (${gainLossPercent}%)`
-          },
-        ].map((card) => (
-          <div key={card.label} className="group flex flex-col p-5 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/40 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-all duration-300">
-            <div className="flex items-start justify-between mb-4">
-              <div className={cn('p-2.5 rounded-xl transition-colors duration-300', card.bg)}>
-                <card.icon className={cn('h-5 w-5', card.color)} />
-              </div>
-            </div>
-            <div>
-              <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{card.label}</p>
-              <div className="flex items-baseline gap-1.5 flex-wrap">
-                <p className="text-xl font-extrabold text-slate-900 dark:text-white tabular-nums">
-                  {formatCurrency(Math.abs(card.value), currency)}
-                </p>
-                {card.suffix && (
-                  <span className={cn('text-[11px] font-bold', card.color)}>
-                    {card.suffix}
+      {isDashboardView && (
+        <>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {summaryCards.map((card) => (
+              <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/70 dark:bg-slate-800/60">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[11px] font-bold uppercase text-slate-400 dark:text-slate-500">{card.label}</p>
+                    <p className={cn('mt-2 truncate text-lg font-extrabold tabular-nums sm:text-xl', card.color)}>{card.value}</p>
+                  </div>
+                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', card.bg)}>
+                    <card.icon className={cn('h-4 w-4', card.color)} />
                   </span>
+                </div>
+                <p className="mt-3 truncate text-xs font-medium text-slate-500 dark:text-slate-400">{card.detail}</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.85fr)]">
+            <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700/70 dark:bg-slate-800/60">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Portfolio Growth</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Last 12 months</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
+                  <span className="h-2.5 w-2.5 rounded-full bg-indigo-500" />
+                  Net Worth
+                </div>
+              </div>
+
+              <div className="mt-5 h-[320px] w-full">
+                {mounted && (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={growthData}>
+                      <defs>
+                        <linearGradient id="growthGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                          <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? '#334155' : '#e2e8f0'} />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
+                        dy={10}
+                      />
+                      <YAxis
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
+                        tickFormatter={(v) => formatCurrency(v, currency).split('.')[0]}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: isDark ? '#1e293b' : '#ffffff',
+                          border: `1px solid ${isDark ? '#334155' : '#e2e8f0'}`,
+                          borderRadius: '8px',
+                          fontSize: '12px'
+                        }}
+                        itemStyle={{ color: isDark ? '#ffffff' : '#0f172a' }}
+                        formatter={(value: unknown) => [formatCurrency(Number(value), currency), 'Total Value']}
+                      />
+                      <Area
+                        type="monotone"
+                        dataKey="value"
+                        stroke="#6366f1"
+                        strokeWidth={3}
+                        fillOpacity={1}
+                        fill="url(#growthGradient)"
+                        animationDuration={1500}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
                 )}
               </div>
             </div>
-          </div>
-        ))}
-      </div>
 
-      {/* Allocation Chart + Filters Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Allocation Pie */}
-        {allocation.length > 0 && (
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Portfolio Allocation</h3>
-            <div className="h-48">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie data={allocation} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={45} outerRadius={75} paddingAngle={2}>
-                    {allocation.map((a) => <Cell key={a.typeConfigId} fill={a.color} />)}
-                  </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(Number(value), currency)} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="mt-3 space-y-1.5">
-              {allocation.map((a) => (
-                <div key={a.typeConfigId} className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: a.color }} />
-                    <span className="text-slate-600 dark:text-slate-300">{a.name}</span>
+            <div className="space-y-6">
+              {allocation.length > 0 && (
+                <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700/70 dark:bg-slate-800/60">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Allocation</h3>
+                    <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{allocation.length} types</span>
                   </div>
-                  <span className="font-medium text-slate-900 dark:text-white">{a.percentage}%</span>
+                  <div className="h-44">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie data={allocation} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={42} outerRadius={70} paddingAngle={2}>
+                          {allocation.map((a) => <Cell key={a.typeConfigId} fill={a.color} />)}
+                        </Pie>
+                        <Tooltip formatter={(value) => formatCurrency(Number(value), currency)} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 space-y-2">
+                    {allocation.slice(0, 4).map((a) => (
+                      <div key={a.typeConfigId} className="flex items-center justify-between gap-3 text-xs">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: a.color }} />
+                          <span className="truncate text-slate-600 dark:text-slate-300">{a.name}</span>
+                        </div>
+                        <span className="font-semibold text-slate-900 dark:text-white">{a.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              ))}
+              )}
+
+              <MaturityTimeline investments={maturities} currency={currency} />
             </div>
           </div>
-        )}
+        </>
+      )}
 
-        {/* Investment List */}
-        <div className={cn('space-y-4', allocation.length > 0 ? 'lg:col-span-2' : 'lg:col-span-3')}>
-          {/* Filters */}
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-              <input
-                type="text" placeholder="Search investments..."
-                value={search} onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="relative">
-                <select value={filterType} onChange={(e) => setFilterType(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
-                  <option value="">All Types</option>
-                  {typeConfigs.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+      {isPortfolioView && (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            {portfolioCards.map((card) => (
+              <div key={card.label} className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/70 dark:bg-slate-800/60">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{card.label}</p>
+                    <p className={cn('mt-2 truncate text-lg font-bold tabular-nums', card.color)}>{card.value}</p>
+                    <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">{card.detail}</p>
+                  </div>
+                  <span className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', card.bg)}>
+                    <card.icon className={cn('h-4 w-4', card.color)} />
+                  </span>
+                </div>
               </div>
-              <div className="relative">
-                <select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}
-                  className="appearance-none pl-3 pr-8 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500">
-                  <option value="">All Status</option>
-                  <option value="ACTIVE">Active</option>
-                  <option value="MATURED">Matured</option>
-                  <option value="SOLD">Sold</option>
-                </select>
-                <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
-              </div>
-            </div>
+            ))}
           </div>
 
-          {/* Cards */}
+          <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/70 dark:bg-slate-800/60">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">Positions</h2>
+                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  {filtered.length} of {investments.length} shown
+                </p>
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearPortfolioFilters}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Clear
+                </button>
+              )}
+            </div>
+
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px]">
+              <div className="relative min-w-0">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by name or institution"
+                  value={search}
+                  onChange={(event) => setSearch(event.target.value)}
+                  className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
+                />
+              </div>
+              <div className="relative min-w-0">
+                <select
+                  value={filterType}
+                  onChange={(event) => setFilterType(event.target.value)}
+                  className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
+                >
+                  <option value="">All types</option>
+                  {typeConfigs.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+              <div className="relative min-w-0">
+                <select
+                  value={filterStatus}
+                  onChange={(event) => setFilterStatus(event.target.value)}
+                  className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
+                >
+                  <option value="">All status</option>
+                  {STATUS_FILTERS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="mt-3 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                {search && <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">Search: {search}</span>}
+                {selectedTypeName && <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">Type: {selectedTypeName}</span>}
+                {selectedStatusLabel && <span className="rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">Status: {selectedStatusLabel}</span>}
+              </div>
+            )}
+          </div>
+
           {filtered.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 dark:border-slate-700 p-12 text-center">
-              <TrendingUp className="h-12 w-12 mx-auto text-slate-300 dark:text-slate-600 mb-4" />
-              <p className="text-slate-500 dark:text-slate-400 font-medium">No investments found</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">Add your first investment to start tracking</p>
+            <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-800/40">
+              <TrendingUp className="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-slate-600" />
+              <p className="font-medium text-slate-600 dark:text-slate-300">No investments found</p>
+              <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
+                {hasActiveFilters ? 'Try a different filter set.' : 'Add your first investment to start tracking.'}
+              </p>
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={clearPortfolioFilters}
+                  className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                >
+                  <X className="h-4 w-4" />
+                  Clear filters
+                </button>
+              )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
               {filtered.map((inv) => {
                 const Icon = getIcon(inv.typeConfig.icon);
                 const invested = Number(inv.investedAmount);
                 const current = Number(inv.currentValue);
                 const gain = current - invested;
                 const gainPct = invested > 0 ? ((gain / invested) * 100).toFixed(1) : '0.0';
+                const progress = invested > 0 ? Math.min(Math.max((current / invested) * 100, 4), 100) : 4;
+                const isPositive = gain >= 0;
 
                 return (
-                  <div key={inv.id} className="group relative rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5 hover:border-indigo-300 dark:hover:border-indigo-500/30 hover:shadow-lg transition-all duration-200">
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white" style={{ backgroundColor: inv.typeConfig.color }}>
-                          <Icon className="h-5 w-5" />
+                  <div key={inv.id} className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition-all duration-200 hover:border-indigo-200 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/60 dark:hover:border-indigo-500/40">
+                    <button
+                      type="button"
+                      onClick={() => setViewingInvestment(inv)}
+                      className="flex flex-1 flex-col p-5 text-left"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: inv.typeConfig.color }}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{inv.name}</h3>
+                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{inv.typeConfig.name}</p>
+                          </div>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-slate-900 dark:text-white text-sm">{inv.name}</h3>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">{inv.typeConfig.name}</p>
+                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold', STATUS_STYLES[inv.status])}>
+                          {inv.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-5">
+                        <p className="text-xs text-slate-500 dark:text-slate-400">Current value</p>
+                        <div className="mt-1 flex items-baseline justify-between gap-3">
+                          <p className="truncate text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(current, currency)}</p>
+                          <p className={cn('flex shrink-0 items-center gap-1 text-sm font-semibold', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                            {isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
+                            {gainPct}%
+                          </p>
+                        </div>
+                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/70">
+                          <div
+                            className={cn('h-full rounded-full', isPositive ? 'bg-emerald-500' : 'bg-rose-500')}
+                            style={{ width: `${progress}%` }}
+                          />
                         </div>
                       </div>
-                      <span className={cn('text-[10px] font-semibold px-2 py-0.5 rounded-full', STATUS_STYLES[inv.status])}>
-                        {inv.status}
-                      </span>
+
+                      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+                        <div className="min-w-0">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Invested</p>
+                          <p className="mt-1 truncate font-semibold text-slate-900 dark:text-white">{formatCurrency(invested, currency)}</p>
+                        </div>
+                        <div className="min-w-0 text-right">
+                          <p className="text-xs text-slate-500 dark:text-slate-400">Gain/loss</p>
+                          <p className={cn('mt-1 truncate font-semibold', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                            {formatSignedCurrency(gain, currency)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+                        {inv.institutionName && (
+                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{inv.institutionName}</span>
+                          </span>
+                        )}
+                        {inv.linkedAccount && (
+                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
+                            <Wallet className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{inv.linkedAccount.name}</span>
+                          </span>
+                        )}
+                        {inv.maturityDate && (
+                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
+                            <Calendar className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{formatDate(inv.maturityDate)}</span>
+                          </span>
+                        )}
+                      </div>
+                    </button>
+
+                    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-700/60">
+                      <button
+                        type="button"
+                        onClick={() => setViewingInvestment(inv)}
+                        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+                      >
+                        <Eye className="h-4 w-4" />
+                        View
+                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => { setEditingInvestment(inv); setShowForm(true); }}
+                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                          aria-label={`Edit ${inv.name}`}
+                        >
+                          <Edit3 className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDeleteId(inv.id); setDeleteMessage(''); }}
+                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                          aria-label={`Delete ${inv.name}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-
-                    {inv.institutionName && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">{inv.institutionName}</p>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-3 mt-3">
-                      <div>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">Invested</p>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(invested, currency)}</p>
-                      </div>
-                      <div>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">Current</p>
-                        <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(current, currency)}</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
-                      <div className={cn('flex items-center gap-1 text-xs font-semibold', gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                        {gain >= 0 ? <ArrowUpRight className="h-3.5 w-3.5" /> : <ArrowDownRight className="h-3.5 w-3.5" />}
-                        {formatCurrency(Math.abs(gain), currency)} ({gainPct}%)
-                      </div>
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setViewingInvestment(inv)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="View"><Eye className="h-4 w-4" /></button>
-                        <button onClick={() => { setEditingInvestment(inv); setShowForm(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Edit"><Edit3 className="h-4 w-4" /></button>
-                        <button onClick={() => { setDeleteId(inv.id); setDeleteMessage(''); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400" title="Delete"><Trash2 className="h-4 w-4" /></button>
-                      </div>
-                    </div>
-
-                    {inv.maturityDate && (
-                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-2">Matures: {formatDate(inv.maturityDate)}</p>
-                    )}
                   </div>
                 );
               })}
             </div>
           )}
         </div>
-      </div>
+      )}
 
       {/* Create / Edit Modal */}
       {showForm && (
@@ -519,17 +781,6 @@ export default function InvestmentPageClient({
           </div>
         </div>
       )}
-      {/* Bottom Grid for Charts and Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 pb-10">
-        <MaturityTimeline investments={maturities} currency={currency} />
-        
-        {/* We can add a growth chart here later in Phase 5 */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-200 dark:border-slate-700/50 flex flex-col items-center justify-center text-center">
-          <TrendingUp className="h-8 w-8 text-slate-300 mb-2" />
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Portfolio Growth</h3>
-          <p className="text-xs text-slate-500 mt-1 max-w-[200px]">Historical growth chart visualization will be implemented in Phase 5.</p>
-        </div>
-      </div>
     </div>
   );
 }

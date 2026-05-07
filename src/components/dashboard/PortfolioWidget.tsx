@@ -1,7 +1,7 @@
 'use client';
 
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { Calendar, Clock, TrendingUp, ArrowRight, ExternalLink } from 'lucide-react';
+import { Clock, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
 type Maturity = {
@@ -33,8 +33,8 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
           <TrendingUp className="h-4 w-4 text-indigo-500" />
           Investment Portfolio
         </h3>
-        <Link 
-          href="/investments" 
+        <Link
+          href="/investments/portfolio"
           className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
         >
           View All <ExternalLink className="h-3 w-3" />

@@ -1,13 +1,13 @@
 import InvestmentPageClient from '@/components/investments/InvestmentPageClient';
-import { getInvestmentPageData } from './investment-page-data';
+import { getInvestmentPageData } from '../investment-page-data';
 
-export default async function InvestmentsPage() {
+export default async function InvestmentPortfolioPage() {
   const data = await getInvestmentPageData();
 
   return (
     <InvestmentPageClient
       {...data}
-      view="dashboard"
+      view="portfolio"
     />
   );
 }
