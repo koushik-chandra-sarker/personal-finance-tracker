@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { getMonthlySummary, getCategoryBreakdown, getMonthlyTrend, getRecentTransactions } from '@/services/report.service';
-import { getBudgets } from '@/services/budget.service';
+import { getMonthlySummary, getCategoryBreakdown, getMonthlyTrend, getRecentTransactions, getUpcomingBillsSummary } from '@/services/report.service';
+import { getBudgets, getBudgetUsageSummary } from '@/services/budget.service';
 import { getTotalBalance } from '@/services/account.service';
 import { getSpendingInsights } from '@/services/insight.service';
 import { getPortfolioSummary, getUpcomingMaturities } from '@/services/investment.service';
@@ -35,7 +35,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const year = Number.isInteger(parsedYear) ? parsedYear : current.year;
   const periodLabel = `${getMonthName(month)} ${year}`;
 
-  const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights, summary_portfolio, maturities] = await Promise.all([
+  const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights, summary_portfolio, maturities, upcomingBills, budgetUsageSummary] = await Promise.all([
     getMonthlySummary(userId, month, year),
     getCategoryBreakdown(userId, month, year),
     getMonthlyTrend(userId, 6),
@@ -45,10 +45,11 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getSpendingInsights(userId),
     getPortfolioSummary(userId),
     getUpcomingMaturities(userId),
+    getUpcomingBillsSummary(userId, 14),
+    getBudgetUsageSummary(userId, month, year),
   ]);
 
   const userCurrency = (session.user as { currency?: string }).currency || 'USD';
-
   return (
     <div className="space-y-6">
       {/* Header with Month/Year Picker */}
@@ -58,7 +59,20 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {/* Summary Cards */}
-      <SummaryCards summary={summary} totalBalance={totalBalance} periodLabel={periodLabel} currency={userCurrency} />
+      <section className="space-y-2" aria-label="Monthly summary overview">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-lg">Your money at a glance</h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">{periodLabel}</p>
+        </div>
+        <SummaryCards
+          summary={summary}
+          totalBalance={totalBalance}
+          periodLabel={periodLabel}
+          currency={userCurrency}
+          upcomingBills={upcomingBills}
+          budgetUsage={budgetUsageSummary}
+        />
+      </section>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

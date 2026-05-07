@@ -92,6 +92,12 @@ export type MonthlySummary = {
   transactionCount: number;
 };
 
+export type UpcomingBillsSummary = {
+  count: number;
+  totalAmount: number;
+  nextDueDate: Date | null;
+};
+
 export type CategoryBreakdown = {
   categoryId: string;
   categoryName: string;

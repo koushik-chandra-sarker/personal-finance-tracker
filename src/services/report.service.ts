@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/prisma';
-import type { MonthlySummary, CategoryBreakdown, MonthlyTrend } from '@/types';
+import type { MonthlySummary, CategoryBreakdown, MonthlyTrend, UpcomingBillsSummary } from '@/types';
 import { format, subMonths } from 'date-fns';
 
 export async function getMonthlySummary(userId: string, month: number, year: number): Promise<MonthlySummary> {
@@ -119,6 +119,41 @@ export async function getRecentTransactions(userId: string, limit: number = 5) {
     include: { category: true, account: true },
     orderBy: { date: 'desc' },
   });
+}
+
+export async function getUpcomingBillsSummary(userId: string, daysAhead: number = 14): Promise<UpcomingBillsSummary> {
+  const from = new Date();
+  const to = new Date(from);
+  to.setDate(to.getDate() + daysAhead);
+
+  const [aggregate, nextBill] = await Promise.all([
+    prisma.recurringTransaction.aggregate({
+      where: {
+        userId,
+        isActive: true,
+        type: 'EXPENSE',
+        nextRunDate: { gte: from, lte: to },
+      },
+      _sum: { amount: true },
+      _count: { id: true },
+    }),
+    prisma.recurringTransaction.findFirst({
+      where: {
+        userId,
+        isActive: true,
+        type: 'EXPENSE',
+        nextRunDate: { gte: from, lte: to },
+      },
+      orderBy: { nextRunDate: 'asc' },
+      select: { nextRunDate: true },
+    }),
+  ]);
+
+  return {
+    count: aggregate._count.id,
+    totalAmount: Number(aggregate._sum.amount || 0),
+    nextDueDate: nextBill?.nextRunDate || null,
+  };
 }
 
 export async function getInvestmentReportRange(
