@@ -78,8 +78,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+        <div className="space-y-6 lg:col-span-2">
           <RecentTransactions transactions={recentTx} currency={userCurrency} />
+          <InsightsWidget insights={insights} />
         </div>
         <div className="space-y-6">
           <PortfolioWidget 
@@ -88,7 +89,6 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
             currency={userCurrency} 
           />
           <BudgetOverview budgets={budgets} currency={userCurrency} />
-          <InsightsWidget insights={insights} />
         </div>
       </div>
     </div>
