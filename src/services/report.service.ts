@@ -113,9 +113,17 @@ export async function getMonthlyTrendRange(
   return trends;
 }
 
-export async function getRecentTransactions(userId: string, limit: number = 5) {
+export async function getRecentTransactions(userId: string, days: number = 7) {
+  const now = new Date();
+  const startDate = new Date(now);
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - Math.max(0, days - 1));
+
   return prisma.transaction.findMany({
-    where: { userId },
+    where: {
+      userId,
+      date: { gte: startDate, lte: now },
+    },
     include: { category: true, account: true },
     orderBy: { date: 'desc' },
   });

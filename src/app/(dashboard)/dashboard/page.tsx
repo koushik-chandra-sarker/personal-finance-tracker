@@ -59,20 +59,14 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       </div>
 
       {/* Summary Cards */}
-      <section className="space-y-2" aria-label="Monthly summary overview">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-lg">Your money at a glance</h2>
-          <p className="text-xs text-slate-500 dark:text-slate-400 sm:text-sm">{periodLabel}</p>
-        </div>
-        <SummaryCards
-          summary={summary}
-          totalBalance={totalBalance}
-          periodLabel={periodLabel}
-          currency={userCurrency}
-          upcomingBills={upcomingBills}
-          budgetUsage={budgetUsageSummary}
-        />
-      </section>
+      <SummaryCards
+        summary={summary}
+        totalBalance={totalBalance}
+        periodLabel={periodLabel}
+        currency={userCurrency}
+        upcomingBills={upcomingBills}
+        budgetUsage={budgetUsageSummary}
+      />
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

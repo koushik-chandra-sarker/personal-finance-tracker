@@ -23,16 +23,16 @@ export default function RecentTransactions({ transactions, currency = 'USD' }: R
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Recent Transactions</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Last 7 Days Transactions</h3>
         <Link href="/transactions" className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300">
           View All →
         </Link>
       </div>
 
       {transactions.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-8">No transactions yet</p>
+        <p className="text-sm text-slate-500 text-center py-8">No transactions in the last 7 days</p>
       ) : (
-        <div className="space-y-3">
+        <div className="max-h-[420px] overflow-y-auto pr-1 space-y-3">
           {transactions.map((tx) => (
             <div key={tx.id} className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
               <div
