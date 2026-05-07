@@ -615,7 +615,17 @@ export default function InvestmentPageClient({
               )}
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700/70 dark:bg-slate-800/60">
+              <div className="hidden border-b border-slate-200 bg-slate-50/80 px-4 py-3 text-[11px] font-bold uppercase text-slate-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(260px,1.35fr)_minmax(120px,0.7fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_minmax(150px,0.8fr)_104px] xl:items-center xl:gap-4">
+                <span>Investment</span>
+                <span>Invested</span>
+                <span>Current</span>
+                <span>Gain/loss</span>
+                <span>Maturity</span>
+                <span className="text-right">Actions</span>
+              </div>
+
+              <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
               {filtered.map((inv) => {
                 const Icon = getIcon(inv.typeConfig.icon);
                 const invested = Number(inv.investedAmount);
@@ -626,110 +636,129 @@ export default function InvestmentPageClient({
                 const isPositive = gain >= 0;
 
                 return (
-                  <div key={inv.id} className="flex h-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white transition-all duration-200 hover:border-indigo-200 hover:shadow-md dark:border-slate-700/70 dark:bg-slate-800/60 dark:hover:border-indigo-500/40">
-                    <button
-                      type="button"
-                      onClick={() => setViewingInvestment(inv)}
-                      className="flex flex-1 flex-col p-5 text-left"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="flex min-w-0 items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: inv.typeConfig.color }}>
-                            <Icon className="h-5 w-5" />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{inv.name}</h3>
-                            <p className="truncate text-xs text-slate-500 dark:text-slate-400">{inv.typeConfig.name}</p>
-                          </div>
+                  <div
+                    key={inv.id}
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setViewingInvestment(inv)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        setViewingInvestment(inv);
+                      }
+                    }}
+                    className="group grid cursor-pointer grid-cols-1 gap-4 px-4 py-4 transition-colors hover:bg-slate-50/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-slate-900/20 xl:grid-cols-[minmax(260px,1.35fr)_minmax(120px,0.7fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_minmax(150px,0.8fr)_104px] xl:items-center"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-white" style={{ backgroundColor: inv.typeConfig.color }}>
+                          <Icon className="h-5 w-5" />
                         </div>
-                        <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold', STATUS_STYLES[inv.status])}>
-                          {inv.status}
-                        </span>
-                      </div>
-
-                      <div className="mt-5">
-                        <p className="text-xs text-slate-500 dark:text-slate-400">Current value</p>
-                        <div className="mt-1 flex items-baseline justify-between gap-3">
-                          <p className="truncate text-xl font-bold text-slate-900 dark:text-white">{formatCurrency(current, currency)}</p>
-                          <p className={cn('flex shrink-0 items-center gap-1 text-sm font-semibold', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                            {isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                            {gainPct}%
-                          </p>
-                        </div>
-                        <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/70">
-                          <div
-                            className={cn('h-full rounded-full', isPositive ? 'bg-emerald-500' : 'bg-rose-500')}
-                            style={{ width: `${progress}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
                         <div className="min-w-0">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Invested</p>
-                          <p className="mt-1 truncate font-semibold text-slate-900 dark:text-white">{formatCurrency(invested, currency)}</p>
-                        </div>
-                        <div className="min-w-0 text-right">
-                          <p className="text-xs text-slate-500 dark:text-slate-400">Gain/loss</p>
-                          <p className={cn('mt-1 truncate font-semibold', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                            {formatSignedCurrency(gain, currency)}
-                          </p>
+                          <div className="flex min-w-0 flex-wrap items-center gap-2">
+                            <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{inv.name}</h3>
+                            <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold', STATUS_STYLES[inv.status])}>
+                              {inv.status}
+                            </span>
+                          </div>
+                          <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
+                            <span className="truncate">{inv.typeConfig.name}</span>
+                            {inv.institutionName && (
+                              <>
+                                <span className="text-slate-300 dark:text-slate-600">/</span>
+                                <span className="inline-flex min-w-0 items-center gap-1">
+                                  <Building2 className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{inv.institutionName}</span>
+                                </span>
+                              </>
+                            )}
+                            {inv.linkedAccount && (
+                              <>
+                                <span className="text-slate-300 dark:text-slate-600">/</span>
+                                <span className="inline-flex min-w-0 items-center gap-1">
+                                  <Wallet className="h-3.5 w-3.5 shrink-0" />
+                                  <span className="truncate">{inv.linkedAccount.name}</span>
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
-
-                      <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
-                        {inv.institutionName && (
-                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
-                            <Building2 className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{inv.institutionName}</span>
-                          </span>
-                        )}
-                        {inv.linkedAccount && (
-                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
-                            <Wallet className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{inv.linkedAccount.name}</span>
-                          </span>
-                        )}
-                        {inv.maturityDate && (
-                          <span className="inline-flex min-w-0 items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 dark:bg-slate-700/60">
-                            <Calendar className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{formatDate(inv.maturityDate)}</span>
-                          </span>
-                        )}
+                      <div className="mt-3 h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-700/70 xl:hidden">
+                        <div
+                          className={cn('h-full rounded-full', isPositive ? 'bg-emerald-500' : 'bg-rose-500')}
+                          style={{ width: `${progress}%` }}
+                        />
                       </div>
-                    </button>
+                    </div>
 
-                    <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 dark:border-slate-700/60">
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Invested</p>
+                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(invested, currency)}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Current</p>
+                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(current, currency)}</p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Gain/loss</p>
+                        <p className={cn('mt-1 flex items-center gap-1 truncate text-sm font-semibold tabular-nums xl:mt-0', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                          {isPositive ? <ArrowUpRight className="h-4 w-4 shrink-0" /> : <ArrowDownRight className="h-4 w-4 shrink-0" />}
+                          <span className="truncate">{formatSignedCurrency(gain, currency)}</span>
+                          <span className="text-xs font-medium">({gainPct}%)</span>
+                        </p>
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Maturity</p>
+                        <p className="mt-1 flex items-center gap-1 truncate text-sm font-medium text-slate-600 dark:text-slate-300 xl:mt-0">
+                          <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="truncate">{inv.maturityDate ? formatDate(inv.maturityDate) : 'No maturity'}</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-1 border-t border-slate-100 pt-3 dark:border-slate-700/60 xl:border-t-0 xl:pt-0">
                       <button
                         type="button"
-                        onClick={() => setViewingInvestment(inv)}
-                        className="inline-flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setViewingInvestment(inv);
+                        }}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        aria-label={`View ${inv.name}`}
                       >
                         <Eye className="h-4 w-4" />
-                        View
                       </button>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => { setEditingInvestment(inv); setShowForm(true); }}
-                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
-                          aria-label={`Edit ${inv.name}`}
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => { setDeleteId(inv.id); setDeleteMessage(''); }}
-                          className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-                          aria-label={`Delete ${inv.name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setEditingInvestment(inv);
+                          setShowForm(true);
+                        }}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                        aria-label={`Edit ${inv.name}`}
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setDeleteId(inv.id);
+                          setDeleteMessage('');
+                        }}
+                        className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+                        aria-label={`Delete ${inv.name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
                 );
               })}
+              </div>
             </div>
           )}
         </div>
