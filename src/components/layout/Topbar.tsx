@@ -13,6 +13,7 @@ import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from '@/actions/notification.actions';
+import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
   RefreshCw, FileBarChart, Settings, X, DollarSign, ChevronDown, Users, KeyRound, TrendingUp
@@ -67,7 +68,10 @@ type NotificationItem = {
   id: string;
   title: string;
   message: string;
+  type: string;
   severity: string;
+  sourceType: string | null;
+  sourceId: string | null;
   actionUrl: string | null;
   isRead: boolean;
   createdAt: string;
@@ -83,6 +87,8 @@ export default function Topbar() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
+  const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
   const isAdmin = session?.user?.role === 'ADMIN';
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
@@ -146,6 +152,31 @@ export default function Topbar() {
     await markNotificationReadAction(id);
     await fetchNotifications();
     setNotificationOpen(false);
+  };
+
+  const handlePayDpsReminder = async (notification: NotificationItem) => {
+    if (!notification.sourceId) return;
+
+    setPayingNotificationId(notification.id);
+    setNotificationActionMessage((current) => ({ ...current, [notification.id]: '' }));
+
+    try {
+      const result = await payDpsInstallmentAction(notification.sourceId);
+      if (result.success) {
+        await markNotificationReadAction(notification.id);
+        setNotificationActionMessage((current) => ({ ...current, [notification.id]: result.message }));
+      } else {
+        setNotificationActionMessage((current) => ({ ...current, [notification.id]: result.message }));
+      }
+      await fetchNotifications();
+    } catch (error) {
+      setNotificationActionMessage((current) => ({
+        ...current,
+        [notification.id]: error instanceof Error ? error.message : 'Failed to pay installment',
+      }));
+    } finally {
+      setPayingNotificationId(null);
+    }
   };
 
   const severityStyle: Record<string, string> = {
@@ -230,6 +261,10 @@ export default function Topbar() {
                   ) : (
                     <div className="max-h-96 overflow-y-auto">
                       {notifications.map((notification) => {
+                        const isDpsReminder = notification.type === 'INVESTMENT_RETURN_DUE'
+                          && notification.sourceType === 'INVESTMENT'
+                          && Boolean(notification.sourceId);
+                        const actionMessage = notificationActionMessage[notification.id];
                         const content = (
                           <div className={cn(
                             'flex gap-3 px-4 py-3 text-left hover:bg-slate-50 dark:hover:bg-white/5 transition-colors',
@@ -242,10 +277,51 @@ export default function Topbar() {
                               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{notification.title}</p>
                               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{notification.message}</p>
                               <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt)}</p>
+                              {isDpsReminder && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={(event) => {
+                                      event.preventDefault();
+                                      event.stopPropagation();
+                                      void handlePayDpsReminder(notification);
+                                    }}
+                                    disabled={payingNotificationId === notification.id}
+                                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
+                                  >
+                                    {payingNotificationId === notification.id ? 'Paying...' : 'Pay'}
+                                  </button>
+                                  {notification.actionUrl && (
+                                    <Link
+                                      href={notification.actionUrl}
+                                      onClick={(event) => {
+                                        event.stopPropagation();
+                                        void handleNotificationClick(notification.id);
+                                      }}
+                                      className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
+                                    >
+                                      Open
+                                    </Link>
+                                  )}
+                                </div>
+                              )}
+                              {actionMessage && (
+                                <p className="mt-2 rounded-lg bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600 dark:bg-slate-700/60 dark:text-slate-300">
+                                  {actionMessage}
+                                </p>
+                              )}
                             </div>
                             {!notification.isRead && <span className="mt-2 h-2 w-2 rounded-full bg-indigo-500 flex-shrink-0" />}
                           </div>
                         );
+
+                        if (isDpsReminder) {
+                          return (
+                            <div key={notification.id}>
+                              {content}
+                            </div>
+                          );
+                        }
 
                         return notification.actionUrl ? (
                           <Link key={notification.id} href={notification.actionUrl} onClick={() => handleNotificationClick(notification.id)}>

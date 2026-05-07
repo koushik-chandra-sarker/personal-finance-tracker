@@ -29,6 +29,8 @@ export const investmentSchema = z.object({
   maturityDate: z.string().optional(),
   linkedAccountId: z.string().optional(),
   monthlyInstallment: z.coerce.number().min(0).optional(),
+  installmentDueDay: z.coerce.number().int().min(1).max(31).optional(),
+  sanchayapatraConfigId: z.string().optional(),
   quantity: z.coerce.number().min(0).optional(),
   avgBuyPrice: z.coerce.number().min(0).optional(),
   notes: z.string().optional(),

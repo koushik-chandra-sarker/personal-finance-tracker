@@ -488,6 +488,7 @@ enum ReturnFrequency {
 enum InvestmentCashflowType {
   BUY
   ADD_FUNDS
+  INSTALLMENT
   RETURN
   TAX
   FEE
@@ -549,6 +550,10 @@ model Investment {
   linkedAccountId    String?
 
   monthlyInstallment Decimal?           @db.Decimal(14, 2)
+  installmentDueDay  Int?
+  missedInstallmentCount Int            @default(0)
+  lastMissedInstallmentOn DateTime?
+  lastInstallmentPaidOn DateTime?
 
   quantity           Decimal?           @db.Decimal(14, 4)
   avgBuyPrice        Decimal?           @db.Decimal(14, 4)
@@ -556,6 +561,7 @@ model Investment {
   notes              String?
   color              String             @default("#6366f1")
   icon               String             @default("trending-up")
+  sanchayapatraConfigId String?
 
   createdAt          DateTime           @default(now())
   updatedAt          DateTime           @updatedAt
@@ -565,6 +571,7 @@ model Investment {
   user               User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   typeConfig         InvestmentTypeConfig @relation(fields: [typeConfigId], references: [id])
   linkedAccount      Account?           @relation(fields: [linkedAccountId], references: [id], onDelete: SetNull)
+  sanchayapatraConfig SanchayapatraConfig? @relation(fields: [sanchayapatraConfigId], references: [id], onDelete: SetNull)
   returns            InvestmentReturn[]
   valuations         InvestmentValuation[]
   cashflows          InvestmentCashflow[]
@@ -572,6 +579,7 @@ model Investment {
   @@index([userId, typeConfigId])
   @@index([userId, status])
   @@index([userId, maturityDate])
+  @@index([sanchayapatraConfigId])
 }
 
 model InvestmentReturn {
@@ -611,6 +619,7 @@ model InvestmentCashflow {
   returnAmount    Decimal                @default(0) @db.Decimal(14, 2)
   taxAmount       Decimal                @default(0) @db.Decimal(14, 2)
   date            DateTime
+  installmentDueDate DateTime?
   description     String?
   createdAt       DateTime               @default(now())
   createdById     String?
@@ -623,6 +632,7 @@ model InvestmentCashflow {
   @@index([transactionId])
   @@index([accountId])
   @@index([type, date])
+  @@index([investmentId, installmentDueDate])
 }
 
 model SanchayapatraConfig {
@@ -636,4 +646,5 @@ model SanchayapatraConfig {
   taxRateAbove     Decimal  @db.Decimal(5, 2) @default(10)
   payoutFrequency  String   // MONTHLY, QUARTERLY, AT_MATURITY
   updatedAt        DateTime @updatedAt
+  investments      Investment[]
 }

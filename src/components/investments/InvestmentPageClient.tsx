@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
 import { 
   createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, 
@@ -37,6 +37,8 @@ type Investment = {
   interestRate?: number | string | null; returnFrequency?: string | null;
   purchaseDate: string; maturityDate?: string | null; soldDate?: string | null;
   monthlyInstallment?: number | string | null; quantity?: number | string | null;
+  installmentDueDay?: number | null; linkedAccountId?: string | null;
+  sanchayapatraConfigId?: string | null;
   avgBuyPrice?: number | string | null; notes?: string | null;
   color: string; icon: string; typeConfigId: string;
   typeConfig: TypeConfig;
@@ -101,6 +103,8 @@ export default function InvestmentPageClient({
   view?: InvestmentView;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const payInstallmentId = searchParams.get('payInstallment');
   const [isPendingRefresh, startRefreshTransition] = useTransition();
   const [investments, setInvestments] = useState(initial);
   const [mounted, setMounted] = useState(false);
@@ -117,6 +121,8 @@ export default function InvestmentPageClient({
   const [showForm, setShowForm] = useState(false);
   const [editingInvestment, setEditingInvestment] = useState<Investment | null>(null);
   const [viewingInvestment, setViewingInvestment] = useState<Investment | null>(null);
+  const [detailInitialAction, setDetailInitialAction] = useState<'pay-installment' | null>(null);
+  const [handledPayInstallmentId, setHandledPayInstallmentId] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
@@ -165,6 +171,24 @@ export default function InvestmentPageClient({
     setFilterType('');
     setFilterStatus('');
   };
+  const openInvestmentDetail = (investment: Investment, initialAction: 'pay-installment' | null = null) => {
+    setViewingInvestment(investment);
+    setDetailInitialAction(initialAction);
+  };
+
+  useEffect(() => {
+    if (!payInstallmentId) {
+      if (handledPayInstallmentId) setHandledPayInstallmentId(null);
+      return;
+    }
+    if (!isPortfolioView || handledPayInstallmentId === payInstallmentId) return;
+
+    const target = investments.find((investment) => investment.id === payInstallmentId);
+    if (!target) return;
+
+    openInvestmentDetail(target, 'pay-installment');
+    setHandledPayInstallmentId(payInstallmentId);
+  }, [handledPayInstallmentId, investments, isPortfolioView, payInstallmentId]);
 
   const handleCreate = async (formData: FormData) => {
     setLoading(true);
@@ -640,11 +664,11 @@ export default function InvestmentPageClient({
                     key={inv.id}
                     role="button"
                     tabIndex={0}
-                    onClick={() => setViewingInvestment(inv)}
+                    onClick={() => openInvestmentDetail(inv)}
                     onKeyDown={(event) => {
                       if (event.key === 'Enter' || event.key === ' ') {
                         event.preventDefault();
-                        setViewingInvestment(inv);
+                        openInvestmentDetail(inv);
                       }
                     }}
                     className="group grid cursor-pointer grid-cols-1 gap-4 px-4 py-4 transition-colors hover:bg-slate-50/80 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500 dark:hover:bg-slate-900/20 xl:grid-cols-[minmax(260px,1.35fr)_minmax(120px,0.7fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_minmax(150px,0.8fr)_104px] xl:items-center"
@@ -723,7 +747,7 @@ export default function InvestmentPageClient({
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation();
-                          setViewingInvestment(inv);
+                          openInvestmentDetail(inv);
                         }}
                         className="rounded-lg p-1.5 text-slate-500 transition-colors hover:bg-indigo-50 hover:text-indigo-600 dark:text-slate-400 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                         aria-label={`View ${inv.name}`}
@@ -789,7 +813,11 @@ export default function InvestmentPageClient({
           onAddFunds={(fd) => handleAddFunds(viewingInvestment.id, fd)}
           onRecordValuation={(fd) => handleRecordValuation(viewingInvestment.id, fd)}
           onCloseInvestment={handleCloseInvestment}
-          onClose={() => setViewingInvestment(null)}
+          initialAction={detailInitialAction}
+          onClose={() => {
+            setViewingInvestment(null);
+            setDetailInitialAction(null);
+          }}
         />
       )}
 

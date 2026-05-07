@@ -12,6 +12,12 @@ function getErrorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
 }
 
+function revalidateInvestmentViews() {
+  revalidatePath('/investments');
+  revalidatePath('/investments/portfolio');
+  revalidatePath('/dashboard');
+}
+
 export async function getInvestmentsAction(filters?: {
   typeConfigId?: string;
   status?: string;
@@ -54,6 +60,8 @@ export async function createInvestmentAction(formData: FormData): Promise<Action
     maturityDate: formData.get('maturityDate') as string || undefined,
     linkedAccountId: formData.get('linkedAccountId') as string || undefined,
     monthlyInstallment: formData.get('monthlyInstallment') as string || undefined,
+    installmentDueDay: formData.get('installmentDueDay') as string || undefined,
+    sanchayapatraConfigId: formData.get('sanchayapatraConfigId') as string || undefined,
     quantity: formData.get('quantity') as string || undefined,
     avgBuyPrice: formData.get('avgBuyPrice') as string || undefined,
     notes: formData.get('notes') as string || undefined,
@@ -65,8 +73,7 @@ export async function createInvestmentAction(formData: FormData): Promise<Action
   if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
 
   await investmentService.createInvestment(userId, executorId, parsed.data);
-  revalidatePath('/investments');
-  revalidatePath('/dashboard');
+  revalidateInvestmentViews();
   return { success: true, message: 'Investment created' };
 }
 
@@ -79,19 +86,19 @@ export async function updateInvestmentAction(id: string, formData: FormData): Pr
 
   const data: Record<string, unknown> = {};
   for (const [key, value] of formData.entries()) {
-    if (value !== '') data[key] = value;
+    if (value !== '' || key === 'sanchayapatraConfigId') data[key] = value;
   }
   // Coerce numeric fields
   if (data.investedAmount) data.investedAmount = Number(data.investedAmount);
   if (data.currentValue) data.currentValue = Number(data.currentValue);
   if (data.interestRate) data.interestRate = Number(data.interestRate);
   if (data.monthlyInstallment) data.monthlyInstallment = Number(data.monthlyInstallment);
+  if (data.installmentDueDay) data.installmentDueDay = Number(data.installmentDueDay);
   if (data.quantity) data.quantity = Number(data.quantity);
   if (data.avgBuyPrice) data.avgBuyPrice = Number(data.avgBuyPrice);
 
   await investmentService.updateInvestment(userId, executorId, id, data as Parameters<typeof investmentService.updateInvestment>[3]);
-  revalidatePath('/investments');
-  revalidatePath('/dashboard');
+  revalidateInvestmentViews();
   return { success: true, message: 'Investment updated' };
 }
 
@@ -100,8 +107,7 @@ export async function deleteInvestmentAction(id: string): Promise<ActionResponse
   await validateAccess('INVESTMENTS', 'EDIT');
   try {
     await investmentService.deleteInvestment(userId, id);
-    revalidatePath('/investments');
-    revalidatePath('/dashboard');
+    revalidateInvestmentViews();
     return { success: true, message: 'Investment deleted' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to delete investment') };
@@ -128,8 +134,7 @@ export async function recordReturnAction(investmentId: string, formData: FormDat
 
   try {
     await investmentService.recordReturn(userId, executorId, investmentId, parsed.data);
-    revalidatePath('/investments');
-    revalidatePath('/dashboard');
+    revalidateInvestmentViews();
     return { success: true, message: 'Return recorded and deposited' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to record return') };
@@ -152,11 +157,26 @@ export async function addFundsAction(investmentId: string, formData: FormData): 
 
   try {
     await investmentService.addFunds(userId, executorId, investmentId, accountId, amount, description);
-    revalidatePath('/investments');
-    revalidatePath('/dashboard');
+    revalidateInvestmentViews();
     return { success: true, message: 'Funds added successfully' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to add funds') };
+  }
+}
+
+export async function payDpsInstallmentAction(investmentId: string): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error('Unauthorized');
+  const executorId = session.user.id;
+  const userId = await getEffectiveUserId();
+  await validateAccess('INVESTMENTS', 'EDIT');
+
+  try {
+    await investmentService.payDpsInstallment(userId, executorId, investmentId);
+    revalidateInvestmentViews();
+    return { success: true, message: 'DPS installment paid' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to pay installment') };
   }
 }
 
@@ -175,7 +195,7 @@ export async function recordValuationAction(investmentId: string, formData: Form
 
   try {
     await investmentService.recordValuation(userId, executorId, investmentId, { value, date });
-    revalidatePath('/investments');
+    revalidateInvestmentViews();
     return { success: true, message: 'Valuation recorded' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to record valuation') };
@@ -221,8 +241,7 @@ export async function closeInvestmentAction(id: string, formData: FormData): Pro
     await investmentService.closeInvestment(userId, executorId, id, {
       status, closeDate, finalValue, linkedAccountId, description
     });
-    revalidatePath('/investments');
-    revalidatePath('/dashboard');
+    revalidateInvestmentViews();
     return { success: true, message: `Investment marked as ${status.toLowerCase()}` };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to update status') };

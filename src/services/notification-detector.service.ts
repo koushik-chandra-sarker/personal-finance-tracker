@@ -30,6 +30,65 @@ function dayKey(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
+function monthKey(date: Date) {
+  return `${date.getFullYear()}-${date.getMonth() + 1}`;
+}
+
+function clampDueDay(value?: number | null) {
+  if (!Number.isFinite(Number(value))) return 5;
+  return Math.min(31, Math.max(1, Math.trunc(Number(value))));
+}
+
+function getInstallmentDueDate(year: number, month: number, dueDay?: number | null) {
+  const lastDay = new Date(year, month + 1, 0).getDate();
+  return startOfDay(new Date(year, month, Math.min(clampDueDay(dueDay), lastDay)));
+}
+
+function getFirstInstallmentDueDate(purchaseDate: Date, dueDay?: number | null) {
+  const purchaseDay = startOfDay(purchaseDate);
+  let dueDate = getInstallmentDueDate(purchaseDate.getFullYear(), purchaseDate.getMonth(), dueDay);
+  if (dueDate < purchaseDay) {
+    dueDate = getInstallmentDueDate(purchaseDate.getFullYear(), purchaseDate.getMonth() + 1, dueDay);
+  }
+  return dueDate;
+}
+
+function getNextInstallmentDueDate(dueDate: Date, dueDay?: number | null) {
+  return getInstallmentDueDate(dueDate.getFullYear(), dueDate.getMonth() + 1, dueDay);
+}
+
+function getPaidInstallmentMonthKeys(cashflows: Array<{
+  type: string;
+  date: Date;
+  installmentDueDate?: Date | null;
+}>) {
+  return new Set(
+    cashflows
+      .filter((cashflow) => cashflow.type === 'INSTALLMENT' || cashflow.type === 'ADD_FUNDS')
+      .map((cashflow) => monthKey(cashflow.installmentDueDate || cashflow.date))
+  );
+}
+
+function getUnpaidInstallmentDueDates(investment: {
+  purchaseDate: Date;
+  installmentDueDay?: number | null;
+  cashflows: Array<{ type: string; date: Date; installmentDueDate?: Date | null }>;
+}, now: Date) {
+  const today = startOfDay(now);
+  const paidMonthKeys = getPaidInstallmentMonthKeys(investment.cashflows);
+  const unpaidDueDates: Date[] = [];
+  let dueDate = getFirstInstallmentDueDate(investment.purchaseDate, investment.installmentDueDay);
+  let guard = 0;
+
+  while (dueDate <= today && guard < 360) {
+    if (!paidMonthKeys.has(monthKey(dueDate))) unpaidDueDates.push(dueDate);
+    dueDate = getNextInstallmentDueDate(dueDate, investment.installmentDueDay);
+    guard++;
+  }
+
+  return unpaidDueDates;
+}
+
 export async function detectUpcomingBills(userId: string, now = new Date()) {
   const preferences = await getOrCreateNotificationPreferences(userId);
   if (!preferences.billRemindersEnabled) return 0;
@@ -279,7 +338,7 @@ export async function detectDPSReminders(userId: string, now = new Date()) {
   const preferences = await getOrCreateNotificationPreferences(userId);
   if (!preferences.dpsReminderEnabled) return 0;
 
-  // We check for investments with monthly installments (DPS)
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
   const dpsInvestments = await prisma.investment.findMany({
     where: {
       userId,
@@ -287,43 +346,43 @@ export async function detectDPSReminders(userId: string, now = new Date()) {
       typeConfig: { hasMonthlyInstallment: true },
       monthlyInstallment: { gt: 0 },
     },
-    include: { typeConfig: true },
+    include: {
+      typeConfig: true,
+      cashflows: {
+        where: { type: { in: ['INSTALLMENT', 'ADD_FUNDS'] } },
+        select: { type: true, date: true, installmentDueDate: true },
+      },
+    },
   });
 
   let created = 0;
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
 
   for (const inv of dpsInvestments) {
-    // Check if a payment has already been recorded this month
-    const thisMonthPayment = await prisma.transaction.findFirst({
-      where: {
-        userId,
-        description: { contains: inv.name, mode: 'insensitive' },
-        date: {
-          gte: startOfDay(new Date(currentYear, currentMonth, 1)),
-          lte: endOfDay(new Date(currentYear, currentMonth + 1, 0)),
-        },
+    const unpaidDueDates = getUnpaidInstallmentDueDates(inv, now);
+    if (unpaidDueDates.length === 0) continue;
+
+    const dueDate = unpaidDueDates[0];
+    const missedDueDates = unpaidDueDates.filter((date) => date < startOfDay(now));
+    const daysLate = Math.max(0, differenceInCalendarDays(now, dueDate));
+    await prisma.investment.updateMany({
+      where: { id: inv.id, userId },
+      data: {
+        missedInstallmentCount: missedDueDates.length,
+        lastMissedInstallmentOn: missedDueDates[0] || null,
       },
     });
 
-    if (!thisMonthPayment) {
-      // Payment missing for this month
-      // We'll set a reminder if it's past the 5th of the month
-      if (now.getDate() >= 5) {
-        const result = await createNotificationOnce(userId, {
-          title: `DPS payment due: ${inv.name}`,
-          message: `Your monthly installment of ${inv.monthlyInstallment} is due this month.`,
-          type: 'INVESTMENT_RETURN_DUE',
-          severity: now.getDate() >= 10 ? 'CRITICAL' : 'WARNING',
-          sourceType: 'INVESTMENT',
-          sourceId: inv.id,
-          dedupeKey: `dps-due:${inv.id}:${currentYear}-${currentMonth}`,
-          actionUrl: '/investments',
-        });
-        if (result.created) created++;
-      }
-    }
+    const result = await createNotificationOnce(userId, {
+      title: `DPS payment due: ${inv.name}`,
+      message: `${unpaidDueDates.length} installment${unpaidDueDates.length > 1 ? 's are' : ' is'} unpaid. Next due: ${formatCurrency(Number(inv.monthlyInstallment), user?.currency || 'BDT')} on ${formatDate(dueDate, 'MMM d')}.`,
+      type: 'INVESTMENT_RETURN_DUE',
+      severity: daysLate >= 5 ? 'CRITICAL' : 'WARNING',
+      sourceType: 'INVESTMENT',
+      sourceId: inv.id,
+      dedupeKey: `dps-due:${inv.id}:${monthKey(dueDate)}`,
+      actionUrl: `/investments/portfolio?payInstallment=${inv.id}`,
+    });
+    if (result.created) created++;
   }
 
   return created;

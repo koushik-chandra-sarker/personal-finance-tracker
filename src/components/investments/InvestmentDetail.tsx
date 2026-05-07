@@ -8,17 +8,30 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { getInvestmentByIdAction } from '@/actions/investment.actions';
 
 type Account = { id: string; name: string; type: string; balance: number | string; isActive: boolean };
+type ScheduleStatus = 'PAID' | 'MISSED' | 'DUE';
+type InvestmentProjection = {
+  dpsInstallments?: Array<{ dueDate: string; amount: number; status: ScheduleStatus }>;
+  sanchayapatraPayouts?: Array<{ date: string; amount: number; grossAmount: number; taxAmount: number; label: string }>;
+  maturity?: { date: string; principal: number; projectedReturn: number; projectedValue: number; taxAmount: number };
+};
 
 type Investment = {
   id: string; name: string; status: string; institutionName?: string | null;
   accountNumber?: string | null; investedAmount: number | string; currentValue: number | string;
   interestRate?: number | string | null; returnFrequency?: string | null;
   purchaseDate: string; maturityDate?: string | null;
-  monthlyInstallment?: number | string | null; quantity?: number | string | null;
+  monthlyInstallment?: number | string | null; installmentDueDay?: number | null;
+  missedInstallmentCount?: number; lastMissedInstallmentOn?: string | null; lastInstallmentPaidOn?: string | null;
+  quantity?: number | string | null;
   avgBuyPrice?: number | string | null; notes?: string | null;
   typeConfig: { name: string; color: string; returnTypes: string[]; hasMonthlyInstallment: boolean };
   linkedAccount?: { id: string; name: string } | null;
   linkedAccountId?: string | null;
+  sanchayapatraConfig?: {
+    id: string; name: string; rate: number | string; payoutFrequency: string;
+    taxThreshold: number | string; taxRateBelow: number | string; taxRateAbove: number | string;
+  } | null;
+  projection?: InvestmentProjection;
   returns?: { id: string; amount: number | string; type: string; description?: string | null; date: string }[];
   valuations?: { id: string; value: number | string; date: string }[];
 };
@@ -28,9 +41,15 @@ const FREQ_LABELS: Record<string, string> = {
   YEARLY: 'Yearly', AT_MATURITY: 'At Maturity', ON_SALE: 'On Sale',
 };
 
+const SCHEDULE_STATUS_STYLES: Record<ScheduleStatus, string> = {
+  PAID: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
+  MISSED: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
+  DUE: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
+};
+
 export default function InvestmentDetail({ 
   investment: initialInvestment, accounts, currency, loading, 
-  onRecordReturn, onAddFunds, onRecordValuation, onCloseInvestment, onClose 
+  onRecordReturn, onAddFunds, onRecordValuation, onCloseInvestment, onClose, initialAction = null
 }: {
   investment: Investment;
   accounts: Account[];
@@ -41,13 +60,14 @@ export default function InvestmentDetail({
   onRecordValuation: (fd: FormData) => Promise<ActionResponse>;
   onCloseInvestment: (id: string, fd: FormData) => Promise<ActionResponse>;
   onClose: () => void;
+  initialAction?: 'pay-installment' | null;
 }) {
   const [investment, setInvestment] = useState<Investment>(initialInvestment);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
   const [activeTab, setActiveTab] = useState<'DETAILS' | 'RETURNS' | 'VALUATIONS'>('DETAILS');
   const [showReturnForm, setShowReturnForm] = useState(false);
-  const [showFundsForm, setShowFundsForm] = useState(false);
+  const [showFundsForm, setShowFundsForm] = useState(initialAction === 'pay-installment');
   const [showValuationForm, setShowValuationForm] = useState(false);
   const [showCloseForm, setShowCloseForm] = useState(false);
   const [message, setMessage] = useState('');
@@ -56,7 +76,10 @@ export default function InvestmentDetail({
     getInvestmentByIdAction(initialInvestment.id).then((data) => {
       setInvestment(data as Investment);
       setIsLoadingData(false);
-    }).catch(console.error);
+    }).catch((error) => {
+      console.error(error);
+      setIsLoadingData(false);
+    });
   }, [initialInvestment.id]);
 
   const invested = Number(investment.investedAmount);
@@ -64,6 +87,8 @@ export default function InvestmentDetail({
   const gain = current - invested;
   const gainPct = invested > 0 ? ((gain / invested) * 100).toFixed(1) : '0.0';
   const totalReturns = (investment.returns || []).reduce((s, r) => s + Number(r.amount), 0);
+  const isInstallmentInvestment = investment.typeConfig.hasMonthlyInstallment && Number(investment.monthlyInstallment || 0) > 0;
+  const projection = investment.projection;
 
   const handleReturn = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -218,12 +243,106 @@ export default function InvestmentDetail({
                   </div>
                 )}
                 {investment.monthlyInstallment && (
-                  <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                    <span className="text-sm text-slate-500 dark:text-slate-400">Monthly Installment</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(investment.monthlyInstallment), currency)}</span>
-                  </div>
+                  <>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Monthly Installment</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(investment.monthlyInstallment), currency)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Due Day</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">Day {investment.installmentDueDay || 5}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Missed Payments</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.missedInstallmentCount || 0}</span>
+                    </div>
+                    {investment.lastInstallmentPaidOn && (
+                      <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                        <span className="text-sm text-slate-500 dark:text-slate-400">Last Paid</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatDate(investment.lastInstallmentPaidOn)}</span>
+                      </div>
+                    )}
+                  </>
+                )}
+                {investment.sanchayapatraConfig && (
+                  <>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Sanchayapatra Scheme</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.sanchayapatraConfig.name}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
+                      <span className="text-sm text-slate-500 dark:text-slate-400">Payout Rule</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                        {Number(investment.sanchayapatraConfig.rate)}% / {investment.sanchayapatraConfig.payoutFrequency.replace(/_/g, ' ')}
+                      </span>
+                    </div>
+                  </>
                 )}
               </div>
+
+              {(projection?.dpsInstallments?.length || projection?.sanchayapatraPayouts?.length || projection?.maturity) && (
+                <div className="space-y-3">
+                  {projection.dpsInstallments && projection.dpsInstallments.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Installment Schedule</h3>
+                        <span className="text-xs text-slate-400">Unpaid + upcoming</span>
+                      </div>
+                      <div className="space-y-2">
+                        {projection.dpsInstallments.map((item) => (
+                          <div key={item.dueDate} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/30">
+                            <div>
+                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.dueDate)}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(item.amount, currency)}</p>
+                            </div>
+                            <span className={cn('rounded-full px-2 py-1 text-[10px] font-bold', SCHEDULE_STATUS_STYLES[item.status])}>
+                              {item.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {projection.sanchayapatraPayouts && projection.sanchayapatraPayouts.length > 0 && (
+                    <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+                      <div className="mb-3 flex items-center justify-between">
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Projected Payouts</h3>
+                        <span className="text-xs text-slate-400">After tax</span>
+                      </div>
+                      <div className="space-y-2">
+                        {projection.sanchayapatraPayouts.map((item) => (
+                          <div key={`${item.date}-${item.label}`} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/30">
+                            <div>
+                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.date)}</p>
+                              <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{item.label}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.amount, currency)}</p>
+                              <p className="text-[11px] text-slate-400">Tax {formatCurrency(item.taxAmount, currency)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {projection.maturity && (
+                    <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4 dark:border-emerald-500/20 dark:bg-emerald-500/5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">Projected Maturity</p>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatDate(projection.maturity.date)}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-base font-bold text-slate-900 dark:text-white">{formatCurrency(projection.maturity.projectedValue, currency)}</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-300">Profit {formatCurrency(projection.maturity.projectedReturn, currency)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {investment.notes && (
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
@@ -234,28 +353,34 @@ export default function InvestmentDetail({
 
               <div className="pt-2">
                 <button onClick={() => setShowFundsForm(!showFundsForm)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors">
-                  <PiggyBank className="h-4 w-4" /> {investment.typeConfig.hasMonthlyInstallment ? 'Pay Installment' : 'Add Funds'}
+                  <PiggyBank className="h-4 w-4" /> {isInstallmentInvestment ? 'Pay Installment' : 'Add Funds'}
                 </button>
               </div>
 
               {showFundsForm && (
                 <form onSubmit={handleAddFunds} className="space-y-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700/50">
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">This will deduct the amount from the selected account and increase your invested amount.</p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">
+                    {isInstallmentInvestment ? 'This will pay the oldest unpaid installment from the selected account.' : 'This will deduct the amount from the selected account and increase your invested amount.'}
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <input name="amount" type="number" step="0.01" required placeholder="Amount" defaultValue={investment.monthlyInstallment ? Number(investment.monthlyInstallment) : ''}
-                      className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
+                      readOnly={isInstallmentInvestment}
+                      className={cn(
+                        'px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500',
+                        isInstallmentInvestment && 'bg-slate-100 text-slate-500 dark:bg-slate-900/40 dark:text-slate-400'
+                      )} />
                     <select name="accountId" required defaultValue={investment.linkedAccountId || ''}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
                       <option value="">Select Account...</option>
                       {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency)})</option>)}
                     </select>
                   </div>
-                  <input name="description" placeholder="Description (optional)" defaultValue={investment.typeConfig.hasMonthlyInstallment ? 'Monthly Installment' : 'Additional Funds'}
+                  <input name="description" placeholder="Description (optional)" defaultValue={isInstallmentInvestment ? `DPS installment for ${investment.name}` : 'Additional Funds'}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
                   <div className="flex gap-2 pt-1">
                     <button type="button" onClick={() => setShowFundsForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : 'Add Funds'}</button>
+                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : isInstallmentInvestment ? 'Pay Installment' : 'Add Funds'}</button>
                   </div>
                 </form>
               )}

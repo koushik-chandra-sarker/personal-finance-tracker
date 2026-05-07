@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { X, ChevronDown, Calculator } from 'lucide-react';
 import SanchayapatraCalculator from './SanchayapatraCalculator';
 import type { ActionResponse } from '@/types';
@@ -12,12 +12,22 @@ type TypeConfig = {
   hasAccountNumber: boolean; returnTypes: string[];
 };
 type Account = { id: string; name: string; type: string; isActive: boolean };
+type SanchayapatraConfig = {
+  id: string;
+  name: string;
+  rate: number | string;
+  taxThreshold: number | string;
+  taxRateBelow: number | string;
+  taxRateAbove: number | string;
+  payoutFrequency: string;
+};
 type Investment = {
   id: string; name: string; typeConfigId: string; institutionName?: string | null;
   accountNumber?: string | null; investedAmount: number | string; currentValue: number | string;
   interestRate?: number | string | null; returnFrequency?: string | null;
   purchaseDate: string; maturityDate?: string | null; linkedAccountId?: string | null;
-  monthlyInstallment?: number | string | null; quantity?: number | string | null;
+  monthlyInstallment?: number | string | null; installmentDueDay?: number | null;
+  sanchayapatraConfigId?: string | null; quantity?: number | string | null;
   avgBuyPrice?: number | string | null; notes?: string | null; color: string; icon: string;
 } | null;
 
@@ -28,7 +38,7 @@ const FREQ_OPTIONS = [
 ];
 
 export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraConfigs, investment, currency, loading, onSubmit, onClose }: {
-  typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: any[]; investment: Investment;
+  typeConfigs: TypeConfig[]; accounts: Account[]; sanchayapatraConfigs: SanchayapatraConfig[]; investment: Investment;
   currency: string; loading: boolean;
   onSubmit: (fd: FormData) => Promise<ActionResponse>;
   onClose: () => void;
@@ -36,16 +46,16 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
   const isEdit = !!investment;
   const [selectedTypeId, setSelectedTypeId] = useState(investment?.typeConfigId || '');
   const [showCalculator, setShowCalculator] = useState(false);
-  const [errors, setErrors] = useState<Record<string, string[]>>({});
+  const [selectedSanchayapatraConfigId, setSelectedSanchayapatraConfigId] = useState(investment?.sanchayapatraConfigId || '');
   const [message, setMessage] = useState('');
   const [investedAmount, setInvestedAmount] = useState<number | ''>(investment?.investedAmount ? Number(investment.investedAmount) : '');
   const calcRef = useRef<HTMLDivElement>(null);
 
   const selectedType = typeConfigs.find((t) => t.id === selectedTypeId);
+  const selectedSanchayapatraConfig = sanchayapatraConfigs.find((config) => config.id === selectedSanchayapatraConfigId);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setErrors({});
     setMessage('');
     const fd = new FormData(e.currentTarget);
     fd.set('typeConfigId', selectedTypeId);
@@ -53,7 +63,6 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
     const result = await onSubmit(fd);
     if (!result.success) {
       setMessage(result.message);
-      if (result.errors) setErrors(result.errors);
     }
   };
 
@@ -170,6 +179,44 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
             </div>
           )}
 
+          {selectedType?.slug === 'govt_savings' ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700/50 dark:bg-slate-900/20">
+              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Sanchayapatra Scheme</label>
+              <div className="relative">
+                <select
+                  name="sanchayapatraConfigId"
+                  value={selectedSanchayapatraConfigId}
+                  onChange={(event) => setSelectedSanchayapatraConfigId(event.target.value)}
+                  className="w-full appearance-none px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Select scheme...</option>
+                  {sanchayapatraConfigs.map((config) => (
+                    <option key={config.id} value={config.id}>{config.name}</option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400 pointer-events-none" />
+              </div>
+              {selectedSanchayapatraConfig && (
+                <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                  <div className="rounded-lg bg-white px-2 py-2 dark:bg-slate-800/60">
+                    <p className="text-[10px] uppercase text-slate-400">Rate</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{Number(selectedSanchayapatraConfig.rate)}%</p>
+                  </div>
+                  <div className="rounded-lg bg-white px-2 py-2 dark:bg-slate-800/60">
+                    <p className="text-[10px] uppercase text-slate-400">Payout</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{selectedSanchayapatraConfig.payoutFrequency.replace(/_/g, ' ')}</p>
+                  </div>
+                  <div className="rounded-lg bg-white px-2 py-2 dark:bg-slate-800/60">
+                    <p className="text-[10px] uppercase text-slate-400">Tax</p>
+                    <p className="text-xs font-bold text-slate-800 dark:text-slate-100">{Number(selectedSanchayapatraConfig.taxRateBelow)}-{Number(selectedSanchayapatraConfig.taxRateAbove)}%</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <input type="hidden" name="sanchayapatraConfigId" value="" />
+          )}
+
           {/* Quantity + Avg Buy Price (conditional) */}
           {selectedType?.hasQuantity && (
             <div className="grid grid-cols-2 gap-3">
@@ -190,11 +237,19 @@ export default function InvestmentForm({ typeConfigs, accounts, sanchayapatraCon
 
           {/* Monthly Installment (conditional) */}
           {selectedType?.hasMonthlyInstallment && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Monthly Installment</label>
-              <input name="monthlyInstallment" type="number" step="0.01"
-                defaultValue={investment?.monthlyInstallment ? Number(investment.monthlyInstallment) : ''}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Monthly Installment</label>
+                <input name="monthlyInstallment" type="number" step="0.01"
+                  defaultValue={investment?.monthlyInstallment ? Number(investment.monthlyInstallment) : ''}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Due Day</label>
+                <input name="installmentDueDay" type="number" min={1} max={31} step={1}
+                  defaultValue={investment?.installmentDueDay || 5}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+              </div>
             </div>
           )}
 
