@@ -43,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           role: user.role,
           status: user.status,
           lastLoginAt: lastLoginAt.toISOString(),
+          mustChangePassword: user.mustChangePassword,
           sessionVersion: user.sessionVersion,
           subscriptionPlan: user.subscription?.plan,
           subscriptionInterval: user.subscription?.interval || null,

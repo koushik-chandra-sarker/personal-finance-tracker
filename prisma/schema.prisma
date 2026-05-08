@@ -17,6 +17,7 @@ model User {
   currency      String                 @default("USD")
   lastLoginAt   DateTime?
   emailVerifiedAt DateTime?
+  mustChangePassword Boolean              @default(false)
   lockedUntil   DateTime?
   sessionVersion Int                   @default(1)
   createdAt     DateTime               @default(now())

@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@/lib/validations/auth';
-import { signIn } from 'next-auth/react';
+import { getSession, signIn } from 'next-auth/react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { DollarSign, Mail, Lock } from 'lucide-react';
@@ -32,7 +32,8 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Invalid email or password');
       } else {
-        router.push('/dashboard');
+        const session = await getSession();
+        router.replace(session?.user?.mustChangePassword ? '/change-password' : '/dashboard');
         router.refresh();
       }
     } catch {

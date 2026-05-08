@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+import bcrypt from 'bcryptjs';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
@@ -43,6 +44,7 @@ export type AdminUserRow = {
   role: UserRole;
   status: UserStatus;
   lastLoginAt: string | null;
+  mustChangePassword: boolean;
   lockedUntil: string | null;
   createdAt: string;
   subscription: {
@@ -81,6 +83,15 @@ export type AdminInviteResult = {
   email: string;
   inviteUrl: string;
   expiresAt: string;
+};
+
+export type AdminCreateUserResult = {
+  name: string;
+  email: string;
+  role: UserRole;
+  packageName: string | null;
+  temporaryPassword: string;
+  mustChangePassword: boolean;
 };
 
 export type AdminUserInviteStatus = 'PENDING' | 'ACCEPTED' | 'EXPIRED';
@@ -231,6 +242,7 @@ function serializeUser(user: {
   role: UserRole;
   status: UserStatus;
   lastLoginAt: Date | null;
+  mustChangePassword: boolean;
   lockedUntil: Date | null;
   createdAt: Date;
   subscription: {
@@ -507,6 +519,7 @@ export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
       role: true,
       status: true,
       lastLoginAt: true,
+      mustChangePassword: true,
       lockedUntil: true,
       createdAt: true,
       subscription: {
@@ -562,6 +575,7 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
       role: true,
       status: true,
       lastLoginAt: true,
+      mustChangePassword: true,
       lockedUntil: true,
       createdAt: true,
       subscription: {
@@ -1158,6 +1172,124 @@ export async function createUserInviteAction(formData: FormData): Promise<Action
       email,
       inviteUrl: `/register?invite=${encodeURIComponent(token)}`,
       expiresAt: expiresAt.toISOString(),
+    },
+  };
+}
+
+export async function createUserWithTemporaryPasswordAction(formData: FormData): Promise<ActionResponse<AdminCreateUserResult>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  await requireRole('ADMIN');
+
+  const name = String(formData.get('name') || '').trim();
+  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const role = String(formData.get('role') || 'USER') as UserRole;
+  const temporaryPassword = String(formData.get('temporaryPassword') || '');
+  const packageId = String(formData.get('packageId') || '').trim() || null;
+
+  if (name.length < 2) return { success: false, message: 'Name must be at least 2 characters' };
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return { success: false, message: 'A valid email is required' };
+  }
+  if (role !== 'ADMIN' && role !== 'USER') return { success: false, message: 'Invalid user role' };
+  if (temporaryPassword.length < 6) return { success: false, message: 'Temporary password must be at least 6 characters' };
+
+  const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (existingUser) return { success: false, message: 'A user with this email already exists' };
+
+  const subscriptionPackage = packageId && role !== 'ADMIN'
+    ? await prisma.subscriptionPackage.findFirst({ where: { id: packageId, isActive: true } })
+    : null;
+  if (packageId && role !== 'ADMIN' && !subscriptionPackage) {
+    return { success: false, message: 'Selected package is not available' };
+  }
+
+  const now = new Date();
+  const hashedPassword = await bcrypt.hash(temporaryPassword, 12);
+
+  await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role,
+        status: 'ACTIVE',
+        emailVerifiedAt: now,
+        mustChangePassword: true,
+      },
+    });
+
+    await tx.category.createMany({
+      data: [
+        { name: 'Salary', type: 'INCOME' as const, icon: 'briefcase', color: '#10b981' },
+        { name: 'Freelance', type: 'INCOME' as const, icon: 'laptop', color: '#06b6d4' },
+        { name: 'Investments', type: 'INCOME' as const, icon: 'trending-up', color: '#8b5cf6' },
+        { name: 'Other Income', type: 'INCOME' as const, icon: 'plus-circle', color: '#6366f1' },
+        { name: 'Food & Dining', type: 'EXPENSE' as const, icon: 'utensils', color: '#ef4444' },
+        { name: 'Transportation', type: 'EXPENSE' as const, icon: 'car', color: '#f97316' },
+        { name: 'Housing', type: 'EXPENSE' as const, icon: 'home', color: '#eab308' },
+        { name: 'Utilities', type: 'EXPENSE' as const, icon: 'zap', color: '#14b8a6' },
+        { name: 'Entertainment', type: 'EXPENSE' as const, icon: 'film', color: '#ec4899' },
+        { name: 'Shopping', type: 'EXPENSE' as const, icon: 'shopping-bag', color: '#a855f7' },
+        { name: 'Healthcare', type: 'EXPENSE' as const, icon: 'heart', color: '#f43f5e' },
+        { name: 'Education', type: 'EXPENSE' as const, icon: 'book', color: '#3b82f6' },
+        { name: 'Personal', type: 'EXPENSE' as const, icon: 'user', color: '#64748b' },
+        { name: 'Other Expense', type: 'EXPENSE' as const, icon: 'minus-circle', color: '#78716c' },
+      ].map((cat) => ({
+        userId: user.id,
+        ...cat,
+        isDefault: true,
+      })),
+    });
+
+    await tx.account.create({
+      data: {
+        userId: user.id,
+        name: 'Cash',
+        type: 'CASH',
+        balance: 0,
+        color: '#10b981',
+        icon: 'wallet',
+      },
+    });
+
+    if (subscriptionPackage) {
+      const currentPeriodEnd = new Date(now);
+      if (subscriptionPackage.interval === 'YEARLY') {
+        currentPeriodEnd.setFullYear(currentPeriodEnd.getFullYear() + 1);
+      } else {
+        currentPeriodEnd.setMonth(currentPeriodEnd.getMonth() + 1);
+      }
+
+      await tx.userSubscription.create({
+        data: {
+          userId: user.id,
+          packageId: subscriptionPackage.id,
+          plan: 'PRO',
+          interval: subscriptionPackage.interval,
+          source: 'ADMIN_GRANT',
+          status: 'ACTIVE',
+          currentPeriodStart: now,
+          currentPeriodEnd,
+          grantedById: session.user.id,
+        },
+      });
+    }
+  });
+
+  revalidatePath('/admin/users');
+  revalidatePath('/admin/subscriptions');
+  return {
+    success: true,
+    message: `${email} created. Share the temporary password securely.`,
+    data: {
+      name,
+      email,
+      role,
+      packageName: subscriptionPackage?.name || null,
+      temporaryPassword,
+      mustChangePassword: true,
     },
   };
 }

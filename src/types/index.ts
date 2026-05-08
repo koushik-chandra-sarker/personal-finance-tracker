@@ -14,6 +14,7 @@ declare module 'next-auth' {
     role?: UserRole;
     status?: UserStatus;
     lastLoginAt?: string | null;
+    mustChangePassword?: boolean;
     sessionVersion?: number;
     subscriptionPlan?: SubscriptionPlan;
     subscriptionInterval?: SubscriptionInterval | null;
@@ -31,6 +32,7 @@ declare module 'next-auth' {
       role?: UserRole;
       status?: UserStatus;
       lastLoginAt?: string | null;
+      mustChangePassword?: boolean;
       sessionVersion?: number;
       subscriptionPlan?: SubscriptionPlan;
       subscriptionInterval?: SubscriptionInterval | null;

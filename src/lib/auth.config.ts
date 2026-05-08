@@ -7,6 +7,7 @@ type SessionUpdate = {
   role?: UserRole;
   status?: UserStatus;
   lastLoginAt?: string | null;
+  mustChangePassword?: boolean;
   sessionVersion?: number;
   subscriptionPlan?: SubscriptionPlan;
   subscriptionInterval?: SubscriptionInterval | null;
@@ -52,6 +53,7 @@ export const authConfig = {
   callbacks: {
     async authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
+      const isPasswordChangeRoute = nextUrl.pathname.startsWith('/change-password');
       const isAuthPage = nextUrl.pathname.startsWith('/login') || 
         nextUrl.pathname.startsWith('/register') || 
         nextUrl.pathname.startsWith('/recovery-backdoor');
@@ -68,8 +70,19 @@ export const authConfig = {
         nextUrl.pathname.startsWith('/subscription');
       const isSubscriptionAllowedRoute = nextUrl.pathname.startsWith('/subscription');
 
+      if (isPasswordChangeRoute) {
+        if (!isLoggedIn) return false;
+        if (!auth.user.mustChangePassword) return Response.redirect(new URL('/dashboard', nextUrl));
+        return true;
+      }
+
       if (isProtectedRoute) {
         if (!isLoggedIn) return false;
+        if (auth.user.mustChangePassword) {
+          const passwordUrl = new URL('/change-password', nextUrl);
+          passwordUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
+          return Response.redirect(passwordUrl);
+        }
         if (isSubscriptionAllowedRoute || hasActiveSessionAccess(auth.user)) return true;
         const subscriptionUrl = new URL('/subscription', nextUrl);
         subscriptionUrl.searchParams.set('reason', getSubscriptionBlockReason(auth.user));
@@ -90,6 +103,7 @@ export const authConfig = {
         appToken.role = user.role;
         appToken.status = user.status;
         appToken.lastLoginAt = user.lastLoginAt;
+        appToken.mustChangePassword = user.mustChangePassword;
         appToken.sessionVersion = user.sessionVersion;
         appToken.subscriptionPlan = user.subscriptionPlan;
         appToken.subscriptionInterval = user.subscriptionInterval;
@@ -104,6 +118,7 @@ export const authConfig = {
         if (updatedSession.currency) appToken.currency = updatedSession.currency;
         if (updatedSession.status) appToken.status = updatedSession.status;
         if (updatedSession.lastLoginAt !== undefined) appToken.lastLoginAt = updatedSession.lastLoginAt;
+        if (updatedSession.mustChangePassword !== undefined) appToken.mustChangePassword = updatedSession.mustChangePassword;
         if (updatedSession.sessionVersion !== undefined) appToken.sessionVersion = updatedSession.sessionVersion;
         if (updatedSession.subscriptionPlan) appToken.subscriptionPlan = updatedSession.subscriptionPlan;
         if (updatedSession.subscriptionInterval !== undefined) appToken.subscriptionInterval = updatedSession.subscriptionInterval;
@@ -125,6 +140,7 @@ export const authConfig = {
         session.user.role = appToken.role;
         session.user.status = appToken.status;
         session.user.lastLoginAt = appToken.lastLoginAt;
+        session.user.mustChangePassword = appToken.mustChangePassword;
         session.user.sessionVersion = appToken.sessionVersion;
         session.user.subscriptionPlan = appToken.subscriptionPlan;
         session.user.subscriptionInterval = appToken.subscriptionInterval;

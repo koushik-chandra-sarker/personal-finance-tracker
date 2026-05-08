@@ -10,6 +10,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Loader from '@/components/ui/Loader';
 import Select from '@/components/ui/Select';
+import AdminCreateUserPanel from '@/components/admin/AdminCreateUserPanel';
 import UserInvitePanel from '@/components/admin/UserInvitePanel';
 import UserInviteList from '@/components/admin/UserInviteList';
 import {
@@ -284,6 +285,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <UserInviteList invites={invites} />
+          <AdminCreateUserPanel packages={packages} />
           <UserInvitePanel packages={packages} />
         </div>
       </div>
@@ -462,6 +464,11 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                             <Badge variant={getAccessBadgeVariant(user)}>
                               {formatSubscriptionStatus(user)}
                             </Badge>
+                            {user.mustChangePassword && (
+                              <Badge variant="warning">
+                                Password reset required
+                              </Badge>
+                            )}
                           </div>
                         </div>
                       </div>

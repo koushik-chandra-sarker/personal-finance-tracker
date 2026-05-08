@@ -4,7 +4,7 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { createHash } from 'crypto';
 import { auth, signIn } from '@/lib/auth';
-import { registerSchema, changePasswordSchema, backdoorResetSchema } from '@/lib/validations/auth';
+import { registerSchema, changePasswordSchema, backdoorResetSchema, firstLoginPasswordSchema } from '@/lib/validations/auth';
 import { assertRecoveryBackdoorEnabled } from '@/lib/recovery-backdoor';
 import type { ActionResponse } from '@/types';
 
@@ -182,7 +182,42 @@ export async function changePasswordAction(formData: FormData): Promise<ActionRe
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, mustChangePassword: false, sessionVersion: { increment: 1 } },
+  });
+
+  return { success: true, message: 'Password updated successfully' };
+}
+
+export async function completeFirstLoginPasswordAction(formData: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  const raw = {
+    newPassword: formData.get('newPassword') as string,
+    confirmPassword: formData.get('confirmPassword') as string,
+  };
+
+  const parsed = firstLoginPasswordSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, mustChangePassword: true },
+  });
+  if (!user) return { success: false, message: 'User not found' };
+  if (!user.mustChangePassword) return { success: true, message: 'Password is already updated' };
+
+  const hashedPassword = await bcrypt.hash(parsed.data.newPassword, 12);
+
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      password: hashedPassword,
+      mustChangePassword: false,
+      sessionVersion: { increment: 1 },
+    },
   });
 
   return { success: true, message: 'Password updated successfully' };
@@ -213,7 +248,7 @@ export async function backdoorResetPasswordAction(formData: FormData): Promise<A
 
   await prisma.user.update({
     where: { id: user.id },
-    data: { password: hashedPassword },
+    data: { password: hashedPassword, mustChangePassword: false, sessionVersion: { increment: 1 } },
   });
 
   return { success: true, message: 'Password reset successfully' };
