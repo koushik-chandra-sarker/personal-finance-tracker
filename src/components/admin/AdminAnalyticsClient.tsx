@@ -201,7 +201,19 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
               <h2 className="font-semibold text-slate-900 dark:text-white">Live Activity</h2>
               <p className="text-sm text-slate-500 dark:text-slate-400">Currently active users are based on recent heartbeat data.</p>
             </div>
-            <Activity className="h-5 w-5 text-emerald-500" />
+            <div className="flex items-center gap-2">
+              <Activity className="h-5 w-5 text-emerald-500" />
+              <button
+                type="button"
+                onClick={refreshAnalytics}
+                disabled={isPending}
+                aria-label="Refresh live activity"
+                title="Refresh live activity"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <RefreshCw className={`h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {liveActivityCards.map((card) => (
