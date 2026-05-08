@@ -8,9 +8,10 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import { updateSubscriptionAction, type SubscriptionPackageRow } from '@/actions/settings.actions';
 import { formatCurrency } from '@/lib/utils';
+import { APP_NAME } from '@/components/brand/AppLogo';
 
 const MESSAGE_BY_REASON: Record<string, string> = {
-  missing: 'A subscription is required to continue using FinTrack.',
+  missing: `A subscription is required to continue using ${APP_NAME}.`,
   inactive: 'Your subscription is not active. Choose a plan to restore access.',
   expired: 'Your subscription has expired. Choose a plan to continue.',
   invalid: 'Your subscription could not be verified. Choose a plan to continue.',
@@ -55,7 +56,7 @@ export default function SubscriptionPageClient({ reason, nextPath, packages }: S
           </div>
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Access paused</p>
           <h1 className="max-w-2xl text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-            Subscribe to continue using FinTrack
+            Subscribe to continue using {APP_NAME}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{reasonMessage}</p>
 

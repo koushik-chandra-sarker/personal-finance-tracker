@@ -37,6 +37,7 @@ import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { AdminAnalyticsResult } from '@/actions/admin.actions';
+import { APP_NAME } from '@/components/brand/AppLogo';
 
 const metricIcons = [Users, ShieldCheck, CreditCard, TrendingUp, AlertTriangle, Activity, Globe2];
 
@@ -102,7 +103,7 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Admin Analytics</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Platform health, access status, subscription value, and finance activity across FinTrack.
+            Platform health, access status, subscription value, and finance activity across {APP_NAME}.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

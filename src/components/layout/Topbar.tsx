@@ -16,10 +16,11 @@ import {
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, DollarSign, ChevronDown, Users, KeyRound, TrendingUp, BarChart3
+  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
+import AppLogo from '@/components/brand/AppLogo';
 
 type NavItem = {
   href: string;
@@ -206,11 +207,8 @@ export default function Topbar() {
           </button>
 
           {/* Mobile logo */}
-          <div className="lg:hidden flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <DollarSign className="h-5 w-5 text-white" />
-            </div>
-            <span className="font-bold text-slate-900 dark:text-white">FinTrack</span>
+          <div className="lg:hidden">
+            <AppLogo size="sm" taglineClassName="hidden" />
           </div>
 
           {/* Search (desktop) */}
@@ -375,10 +373,7 @@ export default function Topbar() {
           <div className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/50 p-4">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-                  <DollarSign className="h-5 w-5 text-white" />
-                </div>
-                <span className="font-bold text-slate-900 dark:text-white">FinTrack</span>
+                <AppLogo size="sm" taglineClassName="hidden" />
               </div>
               <button onClick={() => setMobileOpen(false)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <X className="h-5 w-5" />

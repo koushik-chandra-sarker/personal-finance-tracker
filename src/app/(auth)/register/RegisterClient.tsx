@@ -9,7 +9,8 @@ import { registerSchema, type RegisterInput } from '@/lib/validations/auth';
 import { registerUser } from '@/actions/auth.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { DollarSign, Mail, Lock, User } from 'lucide-react';
+import { Mail, Lock, User } from 'lucide-react';
+import AppLogo from '@/components/brand/AppLogo';
 
 type RegisterClientProps = {
   inviteToken?: string;
@@ -52,13 +53,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
     <div className="min-h-screen auth-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <DollarSign className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">FinTrack</h1>
-            <p className="text-xs text-slate-400">Personal Finance Manager</p>
-          </div>
+          <AppLogo size="lg" textClassName="text-white" taglineClassName="text-slate-400" />
         </div>
 
         <div className="glass-card rounded-2xl p-6 sm:p-8 animate-scale-in">

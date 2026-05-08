@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from '@/components/providers/Providers';
+import { APP_NAME } from '@/components/brand/AppLogo';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
 
@@ -13,8 +14,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'FinTrack — Personal Finance Manager',
-  description: 'Track your income, expenses, budgets, and savings goals with FinTrack. A modern personal finance management app.',
+  title: `${APP_NAME} - Personal Finance Manager`,
+  description: `Track your income, expenses, budgets, and savings goals with ${APP_NAME}. A modern personal finance management app.`,
   keywords: ['finance', 'budget', 'expense tracker', 'savings', 'money management'],
 };
 

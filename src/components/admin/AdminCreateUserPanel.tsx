@@ -13,6 +13,7 @@ import Input from '@/components/ui/Input';
 import Loader from '@/components/ui/Loader';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
+import { APP_NAME } from '@/components/brand/AppLogo';
 
 type AdminCreateUserPanelProps = {
   packages: AdminSubscriptionPackageRow[];
@@ -30,7 +31,7 @@ function generateTemporaryPassword() {
 
 function formatUserDetails(user: AdminCreateUserResult, appOrigin: string) {
   return [
-    'FinTrack account details',
+    `${APP_NAME} account details`,
     '',
     `Login URL: ${appOrigin}/login`,
     `Name: ${user.name}`,

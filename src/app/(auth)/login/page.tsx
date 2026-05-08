@@ -9,7 +9,8 @@ import { loginSchema, type LoginInput } from '@/lib/validations/auth';
 import { getSession, signIn } from 'next-auth/react';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
-import { DollarSign, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
+import AppLogo from '@/components/brand/AppLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -48,13 +49,7 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-500/30">
-            <DollarSign className="h-7 w-7 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-white">FinTrack</h1>
-            <p className="text-xs text-slate-400">Personal Finance Manager</p>
-          </div>
+          <AppLogo size="lg" textClassName="text-white" taglineClassName="text-slate-400" />
         </div>
 
         {/* Card */}

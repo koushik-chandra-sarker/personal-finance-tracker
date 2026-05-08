@@ -6,10 +6,11 @@ import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
-  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, DollarSign, FileText,
+  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
   Users, KeyRound, TrendingUp, BarChart3,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
+import AppLogo from '@/components/brand/AppLogo';
 
 type NavItem = {
   href: string;
@@ -90,15 +91,7 @@ export default function Sidebar() {
     )}>
       {/* Logo */}
       <div className="flex items-center gap-3 p-6 border-b border-slate-200 dark:border-slate-700/50">
-        <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-          <DollarSign className="h-6 w-6 text-white" />
-        </div>
-        {!collapsed && (
-          <div>
-            <h1 className="text-lg font-bold text-slate-900 dark:text-white">FinTrack</h1>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">Finance Manager</p>
-          </div>
-        )}
+        <AppLogo showText={!collapsed} />
       </div>
 
       {/* Nav */}
