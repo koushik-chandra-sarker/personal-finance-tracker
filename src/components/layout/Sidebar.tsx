@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, DollarSign, FileText,
-  Users, KeyRound, TrendingUp,
+  Users, KeyRound, TrendingUp, BarChart3,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 
@@ -40,6 +40,7 @@ const secondaryNavItems: NavItem[] = [
 ];
 
 const adminNavItems: NavItem[] = [
+  { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },

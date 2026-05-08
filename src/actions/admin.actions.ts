@@ -5,7 +5,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
 import type { ActionResponse } from '@/types';
-import type { Prisma, SubscriptionInterval, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
+import type { Prisma, SubscriptionInterval, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
 import { createHash, randomBytes } from 'crypto';
 
@@ -95,6 +95,129 @@ export type AdminUserInviteRow = {
   expiresAt: string;
   acceptedAt: string | null;
   createdAt: string;
+};
+
+export type AdminAnalyticsMetric = {
+  label: string;
+  value: number;
+  helper: string;
+  tone: 'indigo' | 'emerald' | 'amber' | 'rose' | 'sky' | 'violet';
+};
+
+export type AdminAnalyticsTrendPoint = {
+  label: string;
+  users: number;
+  subscriptions: number;
+  transactions: number;
+  visits: number;
+};
+
+export type AdminAnalyticsPackagePoint = {
+  id: string;
+  name: string;
+  currency: string;
+  interval: SubscriptionInterval;
+  price: number;
+  subscriptions: number;
+  monthlyValue: number;
+};
+
+export type AdminAnalyticsRecentUser = {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  status: UserStatus;
+  createdAt: string;
+  lastLoginAt: string | null;
+  subscription: {
+    status: SubscriptionStatus;
+    source: SubscriptionSource;
+    packageName: string | null;
+  } | null;
+};
+
+export type AdminAnalyticsRouteView = {
+  path: string;
+  views: number;
+};
+
+export type AdminAnalyticsBreakdownPoint = {
+  label: string;
+  value: number;
+};
+
+export type AdminAnalyticsRecentPageView = {
+  id: string;
+  path: string;
+  referrer: string | null;
+  deviceType: string | null;
+  browser: string | null;
+  createdAt: string;
+  user: {
+    name: string;
+    email: string;
+  } | null;
+};
+
+export type AdminAnalyticsActiveUser = {
+  id: string;
+  name: string;
+  email: string;
+  currentPath: string;
+  deviceType: string | null;
+  browser: string | null;
+  lastSeenAt: string;
+};
+
+export type AdminAnalyticsResult = {
+  generatedAt: string;
+  metrics: AdminAnalyticsMetric[];
+  access: {
+    activeSubscriptions: number;
+    trialingSubscriptions: number;
+    pastDueSubscriptions: number;
+    canceledSubscriptions: number;
+    adminGranted: number;
+    selfService: number;
+    withoutAccess: number;
+  };
+  finance: {
+    last30DaysIncome: number;
+    last30DaysExpense: number;
+    last30DaysTransactions: number;
+    totalAccountBalance: number;
+    totalInvestedValue: number;
+  };
+  estimatedRevenue: {
+    currency: string;
+    monthlyRecurringValue: number;
+    annualRecurringValue: number;
+  };
+  siteVisits: {
+    totalViews: number;
+    viewsToday: number;
+    viewsLast30Days: number;
+    uniqueVisitorsLast30Days: number;
+    uniqueVisitorsToday: number;
+    loggedInViewsLast30Days: number;
+    anonymousViewsLast30Days: number;
+    topRoutes: AdminAnalyticsRouteView[];
+    deviceBreakdown: AdminAnalyticsBreakdownPoint[];
+    browserBreakdown: AdminAnalyticsBreakdownPoint[];
+    recentViews: AdminAnalyticsRecentPageView[];
+  };
+  liveActivity: {
+    onlineUsersNow: number;
+    activeSessionsNow: number;
+    activeUsersToday: number;
+    activeUsersThisWeek: number;
+    activeRoutes: AdminAnalyticsRouteView[];
+    recentActiveUsers: AdminAnalyticsActiveUser[];
+  };
+  trends: AdminAnalyticsTrendPoint[];
+  packageMix: AdminAnalyticsPackagePoint[];
+  recentUsers: AdminAnalyticsRecentUser[];
 };
 
 function hashInviteToken(token: string) {
@@ -205,6 +328,41 @@ function slugify(value: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+}
+
+function monthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function dayStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addMonth(date: Date, amount: number) {
+  return new Date(date.getFullYear(), date.getMonth() + amount, 1);
+}
+
+function monthLabel(date: Date) {
+  return date.toLocaleDateString('en-US', { month: 'short' });
+}
+
+function decimalToNumber(value: unknown) {
+  return value === null || value === undefined ? 0 : Number(value);
+}
+
+function monthlyPackageValue(pkg: {
+  price: unknown;
+  interval: SubscriptionInterval;
+}) {
+  const price = decimalToNumber(pkg.price);
+  return pkg.interval === 'YEARLY' ? price / 12 : price;
+}
+
+function toBreakdownPoint(label: string | null, value: number): AdminAnalyticsBreakdownPoint {
+  return {
+    label: label || 'Unknown',
+    value,
+  };
 }
 
 function normalizeAdminUsersQuery(query: AdminUsersQuery = {}): AdminUsersPageFilters {
@@ -480,6 +638,420 @@ export async function getAdminUserInvitesAction(): Promise<AdminUserInviteRow[]>
   });
 
   return invites.map(serializeAdminInvite);
+}
+
+export async function getAdminAnalyticsAction(): Promise<AdminAnalyticsResult> {
+  await requireRole('ADMIN');
+
+  const now = new Date();
+  const last30Days = new Date(now);
+  last30Days.setDate(now.getDate() - 30);
+  const previous30Days = new Date(now);
+  previous30Days.setDate(now.getDate() - 60);
+  const today = dayStart(now);
+  const onlineSince = new Date(now);
+  onlineSince.setMinutes(now.getMinutes() - 5);
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - 7);
+
+  const activeSubscriptionWhere: Prisma.UserSubscriptionWhereInput = {
+    status: { in: ['ACTIVE', 'TRIALING'] },
+    OR: [
+      { currentPeriodEnd: null },
+      { currentPeriodEnd: { gte: now } },
+    ],
+  };
+
+  const withoutAccessWhere: Prisma.UserWhereInput = {
+    role: 'USER',
+    OR: [
+      { subscription: { is: null } },
+      { subscription: { is: { status: { in: ['PAST_DUE', 'CANCELED'] } } } },
+      { subscription: { is: { currentPeriodEnd: { lt: now } } } },
+    ],
+  };
+
+  const [
+    totalUsers,
+    activeUsers,
+    admins,
+    suspendedUsers,
+    newUsers30,
+    newUsersPrevious30,
+    activeSubscriptions,
+    trialingSubscriptions,
+    pastDueSubscriptions,
+    canceledSubscriptions,
+    adminGranted,
+    selfService,
+    withoutAccess,
+    last30DaysIncome,
+    last30DaysExpense,
+    last30DaysTransactions,
+    totalAccountBalance,
+    totalInvestedValue,
+    totalPageViews,
+    viewsToday,
+    viewsLast30Days,
+    loggedInViewsLast30Days,
+    anonymousViewsLast30Days,
+    uniqueVisitorsLast30Days,
+    uniqueVisitorsToday,
+    pageViewsForBreakdown,
+    recentViews,
+    activeSessionsNow,
+    onlineUsersNowRows,
+    activeUsersTodayRows,
+    activeUsersThisWeekRows,
+    activeActivityRows,
+    recentActivityRows,
+    activeSubscriptionsForRevenue,
+    packages,
+    recentUsers,
+  ] = await prisma.$transaction([
+    prisma.user.count(),
+    prisma.user.count({ where: { status: 'ACTIVE' } }),
+    prisma.user.count({ where: { role: 'ADMIN' } }),
+    prisma.user.count({ where: { status: 'SUSPENDED' } }),
+    prisma.user.count({ where: { createdAt: { gte: last30Days } } }),
+    prisma.user.count({ where: { createdAt: { gte: previous30Days, lt: last30Days } } }),
+    prisma.userSubscription.count({ where: { status: 'ACTIVE' } }),
+    prisma.userSubscription.count({ where: { status: 'TRIALING' } }),
+    prisma.userSubscription.count({ where: { status: 'PAST_DUE' } }),
+    prisma.userSubscription.count({ where: { status: 'CANCELED' } }),
+    prisma.userSubscription.count({ where: { source: 'ADMIN_GRANT' } }),
+    prisma.userSubscription.count({ where: { source: 'SELF_SERVICE' } }),
+    prisma.user.count({ where: withoutAccessWhere }),
+    prisma.transaction.aggregate({
+      where: { type: 'INCOME', date: { gte: last30Days } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.aggregate({
+      where: { type: 'EXPENSE', date: { gte: last30Days } },
+      _sum: { amount: true },
+    }),
+    prisma.transaction.count({ where: { date: { gte: last30Days } } }),
+    prisma.account.aggregate({ _sum: { balance: true } }),
+    prisma.investment.aggregate({ _sum: { currentValue: true } }),
+    prisma.pageView.count(),
+    prisma.pageView.count({ where: { createdAt: { gte: today } } }),
+    prisma.pageView.count({ where: { createdAt: { gte: last30Days } } }),
+    prisma.pageView.count({ where: { createdAt: { gte: last30Days }, userId: { not: null } } }),
+    prisma.pageView.count({ where: { createdAt: { gte: last30Days }, userId: null } }),
+    prisma.pageView.findMany({
+      where: { createdAt: { gte: last30Days } },
+      distinct: ['visitorId'],
+      select: { visitorId: true },
+    }),
+    prisma.pageView.findMany({
+      where: { createdAt: { gte: today } },
+      distinct: ['visitorId'],
+      select: { visitorId: true },
+    }),
+    prisma.pageView.findMany({
+      where: { createdAt: { gte: last30Days } },
+      select: {
+        path: true,
+        deviceType: true,
+        browser: true,
+      },
+    }),
+    prisma.pageView.findMany({
+      select: {
+        id: true,
+        path: true,
+        referrer: true,
+        deviceType: true,
+        browser: true,
+        createdAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    }),
+    prisma.userActivity.count({ where: { lastSeenAt: { gte: onlineSince } } }),
+    prisma.userActivity.findMany({
+      where: { lastSeenAt: { gte: onlineSince } },
+      distinct: ['userId'],
+      select: { userId: true },
+    }),
+    prisma.userActivity.findMany({
+      where: { lastSeenAt: { gte: today } },
+      distinct: ['userId'],
+      select: { userId: true },
+    }),
+    prisma.userActivity.findMany({
+      where: { lastSeenAt: { gte: weekStart } },
+      distinct: ['userId'],
+      select: { userId: true },
+    }),
+    prisma.userActivity.findMany({
+      where: { lastSeenAt: { gte: onlineSince } },
+      select: { currentPath: true },
+    }),
+    prisma.userActivity.findMany({
+      where: { lastSeenAt: { gte: onlineSince } },
+      select: {
+        id: true,
+        currentPath: true,
+        deviceType: true,
+        browser: true,
+        lastSeenAt: true,
+        user: {
+          select: {
+            name: true,
+            email: true,
+          },
+        },
+      },
+      orderBy: { lastSeenAt: 'desc' },
+      take: 8,
+    }),
+    prisma.userSubscription.findMany({
+      where: activeSubscriptionWhere,
+      select: {
+        source: true,
+        package: {
+          select: {
+            id: true,
+            name: true,
+            currency: true,
+            price: true,
+            interval: true,
+          },
+        },
+      },
+    }),
+    prisma.subscriptionPackage.findMany({
+      select: {
+        id: true,
+        name: true,
+        currency: true,
+        price: true,
+        interval: true,
+        subscriptions: {
+          where: activeSubscriptionWhere,
+          select: { id: true },
+        },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    }),
+    prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        lastLoginAt: true,
+        subscription: {
+          select: {
+            status: true,
+            source: true,
+            package: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 8,
+    }),
+  ]);
+
+  const monthStarts = Array.from({ length: 6 }, (_, index) => addMonth(monthStart(now), index - 5));
+  const trends = await Promise.all(monthStarts.map(async (startDate) => {
+    const endDate = addMonth(startDate, 1);
+    const [users, subscriptions, transactions, visits] = await prisma.$transaction([
+      prisma.user.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
+      prisma.userSubscription.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
+      prisma.transaction.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
+      prisma.pageView.count({ where: { createdAt: { gte: startDate, lt: endDate } } }),
+    ]);
+
+    return {
+      label: monthLabel(startDate),
+      users,
+      subscriptions,
+      transactions,
+      visits,
+    };
+  }));
+
+  const packageMix = packages.map((pkg) => ({
+    id: pkg.id,
+    name: pkg.name,
+    currency: pkg.currency,
+    interval: pkg.interval,
+    price: decimalToNumber(pkg.price),
+    subscriptions: pkg.subscriptions.length,
+    monthlyValue: monthlyPackageValue(pkg) * pkg.subscriptions.length,
+  }));
+
+  const monthlyRecurringValue = activeSubscriptionsForRevenue.reduce((total, subscription) => {
+    return total + (subscription.package ? monthlyPackageValue(subscription.package) : 0);
+  }, 0);
+
+  const growthDelta = newUsers30 - newUsersPrevious30;
+  const churnRisk = pastDueSubscriptions + canceledSubscriptions;
+  const routeCounts = new Map<string, number>();
+  const deviceCounts = new Map<string, number>();
+  const browserCounts = new Map<string, number>();
+  const activeRouteCounts = new Map<string, number>();
+  pageViewsForBreakdown.forEach((view) => {
+    routeCounts.set(view.path, (routeCounts.get(view.path) || 0) + 1);
+    const device = view.deviceType || 'Unknown';
+    const browser = view.browser || 'Unknown';
+    deviceCounts.set(device, (deviceCounts.get(device) || 0) + 1);
+    browserCounts.set(browser, (browserCounts.get(browser) || 0) + 1);
+  });
+  activeActivityRows.forEach((activity) => {
+    activeRouteCounts.set(activity.currentPath, (activeRouteCounts.get(activity.currentPath) || 0) + 1);
+  });
+
+  const topRoutes = Array.from(routeCounts.entries())
+    .map(([path, views]) => ({ path, views }))
+    .sort((left, right) => right.views - left.views)
+    .slice(0, 8);
+  const deviceBreakdown = Array.from(deviceCounts.entries())
+    .map(([label, value]) => toBreakdownPoint(label, value))
+    .sort((left, right) => right.value - left.value);
+  const browserBreakdown = Array.from(browserCounts.entries())
+    .map(([label, value]) => toBreakdownPoint(label, value))
+    .sort((left, right) => right.value - left.value);
+  const activeRoutes = Array.from(activeRouteCounts.entries())
+    .map(([path, views]) => ({ path, views }))
+    .sort((left, right) => right.views - left.views)
+    .slice(0, 6);
+
+  return {
+    generatedAt: now.toISOString(),
+    metrics: [
+      {
+        label: 'Total Users',
+        value: totalUsers,
+        helper: `${newUsers30} joined in the last 30 days`,
+        tone: 'indigo',
+      },
+      {
+        label: 'Active Users',
+        value: activeUsers,
+        helper: `${admins} admins, ${suspendedUsers} suspended`,
+        tone: 'emerald',
+      },
+      {
+        label: 'Active Access',
+        value: activeSubscriptions + trialingSubscriptions,
+        helper: `${withoutAccess} users currently blocked`,
+        tone: 'sky',
+      },
+      {
+        label: 'Growth Delta',
+        value: growthDelta,
+        helper: 'Compared with the previous 30 days',
+        tone: growthDelta >= 0 ? 'violet' : 'rose',
+      },
+      {
+        label: 'Churn Risk',
+        value: churnRisk,
+        helper: `${pastDueSubscriptions} past due, ${canceledSubscriptions} canceled`,
+        tone: churnRisk > 0 ? 'amber' : 'emerald',
+      },
+      {
+        label: '30-Day Transactions',
+        value: last30DaysTransactions,
+        helper: 'Transactions created across all users',
+        tone: 'indigo',
+      },
+      {
+        label: '30-Day Visits',
+        value: viewsLast30Days,
+        helper: `${uniqueVisitorsLast30Days.length} unique visitors`,
+        tone: 'violet',
+      },
+      {
+        label: 'Online Now',
+        value: onlineUsersNowRows.length,
+        helper: `${activeSessionsNow} active sessions in the last 5 minutes`,
+        tone: onlineUsersNowRows.length > 0 ? 'emerald' : 'sky',
+      },
+    ],
+    access: {
+      activeSubscriptions,
+      trialingSubscriptions,
+      pastDueSubscriptions,
+      canceledSubscriptions,
+      adminGranted,
+      selfService,
+      withoutAccess,
+    },
+    finance: {
+      last30DaysIncome: decimalToNumber(last30DaysIncome._sum.amount),
+      last30DaysExpense: decimalToNumber(last30DaysExpense._sum.amount),
+      last30DaysTransactions,
+      totalAccountBalance: decimalToNumber(totalAccountBalance._sum.balance),
+      totalInvestedValue: decimalToNumber(totalInvestedValue._sum.currentValue),
+    },
+    estimatedRevenue: {
+      currency: activeSubscriptionsForRevenue.find((subscription) => subscription.package)?.package?.currency || 'BDT',
+      monthlyRecurringValue,
+      annualRecurringValue: monthlyRecurringValue * 12,
+    },
+    siteVisits: {
+      totalViews: totalPageViews,
+      viewsToday,
+      viewsLast30Days,
+      uniqueVisitorsLast30Days: uniqueVisitorsLast30Days.length,
+      uniqueVisitorsToday: uniqueVisitorsToday.length,
+      loggedInViewsLast30Days,
+      anonymousViewsLast30Days,
+      topRoutes,
+      deviceBreakdown,
+      browserBreakdown,
+      recentViews: recentViews.map((view) => ({
+        ...view,
+        createdAt: view.createdAt.toISOString(),
+      })),
+    },
+    liveActivity: {
+      onlineUsersNow: onlineUsersNowRows.length,
+      activeSessionsNow,
+      activeUsersToday: activeUsersTodayRows.length,
+      activeUsersThisWeek: activeUsersThisWeekRows.length,
+      activeRoutes,
+      recentActiveUsers: recentActivityRows.map((activity) => ({
+        id: activity.id,
+        name: activity.user.name,
+        email: activity.user.email,
+        currentPath: activity.currentPath,
+        deviceType: activity.deviceType,
+        browser: activity.browser,
+        lastSeenAt: activity.lastSeenAt.toISOString(),
+      })),
+    },
+    trends,
+    packageMix,
+    recentUsers: recentUsers.map((user) => ({
+      id: user.id,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      createdAt: user.createdAt.toISOString(),
+      lastLoginAt: user.lastLoginAt?.toISOString() || null,
+      subscription: user.subscription
+        ? {
+            status: user.subscription.status,
+            source: user.subscription.source,
+            packageName: user.subscription.package?.name || null,
+          }
+        : null,
+    })),
+  };
 }
 
 export async function createSubscriptionPackageAction(formData: FormData): Promise<ActionResponse> {

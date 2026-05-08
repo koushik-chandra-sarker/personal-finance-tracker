@@ -30,7 +30,9 @@ model User {
   investmentTypeConfigs InvestmentTypeConfig[]
   notifications Notification[]
   notificationPreference NotificationPreference?
+  pageViews     PageView[]
   recurringTxns RecurringTransaction[]
+  userActivities UserActivity[]
   joinedShares  SharedAccess[]         @relation("JoinedShares")
   ownedShares   SharedAccess[]         @relation("OwnedShares")
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
@@ -340,6 +342,46 @@ model FinancialNote {
   @@index([userId, createdAt])
   @@index([userId, expectedReturnDate])
   @@index([userId, status])
+}
+
+model PageView {
+  id         String   @id @default(cuid())
+  userId     String?
+  visitorId  String
+  sessionId  String
+  path       String
+  referrer   String?
+  userAgent  String?
+  deviceType String?
+  browser    String?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@index([visitorId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([userId, createdAt])
+}
+
+model UserActivity {
+  id          String   @id @default(cuid())
+  userId      String
+  sessionId   String
+  currentPath String
+  userAgent   String?
+  deviceType  String?
+  browser     String?
+  lastSeenAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, sessionId])
+  @@index([lastSeenAt])
+  @@index([currentPath, lastSeenAt])
+  @@index([userId, lastSeenAt])
 }
 
 enum Feature {

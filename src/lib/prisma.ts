@@ -5,7 +5,7 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
-  return Boolean(client && 'investmentCashflow' in client);
+  return Boolean(client && 'investmentCashflow' in client && 'pageView' in client && 'userActivity' in client);
 }
 
 // During next dev, Prisma can be regenerated while the old client instance is
