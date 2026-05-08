@@ -53,3 +53,26 @@ export async function deleteRecurringAction(id: string): Promise<ActionResponse>
   revalidatePath('/recurring');
   return { success: true, message: 'Recurring transaction deleted' };
 }
+
+export async function processDueRecurringAction(): Promise<{ success: boolean; processed: number }> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, processed: 0 };
+
+  const userId = await getEffectiveUserId();
+  await validateAccess('TRANSACTIONS', 'EDIT');
+
+  const processed = await recurringService.processRecurringTransactions({
+    userId,
+    executorId: session.user.id,
+  });
+
+  if (processed > 0) {
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+    revalidatePath('/accounts');
+    revalidatePath('/reports');
+    revalidatePath('/recurring');
+  }
+
+  return { success: true, processed };
+}

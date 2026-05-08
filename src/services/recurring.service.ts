@@ -78,48 +78,86 @@ function getNextDate(current: Date, frequency: string): Date {
   }
 }
 
-export async function processRecurringTransactions() {
+type ProcessRecurringOptions = {
+  userId?: string;
+  executorId?: string;
+};
+
+const MAX_OCCURRENCES_PER_RUN = 370;
+
+export async function processRecurringTransactions(options: ProcessRecurringOptions = {}) {
   const now = new Date();
   const dueTransactions = await prisma.recurringTransaction.findMany({
-    where: { isActive: true, nextRunDate: { lte: now } },
+    where: {
+      isActive: true,
+      nextRunDate: { lte: now },
+      ...(options.userId ? { userId: options.userId } : {}),
+    },
   });
 
+  let processed = 0;
+
   for (const rec of dueTransactions) {
-    // Create the transaction
-    const transaction = await prisma.transaction.create({
-      data: {
-        userId: rec.userId,
-        accountId: rec.accountId,
-        categoryId: rec.categoryId,
-        type: rec.type,
-        amount: rec.amount,
-        description: rec.description,
-        date: rec.nextRunDate,
-        isRecurring: true,
-      },
-    });
+    let dueDate = rec.nextRunDate;
 
-    // Update account balance
-    const balanceChange = rec.type === 'INCOME' ? Number(rec.amount) : -Number(rec.amount);
-    await prisma.account.update({
-      where: { id: rec.accountId },
-      data: { balance: { increment: balanceChange } },
-    });
+    while (dueDate <= now && processed < MAX_OCCURRENCES_PER_RUN) {
+      const nextRunDate = getNextDate(dueDate, rec.frequency);
+      const transaction = await prisma.$transaction(async (tx) => {
+        const claimed = await tx.recurringTransaction.updateMany({
+          where: {
+            id: rec.id,
+            isActive: true,
+            nextRunDate: dueDate,
+            ...(options.userId ? { userId: options.userId } : {}),
+          },
+          data: {
+            nextRunDate,
+            ...(options.executorId ? { updatedById: options.executorId } : {}),
+          },
+        });
 
-    // Advance next run date
-    await prisma.recurringTransaction.update({
-      where: { id: rec.id },
-      data: { nextRunDate: getNextDate(rec.nextRunDate, rec.frequency) },
-    });
+        if (claimed.count === 0) return null;
 
-    if (rec.type === 'EXPENSE') {
-      try {
-        await detectUnusualExpenses(rec.userId, transaction.id);
-      } catch (error) {
-        console.error('Failed to detect unusual recurring expense:', error);
+        const created = await tx.transaction.create({
+          data: {
+            userId: rec.userId,
+            accountId: rec.accountId,
+            categoryId: rec.categoryId,
+            type: rec.type,
+            amount: rec.amount,
+            description: rec.description,
+            date: dueDate,
+            isRecurring: true,
+            ...(options.executorId ? {
+              createdById: options.executorId,
+              updatedById: options.executorId,
+            } : {}),
+          },
+        });
+
+        const balanceChange = rec.type === 'INCOME' ? Number(rec.amount) : -Number(rec.amount);
+        await tx.account.update({
+          where: { id: rec.accountId },
+          data: { balance: { increment: balanceChange } },
+        });
+
+        return created;
+      });
+
+      if (!transaction) break;
+
+      processed += 1;
+      if (rec.type === 'EXPENSE') {
+        try {
+          await detectUnusualExpenses(rec.userId, transaction.id);
+        } catch (error) {
+          console.error('Failed to detect unusual recurring expense:', error);
+        }
       }
+
+      dueDate = nextRunDate;
     }
   }
 
-  return dueTransactions.length;
+  return processed;
 }
