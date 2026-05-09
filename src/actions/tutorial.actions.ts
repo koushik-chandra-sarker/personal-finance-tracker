@@ -5,6 +5,10 @@ import { requireRole } from '@/lib/rbac';
 import * as tutorialService from '@/services/tutorial.service';
 import { ActionResponse } from '@/types';
 
+function getErrorMessage(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
+}
+
 export async function getTutorialsAction(isAdmin: boolean = false) {
   if (isAdmin) {
     await requireRole('ADMIN');
@@ -41,8 +45,8 @@ export async function createTutorialAction(formData: FormData): Promise<ActionRe
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
     return { success: true, message: 'Tutorial created successfully' };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to create tutorial' };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error, 'Failed to create tutorial') };
   }
 }
 
@@ -71,8 +75,8 @@ export async function updateTutorialAction(id: string, formData: FormData): Prom
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
     return { success: true, message: 'Tutorial updated successfully' };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to update tutorial' };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error, 'Failed to update tutorial') };
   }
 }
 
@@ -84,7 +88,7 @@ export async function deleteTutorialAction(id: string): Promise<ActionResponse> 
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
     return { success: true, message: 'Tutorial deleted successfully' };
-  } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to delete tutorial' };
+  } catch (error: unknown) {
+    return { success: false, message: getErrorMessage(error, 'Failed to delete tutorial') };
   }
 }

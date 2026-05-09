@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Plus, Edit2, Trash2, Video, ExternalLink, PlayCircle, LayoutGrid, List as ListIcon } from 'lucide-react';
+import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -137,10 +138,13 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
             <Card key={tutorial.id} className="group overflow-hidden flex flex-col p-0 border-slate-200 dark:border-slate-800 rounded-[2rem] hover:shadow-2xl hover:shadow-slate-200/50 dark:hover:shadow-none transition-all duration-300">
               <div className="aspect-video bg-slate-100 dark:bg-slate-800 relative overflow-hidden">
                 {tutorial.thumbnailUrl ? (
-                  <img 
+                  <Image 
                     src={tutorial.thumbnailUrl} 
                     alt={tutorial.title} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-105 duration-700"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    unoptimized
+                    className="object-cover transition-transform group-hover:scale-105 duration-700"
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400">
@@ -205,71 +209,82 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
         </div>
       ) : (
         <Card className="p-0 overflow-hidden border-slate-200 dark:border-slate-800 rounded-[2rem]">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Tutorial</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Category</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Status</th>
-                <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Order</th>
-                <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {tutorials.map((tutorial) => (
-                <tr key={tutorial.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 aspect-video rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                        {tutorial.thumbnailUrl && <img src={tutorial.thumbnailUrl} className="w-full h-full object-cover" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 dark:text-white truncate">{tutorial.title}</p>
-                        <p className="text-xs text-slate-400 truncate">{tutorial.youtubeUrl}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Badge variant="outline" className="font-bold">{tutorial.category}</Badge>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex gap-1 flex-col">
-                      <Badge variant={tutorial.isActive ? 'success' : 'default'} className="font-bold w-fit">
-                        {tutorial.isActive ? 'ACTIVE' : 'DRAFT'}
-                      </Badge>
-                      {tutorial.isPremium && (
-                        <Badge variant="warning" className="font-bold w-fit">PREMIUM</Badge>
-                      )}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 font-mono text-sm text-slate-500">
-                    {tutorial.sortOrder}
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                       <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleEdit(tutorial)}
-                        className="h-8 w-8 p-0"
-                      >
-                        <Edit2 size={14} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleDelete(tutorial.id)}
-                        className="h-8 w-8 p-0 text-rose-500"
-                        disabled={isDeleting === tutorial.id}
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </div>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-800">
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Tutorial</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Category</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Status</th>
+                  <th className="px-6 py-4 text-xs font-black uppercase tracking-widest text-slate-400">Order</th>
+                  <th className="px-6 py-4 text-right text-xs font-black uppercase tracking-widest text-slate-400">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                {tutorials.map((tutorial) => (
+                  <tr key={tutorial.id} className="hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-4">
+                        <div className="relative w-16 aspect-video rounded-lg overflow-hidden bg-slate-100 shrink-0">
+                          {tutorial.thumbnailUrl && (
+                            <Image
+                              src={tutorial.thumbnailUrl}
+                              alt={tutorial.title}
+                              fill
+                              sizes="4rem"
+                              unoptimized
+                              className="object-cover"
+                            />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 dark:text-white truncate">{tutorial.title}</p>
+                          <p className="text-xs text-slate-400 truncate">{tutorial.youtubeUrl}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline" className="font-bold">{tutorial.category}</Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-1 flex-col">
+                        <Badge variant={tutorial.isActive ? 'success' : 'default'} className="font-bold w-fit">
+                          {tutorial.isActive ? 'ACTIVE' : 'DRAFT'}
+                        </Badge>
+                        {tutorial.isPremium && (
+                          <Badge variant="warning" className="font-bold w-fit">PREMIUM</Badge>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 font-mono text-sm text-slate-500">
+                      {tutorial.sortOrder}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleEdit(tutorial)}
+                          className="h-8 w-8 p-0"
+                        >
+                          <Edit2 size={14} />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={() => handleDelete(tutorial.id)}
+                          className="h-8 w-8 p-0 text-rose-500"
+                          disabled={isDeleting === tutorial.id}
+                        >
+                          <Trash2 size={14} />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </Card>
       )}
 
@@ -307,7 +322,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
             placeholder="https://www.youtube.com/watch?v=..."
             className="h-12 rounded-xl"
           />
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid gap-6 sm:grid-cols-2">
             <Input 
               label="Category" 
               id="category"
@@ -325,7 +340,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
               className="h-12 rounded-xl"
             />
           </div>
-          <div className="grid grid-cols-2 gap-6">
+          <div className="grid gap-6 sm:grid-cols-2">
             <div className="flex items-center gap-3 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800">
               <input 
                 type="checkbox" 

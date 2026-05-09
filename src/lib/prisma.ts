@@ -4,8 +4,24 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+type RuntimePrismaClient = PrismaClient & {
+  _runtimeDataModel?: {
+    models?: Record<string, { fields?: Array<{ name?: string }> }>;
+  };
+};
+
 function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
-  return Boolean(client && 'investmentCashflow' in client && 'pageView' in client && 'userActivity' in client);
+  const runtimeClient = client as RuntimePrismaClient | undefined;
+  const tutorialFields = runtimeClient?._runtimeDataModel?.models?.Tutorial?.fields;
+  const hasTutorialPremiumFlag = tutorialFields?.some((field) => field.name === 'isPremium') ?? false;
+
+  return Boolean(
+    client &&
+    'investmentCashflow' in client &&
+    'pageView' in client &&
+    'userActivity' in client &&
+    hasTutorialPremiumFlag
+  );
 }
 
 // During next dev, Prisma can be regenerated while the old client instance is

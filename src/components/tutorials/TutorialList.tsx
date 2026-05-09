@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { Play, Video, Search, X, Share2, Clock, CheckCircle, Lock } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { ArrowUpRight, BookOpen, CheckCircle, Clock, Crown, Filter, Lock, Play, Search, Share2, ShieldCheck, Video } from 'lucide-react';
+import Image from 'next/image';
 import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import { cn } from '@/lib/utils';
 
 interface Tutorial {
   id: string;
@@ -25,13 +27,27 @@ export default function TutorialList({ tutorials, isPro }: Props) {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [playingVideo, setPlayingVideo] = useState<Tutorial | null>(null);
+  const [lockedVideo, setLockedVideo] = useState<Tutorial | null>(null);
+  const tutorialsSectionRef = useRef<HTMLDivElement | null>(null);
 
-  const categories = ['All', ...Array.from(new Set(tutorials.map(t => t.category).filter(Boolean)))];
+  const categories = useMemo(
+    () => ['All', ...Array.from(new Set(tutorials.map((tutorial) => tutorial.category || 'General')))],
+    [tutorials]
+  );
+
+  const stats = useMemo(() => {
+    const premiumCount = tutorials.filter((tutorial) => tutorial.isPremium).length;
+    return {
+      total: tutorials.length,
+      free: tutorials.length - premiumCount,
+      premium: premiumCount,
+    };
+  }, [tutorials]);
 
   const filteredTutorials = tutorials.filter(t => {
     const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
                          (t.description?.toLowerCase().includes(search.toLowerCase()) || false);
-    const matchesCategory = selectedCategory === 'All' || t.category === selectedCategory;
+    const matchesCategory = selectedCategory === 'All' || (t.category || 'General') === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -54,152 +70,313 @@ export default function TutorialList({ tutorials, isPro }: Props) {
     }
   };
 
+  const openTutorial = (tutorial: Tutorial) => {
+    if (tutorial.isPremium && !isPro) {
+      setLockedVideo(tutorial);
+      return;
+    }
+    setPlayingVideo(tutorial);
+  };
+
+  const categoryLabel = (tutorial: Tutorial) => tutorial.category || 'General';
+  const quickCategories = categories.filter((category) => category !== 'All').slice(0, 4);
+
+  const selectCategory = (category: string, shouldClearSearch = false) => {
+    setSelectedCategory(category);
+    if (shouldClearSearch) setSearch('');
+  };
+
+  const scrollToTutorials = () => {
+    selectCategory('All', true);
+    requestAnimationFrame(() => {
+      tutorialsSectionRef.current?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+  };
+
   return (
-    <div className="space-y-12 pb-20 animate-in fade-in duration-700">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-[3rem] bg-indigo-600 px-8 py-20 text-center text-white shadow-2xl">
-        <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 via-purple-600 to-indigo-800" />
-        <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-white/10 blur-3xl" />
-        <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-purple-400/20 blur-3xl" />
-        
-        <div className="relative z-10 max-w-4xl mx-auto space-y-8">
-          <div className="flex flex-col items-center gap-4">
-            <Badge variant="glass" className="px-6 py-2 text-xs font-black uppercase tracking-[0.3em] bg-white/10 backdrop-blur-xl border-white/20">
-              Personal Finance Academy
-            </Badge>
-            <h1 className="text-5xl font-black sm:text-7xl tracking-tighter leading-[0.95]">
-              Elite Knowledge <br /> 
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-200 to-purple-200">For Your Wealth</span>
-            </h1>
-          </div>
-          
-          <p className="text-xl text-indigo-100 max-w-2xl mx-auto leading-relaxed font-medium">
-            Unlock exclusive strategies, expert insights, and master-level guides designed to transform your financial future.
-          </p>
+    <div className="space-y-8 pb-16 animate-in fade-in duration-500">
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
+        <div className="grid gap-0 xl:grid-cols-[minmax(0,1fr)_23rem]">
+          <div className="space-y-7 p-6 sm:p-8">
+            <div className="flex flex-wrap items-center gap-3">
+              <Badge variant="info" className="px-3 py-1 text-xs font-bold">
+                Personal Finance Academy
+              </Badge>
+              <Badge variant={isPro ? 'success' : 'warning'} className="px-3 py-1 text-xs font-bold">
+                {isPro ? 'PRO access active' : 'Free access'}
+              </Badge>
+            </div>
+            <div className="max-w-3xl space-y-4">
+              <h1 className="max-w-2xl text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+                Learn FinTrack with simple guided lessons
+              </h1>
+              <p className="max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
+                Start with one workflow, watch a short lesson, then apply it directly in your finance dashboard. No guessing where to begin.
+              </p>
+            </div>
 
-          {!isPro && (
-            <div className="pt-4">
-              <button className="px-10 py-5 bg-white text-indigo-600 rounded-[2rem] text-sm font-black hover:bg-indigo-50 transition-all hover:scale-105 shadow-2xl shadow-white/20">
-                UPGRADE TO PRO FOR FULL ACCESS
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <button
+                type="button"
+                onClick={scrollToTutorials}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700"
+              >
+                <Play fill="currentColor" className="ml-0.5 h-4 w-4" />
+                Start Learning
               </button>
+              <div className="flex flex-wrap gap-2">
+                {quickCategories.length > 0 ? (
+                  quickCategories.map((category) => (
+                    <button
+                      key={category}
+                      type="button"
+                      onClick={() => selectCategory(category, true)}
+                      className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                    >
+                      {category}
+                    </button>
+                  ))
+                ) : (
+                  <span className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
+                    New lessons coming soon
+                  </span>
+                )}
+              </div>
             </div>
-          )}
+
+            <div className="grid gap-3 md:grid-cols-3">
+              {[
+                {
+                  title: 'Choose a topic',
+                  description: 'Budgeting, accounts, goals, investments, or daily tracking.',
+                  icon: BookOpen,
+                  color: 'text-indigo-500',
+                  background: 'bg-indigo-50 dark:bg-indigo-500/10',
+                },
+                {
+                  title: 'Watch and apply',
+                  description: 'Follow one focused video, then try the same flow in the app.',
+                  icon: CheckCircle,
+                  color: 'text-emerald-500',
+                  background: 'bg-emerald-50 dark:bg-emerald-500/10',
+                },
+                {
+                  title: 'Go deeper',
+                  description: isPro ? 'Your PRO access unlocks the full advanced library.' : 'Upgrade when you need advanced PRO lessons.',
+                  icon: Crown,
+                  color: 'text-amber-500',
+                  background: 'bg-amber-50 dark:bg-amber-500/10',
+                },
+              ].map((item) => (
+                <div key={item.title} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-950/30">
+                  <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-lg', item.background)}>
+                    <item.icon className={cn('h-4 w-4', item.color)} />
+                  </div>
+                  <h3 className="text-sm font-black text-slate-950 dark:text-white">{item.title}</h3>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.description}</p>
+                </div>
+              ))}
+            </div>
+
+            {!isPro && stats.premium > 0 && (
+              <div className="flex flex-col gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-200 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <Crown className="mt-0.5 h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-bold">PRO tutorials are locked on your current plan.</p>
+                    <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">Upgrade when you are ready to watch advanced guides.</p>
+                  </div>
+                </div>
+                <a
+                  href="/subscription"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-bold text-white transition-colors hover:bg-amber-700"
+                >
+                  View Plans
+                  <ArrowUpRight className="h-4 w-4" />
+                </a>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/40 xl:border-l xl:border-t-0">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold uppercase text-slate-400">Learning path</p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">Start small, build confidence</h2>
+                </div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
+                  <BookOpen className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {[
+                  'Pick the workflow you need today',
+                  'Watch the lesson while your dashboard is open',
+                  'Repeat the flow with your own numbers',
+                ].map((step, index) => (
+                  <div key={step} className="flex gap-3">
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                      {index + 1}
+                    </span>
+                    <p className="text-sm font-medium leading-6 text-slate-600 dark:text-slate-300">{step}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                {[
+                  { label: 'Guides', value: stats.total, icon: BookOpen, color: 'text-indigo-500' },
+                  { label: 'Free', value: stats.free, icon: ShieldCheck, color: 'text-emerald-500' },
+                  { label: 'PRO', value: stats.premium, icon: Crown, color: 'text-amber-500' },
+                ].map((item) => (
+                  <div key={item.label} className="border-r border-slate-200 bg-slate-50 p-3 last:border-r-0 dark:border-slate-800 dark:bg-slate-950/40">
+                    <item.icon className={cn('mb-2 h-4 w-4', item.color)} />
+                    <p className="text-xl font-black text-slate-950 dark:text-white">{item.value}</p>
+                    <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">{item.label}</p>
+                  </div>
+                ))}
+              </div>
+
+              <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
+                Tip: use search when you know the feature name, or tap a topic chip when you are exploring.
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Filters & Search */}
-      <div className="sticky top-20 z-30 flex flex-col md:flex-row gap-6 items-center justify-between bg-white/80 dark:bg-slate-900/80 backdrop-blur-2xl p-4 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none">
-        <div className="relative w-full md:w-96">
-          <Input 
-            placeholder="Search tutorials..." 
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-12 h-14 rounded-3xl border-0 bg-slate-100 dark:bg-slate-800 focus:ring-2 focus:ring-indigo-500"
-            icon={<Search size={20} className="text-slate-400" />}
-          />
-        </div>
-        <div className="flex gap-2 overflow-x-auto pb-1 w-full md:w-auto no-scrollbar scroll-smooth">
-          {categories.map((cat) => (
-            <button
-              key={cat as string}
-              onClick={() => setSelectedCategory(cat as string)}
-              className={`px-6 py-3 rounded-[1.25rem] text-sm font-bold transition-all duration-300 whitespace-nowrap ${
-                selectedCategory === cat 
-                ? 'bg-indigo-600 text-white shadow-xl shadow-indigo-200 dark:shadow-indigo-900/30 scale-105' 
-                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+      <div className="sticky -top-6 z-30 -mx-4 bg-slate-50/95 px-4 py-3 backdrop-blur dark:bg-slate-950/95 lg:-mx-6 lg:px-6">
+        <div className="rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900/95 dark:shadow-none lg:p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div className="relative w-full xl:max-w-md">
+              <Input 
+                placeholder="Search tutorials..." 
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-11 dark:border-slate-700 dark:bg-slate-950/50"
+                icon={<Search size={20} className="text-slate-400" />}
+              />
+            </div>
+            <div className="flex min-w-0 items-center gap-2">
+              <Filter className="hidden h-4 w-4 shrink-0 text-slate-400 sm:block" />
+              <div className="flex w-full gap-2 overflow-x-auto pb-1">
+                {categories.map((cat) => (
+                  <button
+                    key={cat}
+                    type="button"
+                    onClick={() => selectCategory(cat)}
+                    className={cn(
+                      'h-10 whitespace-nowrap rounded-lg border px-4 text-sm font-semibold transition-colors',
+                      selectedCategory === cat
+                        ? 'border-indigo-600 bg-indigo-600 text-white shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
+                    )}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Tutorial Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10">
+      <div ref={tutorialsSectionRef} className="grid scroll-mt-32 grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
         {filteredTutorials.length === 0 ? (
-          <div className="col-span-full py-24 text-center border-4 border-dashed border-slate-100 dark:border-slate-800/50 rounded-[3rem]">
-            <div className="w-24 h-24 bg-slate-50 dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Video size={48} className="text-slate-200 dark:text-slate-700" />
+          <div className="col-span-full rounded-2xl border border-dashed border-slate-300 bg-white py-20 text-center dark:border-slate-700 dark:bg-slate-900">
+            <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
+              <Video size={32} className="text-slate-400" />
             </div>
-            <h3 className="text-2xl font-bold text-slate-900 dark:text-white">No guides found</h3>
-            <p className="text-slate-500 mt-2 max-w-xs mx-auto">We couldn't find any tutorials matching your search. Try different keywords.</p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No guides found</h3>
+            <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">Try a different category or search term.</p>
           </div>
         ) : (
           filteredTutorials.map((tutorial, index) => (
             <div 
               key={tutorial.id} 
-              className={`group cursor-pointer flex flex-col space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 ${tutorial.isPremium && !isPro ? 'opacity-80' : ''}`}
+              className="group flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-indigo-500/30 dark:hover:shadow-none"
               style={{ animationDelay: `${index * 50}ms` }}
-              onClick={() => {
-                if (tutorial.isPremium && !isPro) {
-                  alert('This is a Premium tutorial. Please upgrade to PRO to watch.');
-                  return;
+              onClick={() => openTutorial(tutorial)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  openTutorial(tutorial);
                 }
-                setPlayingVideo(tutorial);
               }}
             >
-              <div className="relative aspect-video rounded-[2.5rem] overflow-hidden shadow-lg group-hover:shadow-[0_20px_50px_rgba(79,70,229,0.2)] dark:group-hover:shadow-none group-hover:-translate-y-2 transition-all duration-500 border border-slate-200/50 dark:border-slate-800">
+              <div className="relative aspect-video overflow-hidden bg-slate-100 dark:bg-slate-800">
                 {tutorial.thumbnailUrl ? (
-                  <img 
+                  <Image 
                     src={tutorial.thumbnailUrl} 
                     alt={tutorial.title} 
-                    className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-1000"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
+                    unoptimized
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 ) : (
-                  <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
                     <Video size={48} />
                   </div>
                 )}
-                
-                {/* Overlay on hover */}
-                <div className="absolute inset-0 bg-indigo-900/10 group-hover:bg-indigo-900/40 transition-colors flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-white/20 backdrop-blur-2xl flex items-center justify-center border border-white/30 scale-75 group-hover:scale-100 transition-all duration-500 shadow-2xl">
-                    <div className="w-14 h-14 rounded-full bg-white flex items-center justify-center shadow-lg">
-                      {tutorial.isPremium && !isPro ? (
-                        <Lock className="text-amber-600" size={24} />
-                      ) : (
-                        <Play fill="currentColor" className="text-indigo-600 ml-1" size={24} />
-                      )}
-                    </div>
+
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/20 opacity-0 transition-opacity group-hover:opacity-100">
+                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-indigo-600 shadow-xl">
+                    {tutorial.isPremium && !isPro ? (
+                      <Lock size={22} />
+                    ) : (
+                      <Play fill="currentColor" className="ml-1" size={22} />
+                    )}
                   </div>
                 </div>
-                
-                {/* Category Badge */}
-                <div className="absolute top-5 left-5 flex gap-2">
-                  <Badge variant="glass" className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] backdrop-blur-xl bg-black/30 border-white/10">
-                    {tutorial.category}
+
+                <div className="absolute left-4 top-4 flex flex-wrap gap-2">
+                  <Badge variant="glass" className="bg-slate-950/45 px-3 py-1 text-[10px] font-bold uppercase">
+                    {categoryLabel(tutorial)}
                   </Badge>
                   {tutorial.isPremium && (
-                    <Badge variant="glass" className="px-4 py-1.5 text-[10px] font-black uppercase tracking-[0.2em] backdrop-blur-xl bg-amber-500/80 border-amber-400/50 text-white">
+                    <Badge variant="glass" className="border-amber-300/40 bg-amber-500/90 px-3 py-1 text-[10px] font-bold uppercase text-white">
                       PRO
                     </Badge>
                   )}
                 </div>
 
-                {/* Share Button */}
                 <button 
+                  type="button"
                   onClick={(e) => handleShare(e, tutorial)}
-                  className="absolute bottom-5 right-5 w-10 h-10 rounded-full bg-black/20 hover:bg-black/40 backdrop-blur-md flex items-center justify-center text-white border border-white/20 transition-all opacity-0 group-hover:opacity-100 translate-y-2 group-hover:translate-y-0"
+                  aria-label={`Share ${tutorial.title}`}
+                  className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 bg-slate-950/40 text-white opacity-0 backdrop-blur transition-all hover:bg-slate-950/60 group-hover:opacity-100"
                 >
                   <Share2 size={16} />
                 </button>
               </div>
 
-              <div className="space-y-3 px-2">
-                <div className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-widest">
-                  <Clock size={12} />
-                  Tutorial Guide
+              <div className="flex flex-1 flex-col p-5">
+                <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
+                  <Clock size={14} className="text-indigo-500" />
+                  Step-by-step guide
                 </div>
-                <h3 className="text-2xl font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2 leading-snug">
+                <h3 className="line-clamp-2 text-lg font-bold leading-snug text-slate-950 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
                   {tutorial.title}
                 </h3>
-                <p className="text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed text-sm">
+                <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                   {tutorial.description || 'Elevate your financial management with this comprehensive step-by-step guide.'}
                 </p>
-                <div className="pt-2 flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
-                   <CheckCircle size={14} />
-                   Verified by Finance Team
+                <div className="mt-auto flex items-center justify-between gap-3 pt-5">
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle size={14} />
+                    Verified
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                    {tutorial.isPremium && !isPro ? 'Preview' : 'Watch'}
+                    <ArrowUpRight size={15} />
+                  </span>
                 </div>
               </div>
             </div>
@@ -215,31 +392,33 @@ export default function TutorialList({ tutorials, isPro }: Props) {
         size="2xl"
       >
         {playingVideo && (
-          <div className="flex flex-col lg:flex-row gap-8 pb-6 animate-in fade-in slide-in-from-bottom-8 duration-500">
-            {/* Left Column: Video & Info */}
-            <div className="flex-1 space-y-8 min-w-0">
-              <div className="aspect-video w-full rounded-[2rem] overflow-hidden bg-black shadow-2xl border-2 border-slate-100 dark:border-slate-800">
+          <div className="grid gap-6 pb-2 lg:grid-cols-[minmax(0,1fr)_18rem]">
+            <div className="min-w-0 space-y-6">
+              <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-sm dark:border-slate-700">
                 <iframe
                   src={getEmbedUrl(playingVideo.youtubeUrl) || ''}
-                  className="w-full h-full border-0"
+                  title={playingVideo.title}
+                  className="h-full w-full border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
                 />
               </div>
               
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+              <div className="space-y-5">
+                <div className="flex flex-col items-start justify-between gap-4 sm:flex-row">
                   <div className="space-y-2">
-                    <div className="flex gap-2">
-                      <Badge variant="info" className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">{playingVideo.category}</Badge>
-                      <Badge variant="success" className="px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider">Verified</Badge>
+                    <div className="flex flex-wrap gap-2">
+                      <Badge variant="info" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">{categoryLabel(playingVideo)}</Badge>
+                      <Badge variant="success" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">Verified</Badge>
                     </div>
-                    <h2 className="text-3xl font-black text-slate-900 dark:text-white leading-tight">{playingVideo.title}</h2>
+                    <h2 className="text-2xl font-black leading-tight text-slate-950 dark:text-white">{playingVideo.title}</h2>
                   </div>
-                  <div className="flex gap-2 w-full sm:w-auto">
+                  <div className="flex w-full gap-2 sm:w-auto">
                     <button 
+                      type="button"
                       onClick={(e) => handleShare(e, playingVideo)}
-                      className="flex-1 sm:flex-none p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-xl transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+                      aria-label={`Share ${playingVideo.title}`}
+                      className="flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-900 transition-colors hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 sm:flex-none sm:px-3"
                     >
                       <Share2 size={20} />
                     </button>
@@ -247,63 +426,127 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                       href={playingVideo.youtubeUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-200 dark:shadow-none"
+                      className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-bold text-white transition-colors hover:bg-rose-700 sm:flex-none"
                     >
                       <Video size={18} />
-                      YOUTUBE
+                      YouTube
                     </a>
                   </div>
                 </div>
 
-                <div className="p-8 bg-slate-50 dark:bg-slate-800/50 rounded-[2rem] border border-slate-100 dark:border-slate-800">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Description</h4>
-                  <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-lg font-medium">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/40">
+                  <h4 className="mb-3 text-xs font-bold uppercase text-slate-400">Description</h4>
+                  <p className="text-sm font-medium leading-7 text-slate-600 dark:text-slate-300">
                     {playingVideo.description || 'This tutorial provides an in-depth look at how to master your personal finances using our platform. Follow along with our experts as they guide you through the core features and best practices.'}
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Right Column: Suggested Tutorials */}
-            <div className="w-full lg:w-80 shrink-0 space-y-6">
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">More Guides</h4>
-                <Badge variant="outline" className="text-[10px] font-bold">{tutorials.length - 1} Total</Badge>
+                <h4 className="text-xs font-bold uppercase text-slate-400">More Guides</h4>
+                <Badge variant="outline" className="text-[10px] font-bold">{Math.max(tutorials.length - 1, 0)} Total</Badge>
               </div>
-              <div className="flex lg:flex-col gap-4 overflow-x-auto lg:overflow-x-visible pb-4 lg:pb-0 no-scrollbar">
+              <div className="flex gap-3 overflow-x-auto pb-2 lg:flex-col lg:overflow-x-visible lg:pb-0">
                 {tutorials
                   .filter(t => t.id !== playingVideo.id)
                   .slice(0, 5)
                   .map((tutorial) => (
-                    <div 
+                    <button 
+                      type="button"
                       key={tutorial.id}
-                      onClick={() => setPlayingVideo(tutorial)}
-                      className="group cursor-pointer flex gap-3 p-3 rounded-2xl hover:bg-slate-100 dark:hover:bg-white/10 transition-all shrink-0 w-64 lg:w-full"
+                      onClick={() => openTutorial(tutorial)}
+                      className="group flex w-64 shrink-0 gap-3 rounded-xl p-2 text-left transition-colors hover:bg-slate-100 dark:hover:bg-white/10 lg:w-full"
                     >
-                      <div className="w-24 aspect-video rounded-xl overflow-hidden shrink-0 border border-slate-200 dark:border-slate-700 shadow-sm">
-                        <img src={tutorial.thumbnailUrl || ''} className="w-full h-full object-cover transition-transform group-hover:scale-110 duration-500" />
+                      <div className="relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                        {tutorial.thumbnailUrl ? (
+                          <Image
+                            src={tutorial.thumbnailUrl}
+                            alt={tutorial.title}
+                            fill
+                            sizes="6rem"
+                            unoptimized
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                            <Video size={22} />
+                          </div>
+                        )}
+                        {tutorial.isPremium && !isPro && (
+                          <div className="absolute inset-0 flex items-center justify-center bg-slate-950/35 text-white">
+                            <Lock size={16} />
+                          </div>
+                        )}
                       </div>
-                      <div className="min-w-0 flex flex-col justify-center">
-                        <h5 className="text-sm font-bold text-slate-900 dark:text-white line-clamp-2 leading-tight group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                      <div className="flex min-w-0 flex-col justify-center">
+                        <h5 className="line-clamp-2 text-sm font-bold leading-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
                           {tutorial.title}
                         </h5>
-                        <p className="text-[10px] text-slate-500 mt-1 font-medium">{tutorial.category}</p>
+                        <p className="mt-1 text-[10px] font-medium text-slate-500">{categoryLabel(tutorial)}</p>
                       </div>
-                    </div>
+                    </button>
                   ))}
               </div>
-              
-              {/* Help Box */}
-              <div className="relative overflow-hidden p-8 bg-indigo-600 rounded-[2.5rem] text-white shadow-2xl shadow-indigo-200 dark:shadow-none hidden lg:block">
-                <div className="absolute -right-4 -top-4 w-20 h-20 bg-white/10 rounded-full blur-2xl" />
-                <div className="relative z-10">
-                  <h5 className="font-black text-lg mb-2">Need help?</h5>
-                  <p className="text-xs text-indigo-100 mb-6 leading-relaxed font-medium">Our support team is available 24/7 to help you reach your goals.</p>
-                  <button className="w-full py-3 bg-white text-indigo-600 rounded-xl text-xs font-black hover:bg-indigo-50 transition-all hover:scale-105 active:scale-95 shadow-lg">
-                    CONTACT SUPPORT
-                  </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
+        isOpen={!!lockedVideo}
+        onClose={() => setLockedVideo(null)}
+        title="PRO tutorial"
+        size="sm"
+      >
+        {lockedVideo && (
+          <div className="space-y-5 pb-2">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 dark:border-slate-700 dark:bg-slate-800">
+              <div className="relative aspect-video">
+                {lockedVideo.thumbnailUrl ? (
+                  <Image
+                    src={lockedVideo.thumbnailUrl}
+                    alt={lockedVideo.title}
+                    fill
+                    sizes="(max-width: 640px) 100vw, 28rem"
+                    unoptimized
+                    className="object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-slate-400">
+                    <Video size={40} />
+                  </div>
+                )}
+                <div className="absolute inset-0 flex items-center justify-center bg-slate-950/45 text-white">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-amber-600 shadow-lg">
+                    <Lock size={22} />
+                  </div>
                 </div>
               </div>
+            </div>
+            <div>
+              <Badge variant="warning" className="mb-3 px-3 py-1 text-xs font-bold">PRO access required</Badge>
+              <h3 className="text-xl font-black text-slate-950 dark:text-white">{lockedVideo.title}</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                This guide is part of the PRO academy. Upgrade your subscription to watch it and unlock the full tutorial library.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => setLockedVideo(null)}
+                className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
+              >
+                Keep Browsing
+              </button>
+              <a
+                href="/subscription"
+                className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
+              >
+                View Plans
+                <ArrowUpRight className="h-4 w-4" />
+              </a>
             </div>
           </div>
         )}
