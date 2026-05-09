@@ -23,6 +23,8 @@ model User {
   createdAt     DateTime               @default(now())
   updatedAt     DateTime               @updatedAt
   accounts      Account[]
+  adminMessageStates AdminMessageState[]
+  adminMessageRecipients AdminMessageRecipient[]
   budgets       Budget[]
   categories    Category[]
   financialNotes FinancialNote[]
@@ -40,6 +42,7 @@ model User {
   sentInvites    UserInvite[]           @relation("SentUserInvites")
   subscription  UserSubscription?
   transactions  Transaction[]
+  createdAdminMessages AdminMessage[] @relation("CreatedAdminMessages")
 
   @@index([status])
   @@index([lastLoginAt])
@@ -318,6 +321,56 @@ model NotificationPreference {
   user                     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model AdminMessage {
+  id          String                    @id @default(cuid())
+  title       String
+  message     String
+  severity    NotificationSeverity      @default(INFO)
+  displayMode AdminMessageDisplayMode   @default(MODAL)
+  frequency   AdminMessageFrequency     @default(ONCE)
+  audience    AdminMessageAudience      @default(ALL)
+  actionLabel String?
+  actionUrl   String?
+  startsAt    DateTime?
+  endsAt      DateTime?
+  isActive    Boolean                   @default(true)
+  createdById String?
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  createdBy   User?                     @relation("CreatedAdminMessages", fields: [createdById], references: [id], onDelete: SetNull)
+  recipients  AdminMessageRecipient[]
+  states      AdminMessageState[]
+
+  @@index([isActive, startsAt, endsAt])
+  @@index([audience])
+  @@index([createdAt])
+}
+
+model AdminMessageRecipient {
+  id        String       @id @default(cuid())
+  messageId String
+  userId    String
+  message   AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId])
+}
+
+model AdminMessageState {
+  id          String       @id @default(cuid())
+  messageId   String
+  userId      String
+  seenCount   Int          @default(0)
+  lastSeenAt  DateTime?
+  dismissedAt DateTime?
+  message     AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([userId, dismissedAt])
+}
+
 model FinancialNote {
   id                 String                  @id @default(cuid())
   userId             String
@@ -511,6 +564,22 @@ enum NotificationSource {
   TRANSACTION
   ACCOUNT
   SYSTEM
+}
+
+enum AdminMessageAudience {
+  ALL
+  SELECTED
+}
+
+enum AdminMessageDisplayMode {
+  MODAL
+  BANNER
+}
+
+enum AdminMessageFrequency {
+  EVERY_REFRESH
+  ONCE
+  UNTIL_DISMISSED
 }
 
 enum InvestmentStatus {

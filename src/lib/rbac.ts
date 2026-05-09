@@ -8,6 +8,7 @@ const ROLE_RANK: Record<UserRole, number> = {
 };
 
 const PLAN_RANK: Record<SubscriptionPlan, number> = {
+  FREE: 0,
   PRO: 1,
 };
 

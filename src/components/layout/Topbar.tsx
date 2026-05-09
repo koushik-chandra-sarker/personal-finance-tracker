@@ -16,7 +16,7 @@ import {
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle,
+  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -55,6 +55,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
+  { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
   { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
 ];

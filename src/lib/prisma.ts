@@ -14,13 +14,15 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   const runtimeClient = client as RuntimePrismaClient | undefined;
   const tutorialFields = runtimeClient?._runtimeDataModel?.models?.Tutorial?.fields;
   const hasTutorialPremiumFlag = tutorialFields?.some((field) => field.name === 'isPremium') ?? false;
+  const hasAdminMessageModel = Boolean(runtimeClient?._runtimeDataModel?.models?.AdminMessage);
 
   return Boolean(
     client &&
     'investmentCashflow' in client &&
     'pageView' in client &&
     'userActivity' in client &&
-    hasTutorialPremiumFlag
+    hasTutorialPremiumFlag &&
+    hasAdminMessageModel
   );
 }
 

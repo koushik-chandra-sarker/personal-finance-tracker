@@ -9,6 +9,7 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 }
 
