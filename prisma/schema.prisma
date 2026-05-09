@@ -415,6 +415,7 @@ enum UserStatus {
 }
 
 enum SubscriptionPlan {
+  FREE
   PRO
 }
 
@@ -690,4 +691,20 @@ model SanchayapatraConfig {
   payoutFrequency  String   // MONTHLY, QUARTERLY, AT_MATURITY
   updatedAt        DateTime @updatedAt
   investments      Investment[]
+}
+
+model Tutorial {
+  id          String   @id @default(cuid())
+  title       String
+  description String?
+  youtubeUrl  String
+  thumbnailUrl String?
+  category    String?  @default("General")
+  isActive    Boolean  @default(true)
+  isPremium   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
 }

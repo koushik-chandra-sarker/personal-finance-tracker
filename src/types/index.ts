@@ -2,7 +2,7 @@ import { type DefaultSession } from 'next-auth';
 
 export type UserRole = 'ADMIN' | 'USER';
 export type UserStatus = 'ACTIVE' | 'SUSPENDED' | 'INVITED' | 'DELETED';
-export type SubscriptionPlan = 'PRO';
+export type SubscriptionPlan = 'FREE' | 'PRO';
 export type SubscriptionInterval = 'MONTHLY' | 'YEARLY';
 export type SubscriptionStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED';
 export type SubscriptionSource = 'SELF_SERVICE' | 'ADMIN_GRANT';

@@ -16,7 +16,7 @@ import {
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3
+  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -44,6 +44,7 @@ const investmentNavItems: NavItem[] = [
 
 const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
+  { href: '/tutorials', label: 'Academy', icon: PlayCircle },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
@@ -55,6 +56,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
+  { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
 ];
 
 function isActiveRoute(pathname: string, href: string) {

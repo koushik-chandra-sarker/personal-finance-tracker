@@ -36,3 +36,15 @@ export function TableSkeleton({ rows = 5 }: { rows?: number }) {
     </div>
   );
 }
+export function TutorialCardSkeleton() {
+  return (
+    <div className="flex flex-col space-y-4">
+      <Skeleton className="aspect-video w-full rounded-[2rem]" />
+      <div className="space-y-2 px-2">
+        <Skeleton className="h-6 w-3/4" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-2/3" />
+      </div>
+    </div>
+  );
+}

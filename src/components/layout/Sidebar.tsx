@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
-  Users, KeyRound, TrendingUp, BarChart3,
+  Users, KeyRound, TrendingUp, BarChart3, PlayCircle,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -34,6 +34,7 @@ const investmentNavItems: NavItem[] = [
 
 const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
+  { href: '/tutorials', label: 'Academy', icon: PlayCircle },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
@@ -45,6 +46,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
+  { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
 ];
 
 function isActiveRoute(pathname: string, href: string) {

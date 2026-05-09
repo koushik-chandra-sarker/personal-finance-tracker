@@ -9,10 +9,10 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  className?: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'full';
 }
 
-export default function Modal({ isOpen, onClose, title, children, className }: ModalProps) {
+export default function Modal({ isOpen, onClose, title, children, className, size = 'md' }: ModalProps) {
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -21,6 +21,15 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
     }
     return () => { document.body.style.overflow = ''; };
   }, [isOpen]);
+
+  const sizes = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-4xl',
+    '2xl': 'max-w-6xl',
+    full: 'max-w-[calc(100vw-2rem)]',
+  };
 
   if (!isOpen) return null;
 
@@ -32,8 +41,9 @@ export default function Modal({ isOpen, onClose, title, children, className }: M
       <div className="absolute inset-0 bg-black/40 dark:bg-black/60 backdrop-blur-sm" />
       <div
         className={cn(
-          'relative flex flex-col w-full max-w-lg max-h-[calc(100vh-6rem)] rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl',
-          'transform transition-all duration-200 scale-100 opacity-100',
+          'relative flex flex-col w-full max-h-[calc(100vh-6rem)] rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl',
+          sizes[size],
+          'transform transition-all duration-300 scale-100 opacity-100',
           className
         )}
         onClick={(e) => e.stopPropagation()}
