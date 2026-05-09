@@ -73,8 +73,8 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
       <Loader show={isPending} message="Processing..." />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Recurring Transactions</h1>
-          <p className="text-sm text-slate-400">{recurring.filter(r => r.isActive).length} active</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Recurring Transactions</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{recurring.filter(r => r.isActive).length} active</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Recurring</Button>
       </div>
@@ -83,31 +83,31 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
         <EmptyState
           title="No recurring transactions"
           description="Set up automatic recurring income or expenses"
-          icon={<RefreshCw className="h-12 w-12 text-slate-500" />}
+          icon={<RefreshCw className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
           action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Recurring</Button>}
         />
       ) : (
         <div className="space-y-2">
           {recurring.map((rec) => (
-            <div key={rec.id} className={`flex items-center gap-3 p-4 rounded-2xl border bg-slate-800/50 transition-all group ${rec.isActive ? 'border-slate-700/50' : 'border-slate-700/30 opacity-50'}`}>
+            <div key={rec.id} className={`flex items-center gap-3 p-4 rounded-2xl border bg-white dark:bg-slate-800/50 transition-all group ${rec.isActive ? 'border-slate-200 dark:border-slate-700/50' : 'border-slate-100 dark:border-slate-700/30 opacity-50'}`}>
               <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${rec.type === 'INCOME' ? 'bg-emerald-500/10' : 'bg-rose-500/10'}`}>
-                {rec.type === 'INCOME' ? <TrendingUp className="h-5 w-5 text-emerald-400" /> : <TrendingDown className="h-5 w-5 text-rose-400" />}
+                {rec.type === 'INCOME' ? <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> : <TrendingDown className="h-5 w-5 text-rose-600 dark:text-rose-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white">{rec.description}</p>
-                <p className="text-xs text-slate-400">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">{rec.description}</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
                   {FREQUENCY_LABELS[rec.frequency]} · Next: {formatDate(rec.nextRunDate)}
                 </p>
               </div>
               <Badge variant={rec.isActive ? 'success' : 'default'}>{rec.isActive ? 'Active' : 'Paused'}</Badge>
-              <p className={`text-sm font-semibold ${rec.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}`}>
+              <p className={`text-sm font-semibold ${rec.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                 {formatCurrency(Number(rec.amount), userCurrency)}
               </p>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                <button onClick={() => handleToggle(rec.id)} className="p-2 rounded-lg text-slate-400 hover:text-amber-400 hover:bg-amber-500/10">
+                <button onClick={() => handleToggle(rec.id)} className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-amber-600 dark:hover:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-500/10">
                   <Power className="h-4 w-4" />
                 </button>
-                <button onClick={() => handleDelete(rec.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-500/10">
+                <button onClick={() => handleDelete(rec.id)} className="p-2 rounded-lg text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10">
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
@@ -119,10 +119,10 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Recurring Transaction">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="flex gap-2">
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'INCOME' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400' : 'border-slate-600/50 text-slate-400'}`}>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'INCOME' ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-200 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <input type="radio" value="INCOME" {...register('type')} className="hidden" /> Income
             </label>
-            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'EXPENSE' ? 'border-rose-500 bg-rose-500/10 text-rose-400' : 'border-slate-600/50 text-slate-400'}`}>
+            <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'EXPENSE' ? 'border-rose-500 bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'border-slate-200 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
               <input type="radio" value="EXPENSE" {...register('type')} className="hidden" /> Expense
             </label>
           </div>
