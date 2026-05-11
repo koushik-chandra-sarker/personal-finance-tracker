@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
-  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare,
+  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -34,6 +34,7 @@ const investmentNavItems: NavItem[] = [
 
 const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
+  { href: '/support', label: 'Support', icon: LifeBuoy },
   { href: '/tutorials', label: 'Academy', icon: PlayCircle },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
@@ -46,6 +47,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
   { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
 ];

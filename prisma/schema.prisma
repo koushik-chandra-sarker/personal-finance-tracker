@@ -25,6 +25,8 @@ model User {
   accounts      Account[]
   adminMessageStates AdminMessageState[]
   adminMessageRecipients AdminMessageRecipient[]
+  adminSupportAccessAudits SupportAccessAudit[] @relation("AdminSupportAccessAudits")
+  adminSupportAccessSessions SupportAccessSession[] @relation("AdminSupportAccessSessions")
   budgets       Budget[]
   categories    Category[]
   financialNotes FinancialNote[]
@@ -41,6 +43,10 @@ model User {
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
   sentInvites    UserInvite[]           @relation("SentUserInvites")
   subscription  UserSubscription?
+  supportAccessAudits SupportAccessAudit[] @relation("UserSupportAccessAudits")
+  supportAccessSessions SupportAccessSession[] @relation("UserSupportAccessSessions")
+  supportMessages SupportMessage[] @relation("UserSupportMessages")
+  supportTickets SupportTicket[] @relation("UserSupportTickets")
   transactions  Transaction[]
   createdAdminMessages AdminMessage[] @relation("CreatedAdminMessages")
 
@@ -371,6 +377,86 @@ model AdminMessageState {
   @@index([userId, dismissedAt])
 }
 
+model SupportTicket {
+  id          String                @id @default(cuid())
+  userId      String
+  subject     String
+  description String                @db.Text
+  phoneNumber String?
+  status      SupportTicketStatus   @default(OPEN)
+  priority    SupportTicketPriority @default(NORMAL)
+  category    SupportTicketCategory @default(GENERAL)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  resolvedAt  DateTime?
+  user        User                  @relation("UserSupportTickets", fields: [userId], references: [id], onDelete: Cascade)
+  messages    SupportMessage[]
+  accessSessions SupportAccessSession[]
+  auditLogs   SupportAccessAudit[]
+
+  @@index([userId])
+  @@index([status])
+  @@index([priority])
+  @@index([category])
+  @@index([updatedAt])
+}
+
+model SupportMessage {
+  id          String        @id @default(cuid())
+  ticketId    String
+  senderId    String
+  message     String        @db.Text
+  isFromAdmin Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  sender      User          @relation("UserSupportMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId, createdAt])
+  @@index([senderId])
+}
+
+model SupportAccessSession {
+  id             String    @id @default(cuid())
+  userId         String
+  adminId        String?
+  ticketId       String?
+  pinHash        String
+  pinLookupHash  String
+  pinExpiresAt   DateTime
+  verifiedAt     DateTime?
+  revokedAt      DateTime?
+  failedAttempts Int       @default(0)
+  lastFailedAt   DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  user           User      @relation("UserSupportAccessSessions", fields: [userId], references: [id], onDelete: Cascade)
+  admin          User?     @relation("AdminSupportAccessSessions", fields: [adminId], references: [id], onDelete: SetNull)
+  ticket         SupportTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([adminId])
+  @@index([ticketId])
+  @@index([pinLookupHash])
+  @@index([pinExpiresAt])
+}
+
+model SupportAccessAudit {
+  id        String                   @id @default(cuid())
+  userId    String
+  adminId   String?
+  ticketId  String?
+  action    SupportAccessAuditAction
+  metadata  Json?
+  createdAt DateTime                 @default(now())
+  user      User                     @relation("UserSupportAccessAudits", fields: [userId], references: [id], onDelete: Cascade)
+  admin     User?                    @relation("AdminSupportAccessAudits", fields: [adminId], references: [id], onDelete: SetNull)
+  ticket    SupportTicket?           @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([adminId, createdAt])
+  @@index([ticketId])
+}
+
 model FinancialNote {
   id                 String                  @id @default(cuid())
   userId             String
@@ -580,6 +666,38 @@ enum AdminMessageFrequency {
   EVERY_REFRESH
   ONCE
   UNTIL_DISMISSED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum SupportTicketCategory {
+  GENERAL
+  BILLING
+  BUG_REPORT
+  FEATURE_REQUEST
+  ACCOUNT_ISSUE
+}
+
+enum SupportAccessAuditAction {
+  PIN_GENERATED
+  PIN_REVOKED
+  PIN_VERIFIED
+  PIN_FAILED
+  SUPPORT_VIEW_STARTED
+  SUPPORT_VIEW_ENDED
+  SUPPORT_VIEW_EXPIRED
 }
 
 enum InvestmentStatus {

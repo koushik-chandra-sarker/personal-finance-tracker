@@ -4,6 +4,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { Feature, AccessLevel } from '@prisma/client';
 import { getCurrentUserAccess, hasActiveSubscription } from '@/lib/rbac';
+import { getActiveSupportView } from '@/lib/support-access';
 
 export const WORKSPACE_COOKIE = 'pft_active_workspace';
 
@@ -35,6 +36,11 @@ export async function getEffectiveUserId(): Promise<string> {
     redirect(subscriptionRedirectPath(currentUser));
   }
 
+  const supportView = await getActiveSupportView();
+  if (supportView) {
+    return supportView.targetUserId;
+  }
+
   const activeWorkspaceId = await getActiveWorkspace();
 
   // If no workspace is explicitly set, the user is in their own workspace
@@ -57,6 +63,14 @@ export async function validateAccess(feature: Feature, requiredLevel: AccessLeve
   }
 
   const activeWorkspaceId = await getActiveWorkspace();
+  const supportView = await getActiveSupportView();
+
+  if (supportView) {
+    if (requiredLevel === 'EDIT') {
+      throw new Error('Support view is read-only. Exit support view to make changes.');
+    }
+    return;
+  }
 
   if (currentUser.role === 'ADMIN') {
     return;
