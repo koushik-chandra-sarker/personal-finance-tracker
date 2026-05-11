@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { ArrowLeft, CheckCircle2, KeyRound, Radio, Send, ShieldCheck, UserCircle } from 'lucide-react';
-import type { SupportTicketDetail } from '@/actions/support.actions';
+import type { SupportTicketDetail, SupportTicketMessageRow } from '@/actions/support.actions';
 import {
   generateSupportPinAction,
   getAdminSupportTicketAction,
@@ -21,6 +21,19 @@ import { formatDate, formatRelativeDate } from '@/lib/utils';
 type Props = {
   ticket: SupportTicketDetail;
   isAdmin?: boolean;
+};
+
+type QueuedSupportMessage = SupportTicketMessageRow & {
+  deliveryStatus?: 'queued' | 'sending' | 'failed';
+};
+
+type TicketState = Omit<SupportTicketDetail, 'messages'> & {
+  messages: QueuedSupportMessage[];
+};
+
+type QueuedReply = {
+  clientId: string;
+  message: string;
 };
 
 const statusOptions = [
@@ -42,15 +55,82 @@ function statusBadge(status: SupportTicketDetail['status']) {
 }
 
 export default function SupportTicketDetailClient({ ticket, isAdmin = false }: Props) {
-  const [currentTicket, setCurrentTicket] = useState(ticket);
+  const [currentTicket, setCurrentTicket] = useState<TicketState>(ticket);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [generatedPin, setGeneratedPin] = useState<{ pin: string; expiresAt: string } | null>(null);
   const [isPinOpen, setIsPinOpen] = useState(false);
   const [isLiveConnected, setIsLiveConnected] = useState(false);
-  const [isReplyPending, startReplyTransition] = useTransition();
+  const [queuedReplyCount, setQueuedReplyCount] = useState(0);
+  const [isQueueSending, setIsQueueSending] = useState(false);
   const [isStatusPending, startStatusTransition] = useTransition();
   const [isPinPending, startPinTransition] = useTransition();
-  const messageEndRef = useRef<HTMLDivElement | null>(null);
+  const messageListRef = useRef<HTMLDivElement | null>(null);
+  const replyQueueRef = useRef<QueuedReply[]>([]);
+  const isProcessingQueueRef = useRef(false);
+
+  const dedupeMessages = useCallback((messages: QueuedSupportMessage[]) => {
+    const seen = new Set<string>();
+    return messages.filter((message) => {
+      if (seen.has(message.id)) return false;
+      seen.add(message.id);
+      return true;
+    });
+  }, []);
+
+  const processReplyQueue = useCallback(async () => {
+    if (isProcessingQueueRef.current) return;
+
+    isProcessingQueueRef.current = true;
+    setIsQueueSending(true);
+
+    while (replyQueueRef.current.length > 0) {
+      const nextReply = replyQueueRef.current[0];
+
+      setCurrentTicket((current) => ({
+        ...current,
+        messages: current.messages.map((message) => (
+          message.id === nextReply.clientId ? { ...message, deliveryStatus: 'sending' } : message
+        )),
+      }));
+
+      const formData = new FormData();
+      formData.set('message', nextReply.message);
+      const result = await replyToSupportTicketAction(ticket.id, formData);
+
+      if (result.success && result.data) {
+        const replyData = result.data;
+        setCurrentTicket((current) => {
+          const hasOptimisticMessage = current.messages.some((message) => message.id === nextReply.clientId);
+          const nextMessages = hasOptimisticMessage
+            ? current.messages.map((message) => (message.id === nextReply.clientId ? replyData.message : message))
+            : [...current.messages, replyData.message];
+          const dedupedMessages = dedupeMessages(nextMessages);
+
+          return {
+            ...current,
+            status: replyData.status,
+            updatedAt: replyData.message.createdAt,
+            messageCount: dedupedMessages.length,
+            messages: dedupedMessages,
+          };
+        });
+      } else {
+        setFeedback({ type: 'error', text: result.message });
+        setCurrentTicket((current) => ({
+          ...current,
+          messages: current.messages.map((message) => (
+            message.id === nextReply.clientId ? { ...message, deliveryStatus: 'failed' } : message
+          )),
+        }));
+      }
+
+      replyQueueRef.current.shift();
+      setQueuedReplyCount(replyQueueRef.current.length);
+    }
+
+    isProcessingQueueRef.current = false;
+    setIsQueueSending(false);
+  }, [dedupeMessages, ticket.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,7 +142,15 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
           : await getUserSupportTicketAction(ticket.id);
 
         if (!cancelled) {
-          setCurrentTicket(latestTicket);
+          setCurrentTicket((current) => {
+            const pendingMessages = current.messages.filter((message) => message.deliveryStatus);
+            const nextMessages = dedupeMessages([...latestTicket.messages, ...pendingMessages]);
+            return {
+              ...latestTicket,
+              messageCount: nextMessages.length,
+              messages: nextMessages,
+            };
+          });
         }
       } catch {
         // Keep the current conversation visible if a transient refresh fails.
@@ -95,10 +183,12 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
       cancelled = true;
       events.close();
     };
-  }, [isAdmin, ticket.id]);
+  }, [dedupeMessages, isAdmin, ticket.id]);
 
   useEffect(() => {
-    messageEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    const messageList = messageListRef.current;
+    if (!messageList) return;
+    messageList.scrollTo({ top: messageList.scrollHeight, behavior: 'smooth' });
   }, [currentTicket.messages.length]);
 
   const handleReply = (event: React.FormEvent<HTMLFormElement>) => {
@@ -106,20 +196,32 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
     setFeedback(null);
     const form = event.currentTarget;
     const formData = new FormData(form);
-    startReplyTransition(async () => {
-      const result = await replyToSupportTicketAction(ticket.id, formData);
-      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
-      if (result.success && result.data) {
-        setCurrentTicket((current) => ({
-          ...current,
-          status: result.data?.status || current.status,
-          updatedAt: result.data?.message.createdAt || current.updatedAt,
-          messageCount: current.messageCount + 1,
-          messages: [...current.messages, result.data!.message],
-        }));
-        form.reset();
-      }
-    });
+    const message = String(formData.get('message') || '').trim();
+    if (!message) return;
+
+    const clientId = `queued-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const createdAt = new Date().toISOString();
+    const optimisticMessage: QueuedSupportMessage = {
+      id: clientId,
+      message,
+      isFromAdmin: isAdmin,
+      createdAt,
+      deliveryStatus: 'queued',
+      sender: isAdmin
+        ? { id: 'support-admin', name: 'Support admin', email: '', role: 'ADMIN' }
+        : { id: currentTicket.user.id, name: currentTicket.user.name, email: currentTicket.user.email, role: 'USER' },
+    };
+
+    replyQueueRef.current.push({ clientId, message });
+    setQueuedReplyCount(replyQueueRef.current.length);
+    setCurrentTicket((current) => ({
+      ...current,
+      updatedAt: createdAt,
+      messageCount: current.messageCount + 1,
+      messages: [...current.messages, optimisticMessage],
+    }));
+    form.reset();
+    void processReplyQueue();
   };
 
   const handleStatus = (event: React.FormEvent<HTMLFormElement>) => {
@@ -198,7 +300,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
             <Radio className={`h-5 w-5 ${isLiveConnected ? 'text-emerald-500' : 'text-slate-400'}`} />
           </div>
 
-          <div className="max-h-[min(64vh,680px)] space-y-4 overflow-y-auto bg-white px-4 py-5 dark:bg-slate-900/20 sm:px-5">
+          <div ref={messageListRef} className="max-h-[min(64vh,680px)] space-y-4 overflow-y-auto bg-white px-4 py-5 dark:bg-slate-900/20 sm:px-5">
             {currentTicket.messages.map((message) => {
               const fromAdmin = message.isFromAdmin;
               return (
@@ -212,6 +314,11 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
                     <div className="mb-1 flex flex-wrap items-center gap-2 text-xs opacity-80">
                       <span className="font-semibold">{fromAdmin ? 'Support admin' : message.sender.name}</span>
                       <span>{formatDate(message.createdAt, 'MMM dd, h:mm a')}</span>
+                      {message.deliveryStatus && (
+                        <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-white/10 dark:text-slate-200">
+                          {message.deliveryStatus}
+                        </span>
+                      )}
                     </div>
                     <p className="whitespace-pre-wrap text-sm leading-6">{message.message}</p>
                   </div>
@@ -223,15 +330,18 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
                 </div>
               );
             })}
-            <div ref={messageEndRef} />
           </div>
 
           <form onSubmit={handleReply} className="sticky bottom-0 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5">
             <div className="mb-2 flex items-center justify-between gap-3">
               <label htmlFor="support-reply" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Reply</label>
-              {currentTicket.status !== 'CLOSED' && (
-                <span className="text-xs text-slate-500 dark:text-slate-400">Enter your message and send</span>
-              )}
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                {queuedReplyCount > 0 || isQueueSending
+                  ? `${queuedReplyCount} queued${isQueueSending ? ' · sending' : ''}`
+                  : currentTicket.status === 'CLOSED'
+                    ? 'Closed tickets cannot receive replies'
+                    : 'Enter your message and send'}
+              </span>
             </div>
             <textarea
               id="support-reply"
@@ -243,7 +353,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
               placeholder={currentTicket.status === 'CLOSED' ? 'Closed tickets cannot receive replies.' : 'Type your reply'}
             />
             <div className="mt-3 flex justify-end">
-              <Button type="submit" isLoading={isReplyPending} disabled={currentTicket.status === 'CLOSED'}>
+              <Button type="submit" disabled={currentTicket.status === 'CLOSED'}>
                 <Send className="h-4 w-4" />
                 Send reply
               </Button>

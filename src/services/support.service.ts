@@ -1,6 +1,7 @@
 import { createHmac, randomInt } from 'crypto';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
+import { createNotification } from '@/services/notification.service';
 import type {
   Prisma,
   SupportAccessAuditAction,
@@ -166,7 +167,7 @@ export async function getTicketDetails(ticketId: string, requesterId: string, is
 export async function addMessageToTicket(ticketId: string, senderId: string, message: string, isFromAdmin: boolean) {
   const ticket = await prisma.supportTicket.findUnique({
     where: { id: ticketId },
-    select: { id: true, status: true, userId: true },
+    select: { id: true, status: true, userId: true, subject: true },
   });
 
   if (!ticket) throw new Error('Support ticket not found.');
@@ -192,8 +193,84 @@ export async function addMessageToTicket(ticketId: string, senderId: string, mes
       select: { status: true },
     });
 
-    return { message: created, status: updatedTicket.status };
+    return { message: created, status: updatedTicket.status, ticket };
   });
+}
+
+export async function notifySupportReply(input: {
+  ticketId: string;
+  ticketSubject: string;
+  ticketOwnerId: string;
+  senderId: string;
+  isFromAdmin: boolean;
+}) {
+  try {
+    if (input.isFromAdmin) {
+      if (input.ticketOwnerId === input.senderId) return;
+      await createNotification(input.ticketOwnerId, {
+        title: 'Support replied',
+        message: `New reply on "${input.ticketSubject}".`,
+        type: 'SYSTEM',
+        severity: 'INFO',
+        sourceType: 'SYSTEM',
+        sourceId: input.ticketId,
+        actionUrl: `/support/${input.ticketId}`,
+      });
+      return;
+    }
+
+    const admins = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        id: { not: input.senderId },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    await Promise.all(admins.map((admin) => createNotification(admin.id, {
+      title: 'User replied to support',
+      message: `New user reply on "${input.ticketSubject}".`,
+      type: 'SYSTEM',
+      severity: 'INFO',
+      sourceType: 'SYSTEM',
+      sourceId: input.ticketId,
+      actionUrl: `/admin/support/${input.ticketId}`,
+    })));
+  } catch (error) {
+    console.error('Failed to create support reply notification:', error);
+  }
+}
+
+export async function notifyNewSupportTicket(input: {
+  ticketId: string;
+  ticketSubject: string;
+  senderId: string;
+}) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        id: { not: input.senderId },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    await Promise.all(admins.map((admin) => createNotification(admin.id, {
+      title: 'New support ticket',
+      message: `"${input.ticketSubject}" needs review.`,
+      type: 'SYSTEM',
+      severity: 'INFO',
+      sourceType: 'SYSTEM',
+      sourceId: input.ticketId,
+      actionUrl: `/admin/support/${input.ticketId}`,
+    })));
+  } catch (error) {
+    console.error('Failed to create new support ticket notification:', error);
+  }
 }
 
 export async function updateTicketStatus(ticketId: string, status: SupportTicketStatus) {

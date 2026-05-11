@@ -3,7 +3,7 @@
 import { useSession, signOut } from 'next-auth/react';
 import { AlertTriangle, Bell, CheckCircle2, FileText, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
-import { type ElementType, useState, useRef, useEffect } from 'react';
+import { type ElementType, useState, useRef, useEffect, useCallback } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -94,6 +94,7 @@ export default function Topbar() {
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notificationToast, setNotificationToast] = useState<NotificationItem | null>(null);
   const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
   const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
   const isAdmin = session?.user?.role === 'ADMIN';
@@ -101,16 +102,103 @@ export default function Topbar() {
   const isAdminRoute = pathname.startsWith('/admin');
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
+  const latestNotificationIdRef = useRef<string | null>(null);
+  const notificationLoadedRef = useRef(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
 
-  const fetchNotifications = async () => {
+  const getNotificationAudioContext = useCallback(() => {
+    try {
+      const AudioContextClass = window.AudioContext || (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AudioContextClass) return null;
+
+      if (!audioContextRef.current || audioContextRef.current.state === 'closed') {
+        audioContextRef.current = new AudioContextClass();
+      }
+
+      return audioContextRef.current;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const playNotificationSound = useCallback(() => {
+    try {
+      const audioContext = getNotificationAudioContext();
+      if (!audioContext) return;
+
+      const playTone = (startTime: number, frequency: number, peakGain: number) => {
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+
+        oscillator.type = 'square';
+        oscillator.frequency.setValueAtTime(frequency, startTime);
+        oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.86, startTime + 0.12);
+        gain.gain.setValueAtTime(0.0001, startTime);
+        gain.gain.exponentialRampToValueAtTime(peakGain, startTime + 0.025);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startTime + 0.24);
+
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startTime);
+        oscillator.stop(startTime + 0.26);
+      };
+
+      const now = audioContext.currentTime;
+      playTone(now, 880, 0.18);
+      playTone(now + 0.18, 1180, 0.16);
+    } catch {
+      // Browsers may block sound until the user has interacted with the page.
+    }
+  }, [getNotificationAudioContext]);
+
+  const fetchNotifications = useCallback(async (options: { announceNew?: boolean } = {}) => {
     if (!session?.user?.id) return;
     const [items, count] = await Promise.all([
       getNotificationsAction({ limit: 10 }),
       getUnreadNotificationCountAction(),
     ]);
-    setNotifications(items as NotificationItem[]);
+    const nextNotifications = items as NotificationItem[];
+    const latestNotification = nextNotifications[0] || null;
+    const previousLatestId = latestNotificationIdRef.current;
+
+    setNotifications(nextNotifications);
     setUnreadCount(count);
-  };
+
+    if (!notificationLoadedRef.current) {
+      notificationLoadedRef.current = true;
+      latestNotificationIdRef.current = latestNotification?.id || null;
+      return;
+    }
+
+    if (
+      options.announceNew
+      && latestNotification
+      && latestNotification.id !== previousLatestId
+      && !latestNotification.isRead
+      && latestNotification.actionUrl !== pathname
+    ) {
+      setNotificationToast(latestNotification);
+    }
+
+    latestNotificationIdRef.current = latestNotification?.id || null;
+  }, [pathname, session?.user?.id]);
+
+  useEffect(() => {
+    const unlockAudio = () => {
+      const audioContext = getNotificationAudioContext();
+      if (audioContext?.state === 'suspended') {
+        void audioContext.resume();
+      }
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [getNotificationAudioContext]);
 
   // Close user menu on outside click
   useEffect(() => {
@@ -142,13 +230,68 @@ export default function Topbar() {
       getUnreadNotificationCountAction(),
     ]).then(([items, count]) => {
       if (cancelled) return;
-      setNotifications(items as NotificationItem[]);
+      const nextNotifications = items as NotificationItem[];
+      setNotifications(nextNotifications);
       setUnreadCount(count);
+      latestNotificationIdRef.current = nextNotifications[0]?.id || null;
+      notificationLoadedRef.current = true;
     });
     return () => {
       cancelled = true;
     };
   }, [session?.user?.id]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const events = new EventSource('/api/notifications/events');
+
+    events.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data) as { type?: string };
+        if (payload.type === 'connected' || payload.type === 'heartbeat') return;
+      } catch {
+        return;
+      }
+
+      void fetchNotifications({ announceNew: true });
+    };
+
+    events.onerror = () => {
+      // EventSource retries automatically; the bell keeps its last known state.
+    };
+
+    return () => {
+      events.close();
+    };
+  }, [session?.user?.id, fetchNotifications]);
+
+  useEffect(() => {
+    if (!notificationToast) return;
+    playNotificationSound();
+    const timeoutId = window.setTimeout(() => setNotificationToast(null), 15000);
+    return () => window.clearTimeout(timeoutId);
+  }, [notificationToast, playNotificationSound]);
+
+  useEffect(() => {
+    if (!session?.user?.id) return;
+
+    const refreshIfVisible = () => {
+      if (document.visibilityState === 'visible') {
+        void fetchNotifications({ announceNew: true });
+      }
+    };
+
+    const intervalId = window.setInterval(refreshIfVisible, 15000);
+    window.addEventListener('focus', refreshIfVisible);
+    document.addEventListener('visibilitychange', refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshIfVisible);
+      document.removeEventListener('visibilitychange', refreshIfVisible);
+    };
+  }, [session?.user?.id, fetchNotifications]);
 
   const handleMarkAllRead = async () => {
     await markAllNotificationsReadAction();
@@ -159,6 +302,7 @@ export default function Topbar() {
     await markNotificationReadAction(id);
     await fetchNotifications();
     setNotificationOpen(false);
+    setNotificationToast(null);
   };
 
   const handlePayDpsReminder = async (notification: NotificationItem) => {
@@ -370,6 +514,46 @@ export default function Topbar() {
           </div>
         </div>
       </header>
+
+      {notificationToast && (
+        <div className="fixed right-4 top-20 z-50 w-[min(calc(100vw-2rem),24rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-900/15 animate-in slide-in-from-top-2 fade-in duration-200 dark:border-slate-700 dark:bg-slate-800">
+          <div className="flex gap-3 p-4">
+            <div className={cn('mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl', severityStyle[notificationToast.severity] || severityStyle.INFO)}>
+              <SeverityIcon severity={notificationToast.severity} />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{notificationToast.title}</p>
+              <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-300">{notificationToast.message}</p>
+              <div className="mt-3 flex items-center gap-2">
+                {notificationToast.actionUrl && (
+                  <Link
+                    href={notificationToast.actionUrl}
+                    onClick={() => void handleNotificationClick(notificationToast.id)}
+                    className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                  >
+                    Open
+                  </Link>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setNotificationToast(null)}
+                  className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setNotificationToast(null)}
+              className="h-8 w-8 shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
+              aria-label="Dismiss notification"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Mobile sidebar overlay */}
       {mobileOpen && (

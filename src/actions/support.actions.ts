@@ -230,6 +230,11 @@ export async function createSupportTicketAction(formData: FormData): Promise<Act
     }
 
     const ticket = await supportService.createTicket(user.id, parsed.data);
+    await supportService.notifyNewSupportTicket({
+      ticketId: ticket.id,
+      ticketSubject: ticket.subject,
+      senderId: user.id,
+    });
     revalidateSupport(ticket.id);
     return { success: true, message: 'Support ticket created.', data: { id: ticket.id } };
   } catch (error) {
@@ -250,6 +255,13 @@ export async function replyToSupportTicketAction(ticketId: string, formData: For
     }
 
     const result = await supportService.addMessageToTicket(ticketId, user.id, parsed.data.message, user.role === 'ADMIN');
+    await supportService.notifySupportReply({
+      ticketId,
+      ticketSubject: result.ticket.subject,
+      ticketOwnerId: result.ticket.userId,
+      senderId: user.id,
+      isFromAdmin: user.role === 'ADMIN',
+    });
     revalidateSupport(ticketId);
     publishSupportTicketEvent(ticketId, 'message');
     return {

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import { Prisma, type NotificationSeverity, type NotificationSource, type NotificationType } from '@prisma/client';
+import { publishNotificationEvent } from '@/lib/notification-events';
 
 type CreateNotificationData = {
   title: string;
@@ -45,9 +46,11 @@ export async function markAllAsRead(userId: string) {
 }
 
 export async function createNotification(userId: string, data: CreateNotificationData) {
-  return prisma.notification.create({
+  const notification = await prisma.notification.create({
     data: { userId, ...data },
   });
+  publishNotificationEvent(userId);
+  return notification;
 }
 
 export async function createNotificationOnce(userId: string, data: CreateNotificationData) {
@@ -60,6 +63,7 @@ export async function createNotificationOnce(userId: string, data: CreateNotific
     const notification = await prisma.notification.create({
       data: { userId, ...data },
     });
+    publishNotificationEvent(userId);
     return { notification, created: true };
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
