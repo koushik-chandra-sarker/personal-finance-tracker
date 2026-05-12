@@ -6,6 +6,7 @@ import { recurringSchema } from '@/lib/validations/recurring';
 import * as recurringService from '@/services/recurring.service';
 import type { ActionResponse } from '@/types';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
+import { hasActiveSubscription } from '@/lib/rbac';
 export async function getRecurringAction() {
   const userId = await getEffectiveUserId();
   await validateAccess('TRANSACTIONS', 'VIEW');
@@ -57,6 +58,7 @@ export async function deleteRecurringAction(id: string): Promise<ActionResponse>
 export async function processDueRecurringAction(): Promise<{ success: boolean; processed: number }> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, processed: 0 };
+  if (!(await hasActiveSubscription(session.user.id))) return { success: false, processed: 0 };
 
   const userId = await getEffectiveUserId();
   await validateAccess('TRANSACTIONS', 'EDIT');

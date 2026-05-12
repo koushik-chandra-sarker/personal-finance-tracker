@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { getSession, signIn } from 'next-auth/react';
 import { useForm, type Resolver } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@/lib/validations/auth';
@@ -38,7 +39,27 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
 
       const result = await registerUser(formData);
       if (result.success) {
-        router.push('/login');
+        const signInResult = await signIn('credentials', {
+          email: data.email,
+          password: data.password,
+          redirect: false,
+        });
+        if (signInResult?.error) {
+          router.push('/login');
+          return;
+        }
+
+        const session = await getSession();
+        const hasActiveSubscription =
+          session?.user?.role === 'ADMIN' ||
+          (
+            session?.user?.subscriptionPlan === 'PRO' &&
+            (session.user.subscriptionStatus === 'ACTIVE' || session.user.subscriptionStatus === 'TRIALING') &&
+            (!session.user.subscriptionCurrentPeriodEnd || new Date(session.user.subscriptionCurrentPeriodEnd) >= new Date())
+          );
+
+        router.replace(hasActiveSubscription ? '/dashboard' : '/subscription?reason=missing&next=/dashboard');
+        router.refresh();
       } else {
         setError(result.message);
       }
@@ -60,7 +81,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
           <div className="text-center mb-6">
             <h2 className="text-xl font-semibold text-white">Create your account</h2>
             <p className="text-sm text-slate-400 mt-1">
-              {inviteToken ? 'Complete your invited account setup' : 'Start managing your finances'}
+              {inviteToken ? 'Complete your invited account setup' : 'Create your account, then choose a subscription'}
             </p>
           </div>
 

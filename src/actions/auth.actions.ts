@@ -50,16 +50,18 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
 
   const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
   const userCount = await prisma.user.count();
-  const invite = parsed.data.inviteToken
+  const inviteToken = parsed.data.inviteToken;
+  const invite = inviteToken
     ? await prisma.userInvite.findUnique({
-        where: { tokenHash: hashInviteToken(parsed.data.inviteToken) },
+        where: { tokenHash: hashInviteToken(inviteToken) },
       })
     : null;
 
-  if (userCount > 0) {
-    if (!invite) {
-      return { success: false, message: 'A valid invite is required to create an account.' };
-    }
+  if (inviteToken && !invite) {
+    return { success: false, message: 'This invite link is not valid.' };
+  }
+
+  if (invite) {
     if (invite.acceptedAt) {
       return { success: false, message: 'This invite has already been used.' };
     }

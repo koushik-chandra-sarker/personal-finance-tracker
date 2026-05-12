@@ -42,6 +42,19 @@ export async function getUnreadNotificationCountAction() {
   return notificationService.getUnreadCount(userId);
 }
 
+export async function getNotificationFeedAction(options: { limit?: number; unreadOnly?: boolean } = {}) {
+  const userId = await getSessionUserId();
+  const [notifications, unreadCount] = await Promise.all([
+    notificationService.getNotifications(userId, options),
+    notificationService.getUnreadCount(userId),
+  ]);
+
+  return {
+    notifications: notifications.map(serializeNotification),
+    unreadCount,
+  };
+}
+
 export async function markNotificationReadAction(id: string): Promise<ActionResponse> {
   const userId = await getSessionUserId();
   await notificationService.markAsRead(userId, id);

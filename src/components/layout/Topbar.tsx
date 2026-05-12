@@ -8,8 +8,7 @@ import WorkspaceSwitcher from './WorkspaceSwitcher';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  getNotificationsAction,
-  getUnreadNotificationCountAction,
+  getNotificationFeedAction,
   markAllNotificationsReadAction,
   markNotificationReadAction,
 } from '@/actions/notification.actions';
@@ -84,6 +83,8 @@ type NotificationItem = {
   createdAt: string;
 };
 
+const NOTIFICATION_STALE_MS = 5 * 60 * 1000;
+
 export default function Topbar() {
   const { data: session } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -103,6 +104,7 @@ export default function Topbar() {
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const latestNotificationIdRef = useRef<string | null>(null);
+  const lastNotificationRefreshAtRef = useRef(0);
   const notificationLoadedRef = useRef(false);
   const audioContextRef = useRef<AudioContext | null>(null);
 
@@ -153,16 +155,14 @@ export default function Topbar() {
 
   const fetchNotifications = useCallback(async (options: { announceNew?: boolean } = {}) => {
     if (!session?.user?.id) return;
-    const [items, count] = await Promise.all([
-      getNotificationsAction({ limit: 10 }),
-      getUnreadNotificationCountAction(),
-    ]);
-    const nextNotifications = items as NotificationItem[];
+    const feed = await getNotificationFeedAction({ limit: 10 });
+    const nextNotifications = feed.notifications as NotificationItem[];
     const latestNotification = nextNotifications[0] || null;
     const previousLatestId = latestNotificationIdRef.current;
 
+    lastNotificationRefreshAtRef.current = Date.now();
     setNotifications(nextNotifications);
-    setUnreadCount(count);
+    setUnreadCount(feed.unreadCount);
 
     if (!notificationLoadedRef.current) {
       notificationLoadedRef.current = true;
@@ -224,22 +224,8 @@ export default function Topbar() {
 
   useEffect(() => {
     if (!session?.user?.id) return;
-    let cancelled = false;
-    Promise.all([
-      getNotificationsAction({ limit: 10 }),
-      getUnreadNotificationCountAction(),
-    ]).then(([items, count]) => {
-      if (cancelled) return;
-      const nextNotifications = items as NotificationItem[];
-      setNotifications(nextNotifications);
-      setUnreadCount(count);
-      latestNotificationIdRef.current = nextNotifications[0]?.id || null;
-      notificationLoadedRef.current = true;
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.user?.id]);
+    void fetchNotifications();
+  }, [fetchNotifications, session?.user?.id]);
 
   useEffect(() => {
     if (!session?.user?.id) return;
@@ -277,17 +263,16 @@ export default function Topbar() {
     if (!session?.user?.id) return;
 
     const refreshIfVisible = () => {
-      if (document.visibilityState === 'visible') {
+      const isStale = Date.now() - lastNotificationRefreshAtRef.current > NOTIFICATION_STALE_MS;
+      if (document.visibilityState === 'visible' && isStale) {
         void fetchNotifications({ announceNew: true });
       }
     };
 
-    const intervalId = window.setInterval(refreshIfVisible, 15000);
     window.addEventListener('focus', refreshIfVisible);
     document.addEventListener('visibilitychange', refreshIfVisible);
 
     return () => {
-      window.clearInterval(intervalId);
       window.removeEventListener('focus', refreshIfVisible);
       document.removeEventListener('visibilitychange', refreshIfVisible);
     };
@@ -378,7 +363,13 @@ export default function Topbar() {
             <ThemeToggle />
             <div className="relative" ref={notificationRef}>
               <button
-                onClick={() => setNotificationOpen(!notificationOpen)}
+                onClick={() => {
+                  const nextOpen = !notificationOpen;
+                  setNotificationOpen(nextOpen);
+                  if (nextOpen && Date.now() - lastNotificationRefreshAtRef.current > NOTIFICATION_STALE_MS) {
+                    void fetchNotifications();
+                  }
+                }}
                 className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
                 aria-label="Notifications"
                 aria-expanded={notificationOpen}

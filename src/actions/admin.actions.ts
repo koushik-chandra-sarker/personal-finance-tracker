@@ -6,7 +6,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
 import type { ActionResponse } from '@/types';
-import type { Prisma, SubscriptionInterval, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
+import type { ManualPaymentProvider, ManualPaymentStatus, Prisma, SubscriptionInterval, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@prisma/client';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
 import { createHash, randomBytes } from 'crypto';
 
@@ -77,6 +77,56 @@ export type AdminSubscriptionPackageRow = SubscriptionPackageRow & {
   createdAt: string;
   updatedAt: string;
   subscriptionCount: number;
+};
+
+export type AdminManualPaymentMethodRow = {
+  id: string;
+  provider: ManualPaymentProvider;
+  label: string;
+  accountNumber: string;
+  accountName: string;
+  instructions: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  requestCount: number;
+};
+
+export type AdminManualPaymentRequestRow = {
+  id: string;
+  provider: ManualPaymentProvider;
+  status: ManualPaymentStatus;
+  amount: number;
+  currency: string;
+  reference: string;
+  senderAccount: string;
+  transactionId: string;
+  paidAt: string | null;
+  screenshotUrl: string | null;
+  note: string | null;
+  adminNote: string | null;
+  createdAt: string;
+  reviewedAt: string | null;
+  user: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  package: {
+    id: string;
+    name: string;
+    interval: SubscriptionInterval;
+  };
+  method: {
+    id: string;
+    label: string;
+    accountNumber: string;
+    accountName: string;
+  } | null;
+  reviewedBy: {
+    name: string;
+    email: string;
+  } | null;
 };
 
 export type AdminInviteResult = {
@@ -305,6 +355,61 @@ function serializeAdminPackage(pkg: {
   };
 }
 
+function serializeAdminManualPaymentMethod(method: {
+  id: string;
+  provider: ManualPaymentProvider;
+  label: string;
+  accountNumber: string;
+  accountName: string;
+  instructions: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: Date;
+  _count: { requests: number };
+}): AdminManualPaymentMethodRow {
+  return {
+    id: method.id,
+    provider: method.provider,
+    label: method.label,
+    accountNumber: method.accountNumber,
+    accountName: method.accountName,
+    instructions: method.instructions,
+    isActive: method.isActive,
+    sortOrder: method.sortOrder,
+    createdAt: method.createdAt.toISOString(),
+    requestCount: method._count.requests,
+  };
+}
+
+function serializeAdminManualPaymentRequest(request: {
+  id: string;
+  provider: ManualPaymentProvider;
+  status: ManualPaymentStatus;
+  amount: unknown;
+  currency: string;
+  reference: string;
+  senderAccount: string;
+  transactionId: string;
+  paidAt: Date | null;
+  screenshotUrl: string | null;
+  note: string | null;
+  adminNote: string | null;
+  createdAt: Date;
+  reviewedAt: Date | null;
+  user: { id: string; name: string; email: string };
+  package: { id: string; name: string; interval: SubscriptionInterval };
+  method: { id: string; label: string; accountNumber: string; accountName: string } | null;
+  reviewedBy: { name: string; email: string } | null;
+}): AdminManualPaymentRequestRow {
+  return {
+    ...request,
+    amount: Number(request.amount),
+    paidAt: request.paidAt?.toISOString() || null,
+    createdAt: request.createdAt.toISOString(),
+    reviewedAt: request.reviewedAt?.toISOString() || null,
+  };
+}
+
 function serializeAdminInvite(invite: {
   id: string;
   email: string;
@@ -508,6 +613,54 @@ function parsePackageFormData(formData: FormData): ActionResponse<{
   };
 }
 
+function parseManualPaymentMethodFormData(formData: FormData): ActionResponse<{
+  provider: ManualPaymentProvider;
+  label: string;
+  accountNumber: string;
+  accountName: string;
+  instructions: string | null;
+  isActive: boolean;
+  sortOrder: number;
+}> {
+  const provider = String(formData.get('provider') || '') as ManualPaymentProvider;
+  const label = String(formData.get('label') || '').trim();
+  const accountNumber = String(formData.get('accountNumber') || '').trim();
+  const accountName = String(formData.get('accountName') || '').trim();
+  const instructions = String(formData.get('instructions') || '').trim() || null;
+  const sortOrder = Number(formData.get('sortOrder') || 0);
+
+  if (provider !== 'BKASH' && provider !== 'NAGAD') return { success: false, message: 'Payment provider is invalid' };
+  if (!label || label.length > 80) return { success: false, message: 'Account label is required' };
+  if (!accountNumber || accountNumber.length < 8 || accountNumber.length > 24) return { success: false, message: 'Account number is invalid' };
+  if (!accountName || accountName.length > 80) return { success: false, message: 'Account name is required' };
+  if (instructions && instructions.length > 500) return { success: false, message: 'Instructions must be 500 characters or less' };
+  if (!Number.isInteger(sortOrder)) return { success: false, message: 'Sort order must be a whole number' };
+
+  return {
+    success: true,
+    message: 'Payment account data is valid',
+    data: {
+      provider,
+      label,
+      accountNumber,
+      accountName,
+      instructions,
+      isActive: formData.get('isActive') === 'on',
+      sortOrder,
+    },
+  };
+}
+
+function addSubscriptionInterval(date: Date, interval: SubscriptionInterval) {
+  const next = new Date(date);
+  if (interval === 'YEARLY') {
+    next.setFullYear(next.getFullYear() + 1);
+  } else {
+    next.setMonth(next.getMonth() + 1);
+  }
+  return next;
+}
+
 export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
   await requireRole('ADMIN');
 
@@ -627,6 +780,63 @@ export async function getAdminSubscriptionPackagesAction(): Promise<AdminSubscri
   });
 
   return packages.map(serializeAdminPackage);
+}
+
+export async function getAdminManualPaymentMethodsAction(): Promise<AdminManualPaymentMethodRow[]> {
+  await requireRole('ADMIN');
+
+  const methods = await prisma.manualPaymentMethod.findMany({
+    orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
+    include: {
+      _count: {
+        select: { requests: true },
+      },
+    },
+  });
+
+  return methods.map(serializeAdminManualPaymentMethod);
+}
+
+export async function getAdminManualPaymentRequestsAction(): Promise<AdminManualPaymentRequestRow[]> {
+  await requireRole('ADMIN');
+
+  const requests = await prisma.manualPaymentRequest.findMany({
+    select: {
+      id: true,
+      provider: true,
+      status: true,
+      amount: true,
+      currency: true,
+      reference: true,
+      senderAccount: true,
+      transactionId: true,
+      paidAt: true,
+      screenshotUrl: true,
+      note: true,
+      adminNote: true,
+      createdAt: true,
+      reviewedAt: true,
+      user: {
+        select: { id: true, name: true, email: true },
+      },
+      package: {
+        select: { id: true, name: true, interval: true },
+      },
+      method: {
+        select: { id: true, label: true, accountNumber: true, accountName: true },
+      },
+      reviewedBy: {
+        select: { name: true, email: true },
+      },
+    },
+    orderBy: [
+      { status: 'asc' },
+      { createdAt: 'desc' },
+    ],
+    take: 50,
+  });
+
+  return requests.map(serializeAdminManualPaymentRequest);
 }
 
 export async function getAdminUserInvitesAction(): Promise<AdminUserInviteRow[]> {
@@ -1117,6 +1327,162 @@ export async function setSubscriptionPackageActiveAction(packageId: string, isAc
   revalidatePath('/subscription');
   revalidatePath('/settings');
   return { success: true, message: `${pkg.name} ${isActive ? 'activated' : 'deactivated'}` };
+}
+
+export async function createManualPaymentMethodAction(formData: FormData): Promise<ActionResponse> {
+  await requireRole('ADMIN');
+
+  const parsed = parseManualPaymentMethodFormData(formData);
+  if (!parsed.success || !parsed.data) return { success: false, message: parsed.message };
+
+  try {
+    await prisma.manualPaymentMethod.create({ data: parsed.data });
+    revalidatePath('/admin/subscriptions');
+    revalidatePath('/subscription');
+    return { success: true, message: `${parsed.data.label} payment account created` };
+  } catch {
+    return { success: false, message: 'Failed to create payment account' };
+  }
+}
+
+export async function updateManualPaymentMethodAction(methodId: string, formData: FormData): Promise<ActionResponse> {
+  await requireRole('ADMIN');
+
+  const parsed = parseManualPaymentMethodFormData(formData);
+  if (!parsed.success || !parsed.data) return { success: false, message: parsed.message };
+
+  try {
+    await prisma.manualPaymentMethod.update({
+      where: { id: methodId },
+      data: parsed.data,
+    });
+    revalidatePath('/admin/subscriptions');
+    revalidatePath('/subscription');
+    return { success: true, message: `${parsed.data.label} payment account updated` };
+  } catch {
+    return { success: false, message: 'Failed to update payment account' };
+  }
+}
+
+export async function setManualPaymentMethodActiveAction(methodId: string, isActive: boolean): Promise<ActionResponse> {
+  await requireRole('ADMIN');
+
+  const method = await prisma.manualPaymentMethod.update({
+    where: { id: methodId },
+    data: { isActive },
+  });
+
+  revalidatePath('/admin/subscriptions');
+  revalidatePath('/subscription');
+  return { success: true, message: `${method.label} ${isActive ? 'activated' : 'deactivated'}` };
+}
+
+export async function approveManualPaymentRequestAction(requestId: string, formData?: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  await requireRole('ADMIN');
+
+  const adminNote = String(formData?.get('adminNote') || '').trim() || null;
+  if (adminNote && adminNote.length > 500) return { success: false, message: 'Admin note must be 500 characters or less' };
+
+  const request = await prisma.manualPaymentRequest.findUnique({
+    where: { id: requestId },
+    include: {
+      package: true,
+      user: { select: { email: true } },
+    },
+  });
+
+  if (!request) return { success: false, message: 'Payment request not found' };
+  if (request.status !== 'PENDING') return { success: false, message: 'Only pending payments can be approved' };
+
+  const now = new Date();
+  await prisma.$transaction(async (tx) => {
+    const existingSubscription = await tx.userSubscription.findUnique({
+      where: { userId: request.userId },
+      select: { currentPeriodEnd: true, status: true },
+    });
+    const baseDate =
+      existingSubscription?.status === 'ACTIVE' &&
+      existingSubscription.currentPeriodEnd &&
+      existingSubscription.currentPeriodEnd > now
+        ? existingSubscription.currentPeriodEnd
+        : now;
+    const currentPeriodEnd = addSubscriptionInterval(baseDate, request.package.interval);
+
+    await tx.manualPaymentRequest.update({
+      where: { id: request.id },
+      data: {
+        status: 'APPROVED',
+        adminNote,
+        reviewedAt: now,
+        reviewedById: session.user.id,
+      },
+    });
+
+    await tx.userSubscription.upsert({
+      where: { userId: request.userId },
+      update: {
+        packageId: request.packageId,
+        plan: 'PRO',
+        interval: request.package.interval,
+        source: 'SELF_SERVICE',
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: false,
+        providerSubscriptionId: `manual:${request.id}`,
+      },
+      create: {
+        userId: request.userId,
+        packageId: request.packageId,
+        plan: 'PRO',
+        interval: request.package.interval,
+        source: 'SELF_SERVICE',
+        status: 'ACTIVE',
+        currentPeriodStart: now,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: false,
+        providerSubscriptionId: `manual:${request.id}`,
+      },
+    });
+  });
+
+  revalidatePath('/admin/subscriptions');
+  revalidatePath('/subscription');
+  revalidatePath('/settings');
+  revalidatePath('/dashboard');
+  return { success: true, message: `Payment approved and access activated for ${request.user.email}` };
+}
+
+export async function rejectManualPaymentRequestAction(requestId: string, formData?: FormData): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  await requireRole('ADMIN');
+
+  const adminNote = String(formData?.get('adminNote') || '').trim() || null;
+  if (adminNote && adminNote.length > 500) return { success: false, message: 'Admin note must be 500 characters or less' };
+
+  const request = await prisma.manualPaymentRequest.findUnique({
+    where: { id: requestId },
+    select: { id: true, status: true, user: { select: { email: true } } },
+  });
+  if (!request) return { success: false, message: 'Payment request not found' };
+  if (request.status !== 'PENDING') return { success: false, message: 'Only pending payments can be rejected' };
+
+  await prisma.manualPaymentRequest.update({
+    where: { id: request.id },
+    data: {
+      status: 'REJECTED',
+      adminNote,
+      reviewedAt: new Date(),
+      reviewedById: session.user.id,
+    },
+  });
+
+  revalidatePath('/admin/subscriptions');
+  revalidatePath('/subscription');
+  return { success: true, message: `Payment rejected for ${request.user.email}` };
 }
 
 export async function createUserInviteAction(formData: FormData): Promise<ActionResponse<AdminInviteResult>> {
