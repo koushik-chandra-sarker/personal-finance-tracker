@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
+import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
@@ -35,11 +36,11 @@ const investmentNavItems: NavItem[] = [
 const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/support', label: 'Support', icon: LifeBuoy },
-  { href: '/tutorials', label: 'Academy', icon: PlayCircle },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -63,19 +64,23 @@ function isActiveInvestmentRoute(pathname: string, href: string) {
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [collapsed, setCollapsed] = useState(false);
   const [investmentsOpen, setInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'));
-  const isAdmin = session?.user?.role === 'ADMIN';
+  const currentUser = session?.user;
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const isSubscriptionLocked = status === 'authenticated' && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
   const renderNavLink = (item: NavItem) => {
     const isActive = isActiveRoute(pathname, item.href);
     return (
       <Link
         key={item.href}
-        href={item.href}
+        href={navHref(item.href)}
+        prefetch={!isSubscriptionLocked}
         className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
           isActive
@@ -132,7 +137,8 @@ export default function Sidebar() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={navHref(item.href)}
+                    prefetch={!isSubscriptionLocked}
                     title={collapsed ? item.label : undefined}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
@@ -181,7 +187,8 @@ export default function Sidebar() {
                   return (
                     <Link
                       key={item.href}
-                      href={item.href}
+                      href={navHref(item.href)}
+                      prefetch={!isSubscriptionLocked}
                       title={collapsed ? item.label : undefined}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',

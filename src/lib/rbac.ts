@@ -1,6 +1,7 @@
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { SubscriptionPlan, UserRole } from '@prisma/client';
+import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 
 const ROLE_RANK: Record<UserRole, number> = {
   USER: 1,
@@ -99,6 +100,7 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
       lockedUntil: true,
       subscription: {
         select: {
+          plan: true,
           status: true,
           currentPeriodEnd: true,
         },
@@ -110,9 +112,11 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
   if (user.status !== 'ACTIVE') return false;
   if (user.lockedUntil && user.lockedUntil > new Date()) return false;
   if (user.role === 'ADMIN') return true;
-  if (!user.subscription) return false;
-
-  const isActive = user.subscription.status === 'ACTIVE' || user.subscription.status === 'TRIALING';
-  const isExpired = user.subscription.currentPeriodEnd ? user.subscription.currentPeriodEnd < new Date() : false;
-  return isActive && !isExpired;
+  return hasActiveSubscriptionAccess({
+    role: user.role,
+    status: user.status,
+    subscriptionPlan: user.subscription?.plan || null,
+    subscriptionStatus: user.subscription?.status || null,
+    subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd || null,
+  });
 }

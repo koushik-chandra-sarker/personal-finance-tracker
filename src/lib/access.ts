@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import type { Feature, AccessLevel } from '@prisma/client';
 import { getCurrentUserAccess, hasActiveSubscription } from '@/lib/rbac';
 import { getActiveSupportView } from '@/lib/support-access';
+import { getSubscriptionBlockReason } from '@/lib/subscription-access';
 
 export const WORKSPACE_COOKIE = 'pft_active_workspace';
 
@@ -15,15 +16,7 @@ export async function getActiveWorkspace(): Promise<string | null> {
 }
 
 function subscriptionRedirectPath(access: Awaited<ReturnType<typeof getCurrentUserAccess>>) {
-  const reason = access.subscriptionPlan !== 'PRO'
-    ? 'missing'
-    : access.subscriptionStatus !== 'ACTIVE' && access.subscriptionStatus !== 'TRIALING'
-      ? 'inactive'
-      : access.subscriptionCurrentPeriodEnd && access.subscriptionCurrentPeriodEnd < new Date()
-        ? 'expired'
-        : 'invalid';
-
-  return `/subscription?reason=${reason}`;
+  return `/subscription?reason=${getSubscriptionBlockReason(access)}`;
 }
 
 export async function getEffectiveUserId(): Promise<string> {

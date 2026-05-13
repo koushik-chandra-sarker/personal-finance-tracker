@@ -1,5 +1,6 @@
 import type { NextAuthConfig } from 'next-auth';
 import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@/types';
+import { getSubscriptionBlockReason, hasActiveSubscriptionAccess, isSubscriptionUnlockedPath } from '@/lib/subscription-access';
 
 type SessionUpdate = {
   id?: string;
@@ -17,34 +18,6 @@ type SessionUpdate = {
   subscriptionCurrentPeriodEnd?: string | null;
   subscriptionCancelAtPeriodEnd?: boolean;
 };
-
-function hasActiveSessionAccess(user?: {
-  role?: UserRole;
-  status?: UserStatus;
-  subscriptionPlan?: SubscriptionPlan;
-  subscriptionStatus?: SubscriptionStatus;
-  subscriptionCurrentPeriodEnd?: string | null;
-}) {
-  if (!user) return false;
-  if (user.status && user.status !== 'ACTIVE') return false;
-  if (user.role === 'ADMIN') return true;
-  if (user.subscriptionPlan !== 'PRO') return false;
-  if (user.subscriptionStatus !== 'ACTIVE' && user.subscriptionStatus !== 'TRIALING') return false;
-  if (!user.subscriptionCurrentPeriodEnd) return true;
-  return new Date(user.subscriptionCurrentPeriodEnd) >= new Date();
-}
-
-function getSubscriptionBlockReason(user?: {
-  role?: UserRole;
-  subscriptionPlan?: SubscriptionPlan;
-  subscriptionStatus?: SubscriptionStatus;
-  subscriptionCurrentPeriodEnd?: string | null;
-}) {
-  if (!user || user.subscriptionPlan !== 'PRO') return 'missing';
-  if (user.subscriptionStatus !== 'ACTIVE' && user.subscriptionStatus !== 'TRIALING') return 'inactive';
-  if (user.subscriptionCurrentPeriodEnd && new Date(user.subscriptionCurrentPeriodEnd) < new Date()) return 'expired';
-  return 'invalid';
-}
 
 export const authConfig = {
   pages: {
@@ -68,7 +41,7 @@ export const authConfig = {
         nextUrl.pathname.startsWith('/reports') || 
         nextUrl.pathname.startsWith('/settings') ||
         nextUrl.pathname.startsWith('/subscription');
-      const isSubscriptionAllowedRoute = nextUrl.pathname.startsWith('/subscription');
+      const isSubscriptionAllowedRoute = isSubscriptionUnlockedPath(nextUrl.pathname);
 
       if (isPasswordChangeRoute) {
         if (!isLoggedIn) return false;
@@ -83,7 +56,7 @@ export const authConfig = {
           passwordUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
           return Response.redirect(passwordUrl);
         }
-        if (isSubscriptionAllowedRoute || hasActiveSessionAccess(auth.user)) return true;
+        if (isSubscriptionAllowedRoute || hasActiveSubscriptionAccess(auth.user)) return true;
         const subscriptionUrl = new URL('/subscription', nextUrl);
         subscriptionUrl.searchParams.set('reason', getSubscriptionBlockReason(auth.user));
         subscriptionUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);

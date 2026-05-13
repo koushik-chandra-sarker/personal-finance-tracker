@@ -3,7 +3,7 @@ import {
   getActiveSubscriptionPackagesAction,
   getMyManualPaymentRequestsAction,
 } from '@/actions/settings.actions';
-import { hasActiveSubscription } from '@/lib/rbac';
+import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 import { redirect } from 'next/navigation';
 import SubscriptionPageClient from '@/components/subscription/SubscriptionPageClient';
 
@@ -15,7 +15,7 @@ export default async function SubscriptionPage({ searchParams }: SubscriptionPag
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  if (await hasActiveSubscription(session.user.id)) {
+  if (hasActiveSubscriptionAccess(session.user)) {
     redirect('/dashboard');
   }
 

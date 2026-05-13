@@ -20,6 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
 import AppLogo from '@/components/brand/AppLogo';
+import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 
 type NavItem = {
   href: string;
@@ -44,11 +45,11 @@ const investmentNavItems: NavItem[] = [
 const secondaryNavItems: NavItem[] = [
   { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/support', label: 'Support', icon: LifeBuoy },
-  { href: '/tutorials', label: 'Academy', icon: PlayCircle },
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -86,7 +87,7 @@ type NotificationItem = {
 const NOTIFICATION_STALE_MS = 5 * 60 * 1000;
 
 export default function Topbar() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const [mobileInvestmentsOpen, setMobileInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
@@ -98,9 +99,12 @@ export default function Topbar() {
   const [notificationToast, setNotificationToast] = useState<NotificationItem | null>(null);
   const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
   const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
-  const isAdmin = session?.user?.role === 'ADMIN';
+  const currentUser = session?.user;
+  const isAdmin = currentUser?.role === 'ADMIN';
+  const isSubscriptionLocked = status === 'authenticated' && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const latestNotificationIdRef = useRef<string | null>(null);
@@ -490,7 +494,7 @@ export default function Topbar() {
               </button>
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
-                  <Link href="/settings" className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
+                  <Link href={navHref('/settings')} prefetch={!isSubscriptionLocked} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                     <Settings className="h-4 w-4" /> Settings
                   </Link>
                   <button
@@ -565,7 +569,8 @@ export default function Topbar() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={navHref(item.href)}
+                    prefetch={!isSubscriptionLocked}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
@@ -604,7 +609,8 @@ export default function Topbar() {
                       return (
                         <Link
                           key={item.href}
-                          href={item.href}
+                          href={navHref(item.href)}
+                          prefetch={!isSubscriptionLocked}
                           onClick={() => setMobileOpen(false)}
                           className={cn(
                             'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
@@ -627,7 +633,8 @@ export default function Topbar() {
                 return (
                   <Link
                     key={item.href}
-                    href={item.href}
+                    href={navHref(item.href)}
+                    prefetch={!isSubscriptionLocked}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
@@ -667,7 +674,8 @@ export default function Topbar() {
                         return (
                           <Link
                             key={item.href}
-                            href={item.href}
+                            href={navHref(item.href)}
+                            prefetch={!isSubscriptionLocked}
                             onClick={() => setMobileOpen(false)}
                             className={cn(
                               'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
