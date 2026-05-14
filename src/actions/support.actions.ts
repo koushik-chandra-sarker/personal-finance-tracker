@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { auth } from '@/lib/auth';
+import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/rbac';
 import { getActiveSupportView, setSupportViewCookie, clearSupportViewCookie } from '@/lib/support-access';
 import { publishSupportTicketEvent } from '@/lib/support-events';
@@ -373,5 +374,38 @@ export async function exitSupportViewAction(): Promise<ActionResponse> {
     return { success: true, message: 'Support view exited.' };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to exit support view.') };
+  }
+}
+
+export async function resetUserAppPinFromSupportAction(ticketId: string): Promise<ActionResponse> {
+  try {
+    const user = await getSessionUser();
+    await requireRole('ADMIN');
+    const ticket = await supportService.getTicketDetails(ticketId, user.id, true);
+
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: ticket.userId },
+        data: {
+          appPinHash: null,
+          appPinSetAt: null,
+          appPinResetAt: new Date(),
+        },
+      }),
+      prisma.supportMessage.create({
+        data: {
+          ticketId,
+          senderId: user.id,
+          isFromAdmin: true,
+          message: 'Your app PIN has been reset by support. You can create a new PIN from the in-app suggestion after you continue.',
+        },
+      }),
+    ]);
+
+    revalidateSupport(ticketId);
+    publishSupportTicketEvent(ticketId, 'message');
+    return { success: true, message: 'User app PIN reset.' };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to reset user app PIN.') };
   }
 }

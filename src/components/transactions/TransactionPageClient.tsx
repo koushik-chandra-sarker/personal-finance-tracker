@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,7 +17,7 @@ import EmptyState from '@/components/ui/EmptyState';
 import Loader from '@/components/ui/Loader';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import TransactionFilters from '@/components/transactions/TransactionFilters';
-import { Edit2, Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown, Clock } from 'lucide-react';
+import { Edit2, Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown, Clock, Loader2 } from 'lucide-react';
 
 interface Category { id: string; name: string; type: string; color: string; }
 interface Account { id: string; name: string; type: string; }
@@ -44,18 +44,61 @@ interface TransactionPageClientProps {
   totalExpense: number;
   dateFrom: string;
   dateTo: string;
+  dataVersionKey: string;
 }
 
 type TransactionFormValues = z.input<typeof transactionSchema>;
 
+function TransactionListLoading({ message }: { message: string }) {
+  return (
+    <div className="space-y-3">
+      <div className="sticky top-4 z-10 overflow-hidden rounded-xl border border-indigo-200 bg-white shadow-lg shadow-indigo-500/10 dark:border-indigo-500/30 dark:bg-slate-900">
+        <div className="flex items-center justify-between gap-3 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-100 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-200">
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{message}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Preparing the latest transaction view</p>
+            </div>
+          </div>
+          <div className="hidden h-2 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 sm:block">
+            <div className="h-full w-1/2 animate-pulse rounded-full bg-indigo-500" />
+          </div>
+        </div>
+        <div className="h-1 overflow-hidden bg-indigo-100 dark:bg-indigo-500/10">
+          <div className="h-full w-1/3 animate-pulse rounded-full bg-indigo-500" />
+        </div>
+      </div>
+
+      <div className="space-y-2" aria-hidden="true">
+        {Array.from({ length: 5 }, (_, index) => (
+          <div key={index} className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:flex-row sm:items-center sm:gap-4">
+            <div className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-700/60" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <div className="h-4 w-2/3 animate-pulse rounded bg-slate-200 dark:bg-slate-700/60" />
+              <div className="h-3 w-1/2 animate-pulse rounded bg-slate-100 dark:bg-slate-700/40" />
+            </div>
+            <div className="hidden h-4 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-700/60 sm:block" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function TransactionPageClient({
   initialTransactions, categories, accounts, total, pages, currentPage,
-  totalIncome, totalExpense, dateFrom, dateTo
+  totalIncome, totalExpense, dateFrom, dateTo, dataVersionKey
 }: TransactionPageClientProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+  const [navigationLoaderMessage, setNavigationLoaderMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const searchParamKey = searchParams.toString();
   const { data: session } = useSession();
   const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
     ? session.user.currency
@@ -122,6 +165,23 @@ export default function TransactionPageClient({
     });
   };
 
+  const transactionPageHref = (page: number) => {
+    const params = new URLSearchParams(searchParamKey);
+    params.set('page', String(page));
+    return `/transactions?${params.toString()}`;
+  };
+
+  const navigateToPage = (page: number) => {
+    setNavigationLoaderMessage('Loading transactions...');
+    router.push(transactionPageHref(page));
+  };
+
+  const isNavigatingTransactions = Boolean(navigationLoaderMessage);
+
+  useEffect(() => {
+    setNavigationLoaderMessage(null);
+  }, [dataVersionKey]);
+
   return (
     <div className="space-y-6">
       <Loader show={isPending} message={editingTransaction ? "Updating transaction..." : "Processing..."} />
@@ -145,10 +205,12 @@ export default function TransactionPageClient({
 
       {/* Filters */}
       <TransactionFilters 
+        key={searchParamKey}
         categories={categories} 
         accounts={accounts} 
         defaultDateFrom={dateFrom} 
         defaultDateTo={dateTo} 
+        onNavigateStart={(loaderMessage = 'Loading transactions...') => setNavigationLoaderMessage(loaderMessage)}
       />
 
       {/* Totals Summary */}
@@ -186,18 +248,23 @@ export default function TransactionPageClient({
         </div>
       </div>
 
-      {/* Transaction List */}
-      {initialTransactions.length === 0 ? (
-        <EmptyState
-          title="No transactions found"
-          description="Add your first transaction to start tracking your finances"
-          icon={<ArrowLeftRight className="h-12 w-12 text-slate-500" />}
-          action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Transaction</Button>}
-        />
-      ) : (
-        <div className="space-y-2">
-          {initialTransactions.map((tx) => (
-            <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all group">
+      <div className="relative" aria-busy={isNavigatingTransactions}>
+        {isNavigatingTransactions ? (
+          <TransactionListLoading message={navigationLoaderMessage || 'Loading transactions...'} />
+        ) : (
+        <div className="transition-opacity">
+          {/* Transaction List */}
+          {initialTransactions.length === 0 ? (
+            <EmptyState
+              title="No transactions found"
+              description="Add your first transaction to start tracking your finances"
+              icon={<ArrowLeftRight className="h-12 w-12 text-slate-500" />}
+              action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Transaction</Button>}
+            />
+          ) : (
+            <div className="space-y-2">
+              {initialTransactions.map((tx) => (
+                <div key={tx.id} className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 p-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 hover:bg-slate-50 dark:hover:bg-slate-800/70 transition-all group">
               
               {/* Top Section / Left Side */}
               <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0">
@@ -285,26 +352,30 @@ export default function TransactionPageClient({
                   Delete
                 </button>
               </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          )}
 
-      {/* Pagination */}
-      {pages > 1 && (
-        <div className="flex justify-center gap-2">
-          {Array.from({ length: pages }, (_, i) => (
-            <button
-              key={i}
-              onClick={() => router.push(`/transactions?page=${i + 1}`)}
-              className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${currentPage === i + 1 ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5'
-                }`}
-            >
-              {i + 1}
-            </button>
-          ))}
+          {/* Pagination */}
+          {pages > 1 && (
+            <div className="mt-6 flex justify-center gap-2">
+              {Array.from({ length: pages }, (_, i) => (
+                <button
+                  key={i}
+                  onClick={() => navigateToPage(i + 1)}
+                  disabled={currentPage === i + 1 || isNavigatingTransactions}
+                  className={`w-9 h-9 rounded-lg text-sm font-medium transition-colors ${currentPage === i + 1 ? 'bg-indigo-600 dark:bg-indigo-500 text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-white/5'
+                    }`}
+                >
+                  {i + 1}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
-      )}
+        )}
+      </div>
 
       {/* Add Transaction Modal */}
       <Modal 

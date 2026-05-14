@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useTransition, useState, useEffect, useMemo } from 'react';
+import { useTransition, useState, useMemo } from 'react';
 import { Search, Loader2, X, Filter } from 'lucide-react';
 import MultiSelectFilter, { type FilterMode } from '@/components/ui/MultiSelectFilter';
 
@@ -13,11 +13,13 @@ export default function TransactionFilters({
   accounts,
   defaultDateFrom = '',
   defaultDateTo = '',
+  onNavigateStart,
 }: { 
   categories: Category[]; 
   accounts: Account[];
   defaultDateFrom?: string;
   defaultDateTo?: string;
+  onNavigateStart?: (message?: string) => void;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -51,20 +53,6 @@ export default function TransactionFilters({
   const [dateFrom, setDateFrom] = useState(searchParams.get('dateFrom') || defaultDateFrom);
   const [dateTo, setDateTo] = useState(searchParams.get('dateTo') || defaultDateTo);
   const [sortBy, setSortBy] = useState(searchParams.get('sortBy') || 'createdAt_desc');
-
-  // Keep local state in sync with URL if user uses back/forward browser buttons
-  useEffect(() => {
-    setSearch(searchParams.get('search') || '');
-    setSelectedTypes(searchParams.get('types')?.split(',').filter(Boolean) || []);
-    setTypeMode((searchParams.get('typeMode') as FilterMode) || 'include');
-    setSelectedCategories(searchParams.get('categoryIds')?.split(',').filter(Boolean) || []);
-    setCategoryMode((searchParams.get('categoryMode') as FilterMode) || 'include');
-    setSelectedAccounts(searchParams.get('accountIds')?.split(',').filter(Boolean) || []);
-    setAccountMode((searchParams.get('accountMode') as FilterMode) || 'include');
-    setDateFrom(searchParams.get('dateFrom') || defaultDateFrom);
-    setDateTo(searchParams.get('dateTo') || defaultDateTo);
-    setSortBy(searchParams.get('sortBy') || 'createdAt_desc');
-  }, [searchParams, defaultDateFrom, defaultDateTo]);
 
   const applyFilters = () => {
     const params = new URLSearchParams(searchParams.toString());
@@ -109,8 +97,13 @@ export default function TransactionFilters({
     if (dateTo) params.set('dateTo', dateTo); else params.delete('dateTo');
     if (sortBy && sortBy !== 'createdAt_desc') params.set('sortBy', sortBy); else params.delete('sortBy');
 
+    const target = `/transactions?${params.toString()}`;
+    const current = searchParams.toString() ? `/transactions?${searchParams.toString()}` : '/transactions';
+    if (target === current) return;
+
+    onNavigateStart?.('Applying filters...');
     startTransition(() => {
-      router.push(`/transactions?${params.toString()}`);
+      router.push(target);
     });
   };
 
@@ -125,6 +118,9 @@ export default function TransactionFilters({
     setDateFrom('');
     setDateTo('');
     setSortBy('createdAt_desc');
+    if (!searchParams.toString()) return;
+
+    onNavigateStart?.('Clearing filters...');
     startTransition(() => {
       router.push('/transactions');
     });

@@ -9,6 +9,7 @@ import {
   getAdminSupportTicketAction,
   getUserSupportTicketAction,
   replyToSupportTicketAction,
+  resetUserAppPinFromSupportAction,
   updateSupportTicketStatusAction,
 } from '@/actions/support.actions';
 import Badge from '@/components/ui/Badge';
@@ -64,6 +65,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
   const [isQueueSending, setIsQueueSending] = useState(false);
   const [isStatusPending, startStatusTransition] = useTransition();
   const [isPinPending, startPinTransition] = useTransition();
+  const [isResetPinPending, startResetPinTransition] = useTransition();
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const replyQueueRef = useRef<QueuedReply[]>([]);
   const isProcessingQueueRef = useRef(false);
@@ -250,6 +252,19 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
     });
   };
 
+  const handleResetAppPin = () => {
+    if (!confirm(`Reset the app PIN for ${currentTicket.user.name}?`)) return;
+    setFeedback(null);
+    startResetPinTransition(async () => {
+      const result = await resetUserAppPinFromSupportAction(ticket.id);
+      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
+      if (result.success) {
+        const latestTicket = await getAdminSupportTicketAction(ticket.id);
+        setCurrentTicket({ ...latestTicket, messages: latestTicket.messages });
+      }
+    });
+  };
+
   const copyPin = async () => {
     if (!generatedPin) return;
     await navigator.clipboard.writeText(generatedPin.pin);
@@ -382,6 +397,14 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
                 <Select key={currentTicket.status} label="Status" name="status" defaultValue={currentTicket.status} options={statusOptions} />
                 <Button type="submit" isLoading={isStatusPending}>Update status</Button>
               </form>
+              <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">App PIN reset</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Use this after verifying the user in this support conversation.</p>
+                <Button type="button" variant="outline" className="mt-3" onClick={handleResetAppPin} isLoading={isResetPinPending}>
+                  <KeyRound className="h-4 w-4" />
+                  Reset user PIN
+                </Button>
+              </div>
             </Card>
           )}
 

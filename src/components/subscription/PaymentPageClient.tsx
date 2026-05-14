@@ -7,10 +7,13 @@ import { useSession } from 'next-auth/react';
 import {
   AlertCircle,
   ArrowLeft,
+  ArrowRight,
+  CalendarClock,
   Check,
   CheckCircle2,
   Clock3,
   Copy,
+  CreditCard,
   History,
   MessageCircle,
   ReceiptText,
@@ -88,6 +91,7 @@ export default function PaymentPageClient({
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [renderedAt] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
 
   const selectedPackage =
@@ -102,8 +106,15 @@ export default function PaymentPageClient({
   const providerMethods = methodsByProvider[selectedProvider];
   const selectedMethod = paymentMethods.find((method) => method.id === selectedMethodId) || providerMethods[0] || null;
   const pendingRequest = requests.find((request) => request.status === 'PENDING') || null;
+  const latestApprovedRequest = requests.find((request) => request.status === 'APPROVED') || null;
   const canSubmit = Boolean(selectedPackage && !pendingRequest);
   const canUseProviderTabs = paymentMethods.length > 0;
+  const activePackage = packages.find((pkg) => pkg.id === session?.user?.subscriptionPackageId) || null;
+  const accessEndDate = session?.user?.subscriptionCurrentPeriodEnd ? new Date(session.user.subscriptionCurrentPeriodEnd) : null;
+  const accessEndLabel = accessEndDate ? accessEndDate.toLocaleDateString() : 'Unlimited';
+  const daysRemaining = accessEndDate
+    ? Math.max(0, Math.ceil((accessEndDate.getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
+    : null;
   const userReference = useMemo(() => {
     const emailPart = session?.user?.email?.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'USER';
     return selectedPackage ? `TP-${emailPart}-${selectedPackage.slug}`.toUpperCase() : '';
@@ -143,24 +154,103 @@ export default function PaymentPageClient({
 
   if (accessState === 'active') {
     return (
-      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-3xl flex-col justify-center">
-        <div className="rounded-2xl border border-emerald-200 bg-white p-6 text-center shadow-sm dark:border-emerald-500/30 dark:bg-slate-900/60 sm:p-8">
-          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
-            <CheckCircle2 className="h-7 w-7" />
+      <div className="mx-auto max-w-5xl space-y-6">
+        <div className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-500/30 dark:bg-slate-900/60">
+          <div className="grid gap-5 p-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                <CheckCircle2 className="h-7 w-7" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Payment approved</p>
+                <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">Your subscription is active</h1>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+                  The payment form is hidden while your access is active. When the current period expires, you can return here to renew or upgrade.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
+              <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+                Go to dashboard <ArrowRight className="h-4 w-4" />
+              </Link>
+              <Link href="/settings" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+                Back to billing
+              </Link>
+            </div>
           </div>
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Payment approved</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Your subscription is active</h1>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            The payment form is hidden while your subscription is active. When it expires, you can return here to renew or upgrade.
-          </p>
-          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link href="/dashboard" className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-              Go to dashboard
-            </Link>
-            <Link href="/settings" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-              View subscription
-            </Link>
+          <div className="grid border-t border-slate-200 dark:border-slate-800 md:grid-cols-3">
+            <div className="p-5">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Current plan</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{session?.user?.subscriptionSource === 'ADMIN_GRANT' ? 'Admin granted' : 'Manual payment'}</p>
+            </div>
+            <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <CalendarClock className="h-5 w-5" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Valid until</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{accessEndLabel}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {daysRemaining !== null ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : 'No expiry date'}
+              </p>
+            </div>
+            <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                <ReceiptText className="h-5 w-5" />
+              </div>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Last approved payment</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+                {latestApprovedRequest ? formatCurrency(latestApprovedRequest.amount, latestApprovedRequest.currency) : 'Approved'}
+              </p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {latestApprovedRequest ? `${providerLabel(latestApprovedRequest.provider)} - ${latestApprovedRequest.transactionId}` : 'No manual payment history'}
+              </p>
+            </div>
           </div>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <Card className="p-0">
+            <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50">
+              <History className="h-5 w-5 text-indigo-500" />
+              <h2 className="font-semibold text-slate-900 dark:text-white">Payment History</h2>
+            </div>
+            <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
+              {requests.length === 0 ? (
+                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">No payment request submitted yet.</div>
+              ) : requests.map((request) => (
+                <div key={request.id} className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-semibold text-slate-900 dark:text-white">{request.package.name}</p>
+                      <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[request.status]}`}>
+                        {statusIcon(request.status)} {request.status.toLowerCase()}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                      {providerLabel(request.provider)} - {formatCurrency(request.amount, request.currency)}
+                    </p>
+                    <p className="mt-1 break-all text-xs text-slate-400">TrxID {request.transactionId} - Ref {request.reference}</p>
+                    {request.adminNote && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">Admin note: {request.adminNote}</p>}
+                  </div>
+                  <p className="text-xs text-slate-400">{new Date(request.createdAt).toLocaleString()}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <ShieldCheck className="mb-3 h-5 w-5 text-emerald-500" />
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Renewal rules</h2>
+            <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
+              <p>The payment form is locked while your subscription is active.</p>
+              <p>After expiry, package selection and manual payment submission will become available again.</p>
+              <p>Admin approval activates your next billing period after wallet verification.</p>
+            </div>
+          </Card>
         </div>
       </div>
     );

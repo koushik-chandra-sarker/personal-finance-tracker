@@ -1,0 +1,4 @@
+ALTER TABLE "User"
+ADD COLUMN "appPinHash" TEXT,
+ADD COLUMN "appPinSetAt" TIMESTAMP(3),
+ADD COLUMN "appPinResetAt" TIMESTAMP(3);

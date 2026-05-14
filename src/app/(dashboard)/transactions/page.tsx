@@ -52,9 +52,11 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
     prisma.category.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
     prisma.account.findMany({ where: { userId, isActive: true }, orderBy: { name: 'asc' } }),
   ]);
+  const clientStateKey = JSON.stringify(Object.entries(params).sort(([a], [b]) => a.localeCompare(b)));
 
   return (
     <TransactionPageClient
+      key={clientStateKey}
       initialTransactions={JSON.parse(JSON.stringify(transactions))}
       categories={JSON.parse(JSON.stringify(categories))}
       accounts={JSON.parse(JSON.stringify(accounts))}
@@ -65,6 +67,7 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
       totalExpense={totalExpense}
       dateFrom={dateFrom}
       dateTo={dateTo}
+      dataVersionKey={clientStateKey}
     />
   );
 }
