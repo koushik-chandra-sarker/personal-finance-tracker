@@ -1449,7 +1449,9 @@ export async function approveManualPaymentRequestAction(requestId: string, formD
   });
 
   revalidatePath('/admin/subscriptions');
+  revalidatePath('/admin/payments');
   revalidatePath('/subscription');
+  revalidatePath('/subscription/payment');
   revalidatePath('/settings');
   revalidatePath('/dashboard');
   return { success: true, message: `Payment approved and access activated for ${request.user.email}` };

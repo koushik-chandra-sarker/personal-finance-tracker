@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -387,6 +388,7 @@ model AdminMessage {
   displayMode AdminMessageDisplayMode   @default(MODAL)
   frequency   AdminMessageFrequency     @default(ONCE)
   audience    AdminMessageAudience      @default(ALL)
+  showToUnsubscribed Boolean            @default(false)
   actionLabel String?
   actionUrl   String?
   startsAt    DateTime?

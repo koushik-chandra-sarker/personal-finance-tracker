@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
-import { Check, CreditCard, Globe, Palette, Shield, User } from 'lucide-react';
+import { ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, ReceiptText, Palette, Shield, User } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import CollaboratorsList from '@/components/settings/CollaboratorsList';
@@ -11,7 +12,6 @@ import Loader from '@/components/ui/Loader';
 import {
   getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
-  updateSubscriptionAction,
   type SubscriptionPackageRow,
 } from '@/actions/settings.actions';
 
@@ -32,11 +32,11 @@ export default function SettingsPage() {
   const [packages, setPackages] = useState<SubscriptionPackageRow[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [isSubscriptionPending, startSubscriptionTransition] = useTransition();
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'billing' | 'security' | 'community'>('account');
+  const [renderedAt] = useState(() => Date.now());
   
   const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
   const subscriptionPlan = session?.user?.subscriptionPlan || null;
@@ -47,12 +47,18 @@ export default function SettingsPage() {
   const subscriptionPeriodEnd = session?.user?.subscriptionCurrentPeriodEnd
     ? new Date(session.user.subscriptionCurrentPeriodEnd).toLocaleDateString()
     : null;
+  const subscriptionEndDate = session?.user?.subscriptionCurrentPeriodEnd
+    ? new Date(session.user.subscriptionCurrentPeriodEnd)
+    : null;
   const isAdmin = session?.user?.role === 'ADMIN';
   const hasActiveSubscription = isAdmin || (
     subscriptionPlan === 'PRO' &&
     (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIALING') &&
     (!session?.user?.subscriptionCurrentPeriodEnd || new Date(session.user.subscriptionCurrentPeriodEnd) >= new Date())
   );
+  const daysRemaining = subscriptionEndDate
+    ? Math.max(0, Math.ceil((subscriptionEndDate.getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
+    : null;
   const currentTab = session && !hasActiveSubscription ? 'billing' : activeTab;
   const userName = session?.user?.name || 'User';
   const userEmail = session?.user?.email || '';
@@ -99,19 +105,6 @@ export default function SettingsPage() {
       });
   };
 
-  const activateSubscription = (packageId: string) => {
-    setSubscriptionMessage(null);
-    startSubscriptionTransition(async () => {
-      const result = await updateSubscriptionAction(packageId);
-      if (result.success && result.data) {
-        await update(result.data);
-        setSubscriptionMessage({ type: 'success', text: result.message });
-      } else {
-        setSubscriptionMessage({ type: 'error', text: result.message });
-      }
-    });
-  };
-
   const planLabel = () => {
     if (isAdmin) return 'Admin access';
     if (subscriptionPlan !== 'PRO') return 'Subscription required';
@@ -126,6 +119,25 @@ export default function SettingsPage() {
     if (subscriptionPackageId) return subscriptionPackageId === packageId;
     return subscriptionInterval === interval;
   };
+
+  const currentPackage = packages.find((pkg) => pkg.id === subscriptionPackageId) || null;
+  const statusLabel = isAdmin
+    ? 'Admin'
+    : hasActiveSubscription
+      ? subscriptionStatus === 'TRIALING' ? 'Trialing' : 'Active'
+      : subscriptionPlan === 'PRO' && subscriptionEndDate && subscriptionEndDate < new Date()
+        ? 'Expired'
+        : 'Payment required';
+  const statusTone = hasActiveSubscription
+    ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300'
+    : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300';
+  const accessSourceLabel = isAdmin
+    ? 'Admin role'
+    : subscriptionSource === 'ADMIN_GRANT'
+      ? 'Admin granted'
+      : subscriptionSource === 'SELF_SERVICE'
+        ? 'Manual payment'
+        : 'Not subscribed';
 
   const handleTabClick = (tabId: typeof activeTab) => {
     if (session && !hasActiveSubscription && tabId !== 'billing') {
@@ -273,76 +285,144 @@ export default function SettingsPage() {
               )}
 
               {currentTab === 'billing' && (
-                <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center gap-3 mb-8">
-                    <CreditCard className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Subscription</h2>
-                  </div>
+                <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-700/50 dark:bg-slate-800/50">
+                    <div className="grid gap-5 p-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+                      <div className="flex items-start gap-4">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+                          <CreditCard className="h-6 w-6" />
+                        </div>
+                        <div className="min-w-0">
+                          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Billing</h2>
+                          <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            Manage your access, review package options, and submit manual payment when renewal is needed.
+                          </p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex w-fit items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-bold ${statusTone}`}>
+                        {hasActiveSubscription ? <CheckCircle2 className="h-4 w-4" /> : <Clock3 className="h-4 w-4" />}
+                        {statusLabel}
+                      </span>
+                    </div>
 
-                  <div className="mb-6 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 p-5">
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                      <div>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Current Access</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                          {planLabel()}
-                        </p>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">
-                          Status: {subscriptionStatus.toLowerCase()}
-                          {subscriptionPeriodEnd ? ` · Valid until ${subscriptionPeriodEnd}` : subscriptionPlan === 'PRO' ? ' · Unlimited' : ''}
+                    <div className="grid border-t border-slate-200 dark:border-slate-800 md:grid-cols-3">
+                      <div className="p-5">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Current access</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{planLabel()}</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{accessSourceLabel}</p>
+                      </div>
+                      <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Valid until</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{subscriptionPeriodEnd || (subscriptionPlan === 'PRO' ? 'Unlimited' : '-')}</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                          {daysRemaining !== null && hasActiveSubscription ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : 'Renewal opens after expiry'}
                         </p>
                       </div>
-                      {isAdmin && (
-                        <div className="rounded-xl bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 text-sm font-medium text-indigo-700 dark:text-indigo-300">
-                          Admin
-                        </div>
-                      )}
+                      <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Payment flow</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Manual review</p>
+                        <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">bKash/Nagad details are verified by admin.</p>
+                      </div>
                     </div>
                   </div>
 
                   {subscriptionMessage && (
-                    <div className={`mb-6 p-3 rounded-xl text-sm ${subscriptionMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
+                    <div className={`p-3 rounded-xl text-sm ${subscriptionMessage.type === 'success' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400'}`}>
                       {subscriptionMessage.text}
                     </div>
                   )}
 
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {packages.length === 0 ? (
-                      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/50 p-5 text-sm text-slate-500 dark:text-slate-400 md:col-span-2">
-                        No subscription packages are currently available.
-                      </div>
-                    ) : packages.map((pkg) => {
-                      const currentPackage = isCurrentPackage(pkg.id, pkg.interval);
-                      return (
-                        <div key={pkg.id} className={`rounded-2xl border p-5 ${pkg.isFeatured ? 'border-indigo-200 dark:border-indigo-500/30 bg-indigo-50/50 dark:bg-indigo-500/10' : 'border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-900/30'}`}>
-                          <div className="flex items-center justify-between gap-3 mb-4">
-                            <div>
-                              <div className="flex flex-wrap items-center gap-2">
-                                <h3 className="text-lg font-bold text-slate-900 dark:text-white">{pkg.name}</h3>
-                                {pkg.discountLabel && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">{pkg.discountLabel}</span>}
-                              </div>
-                              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{pkg.description}</p>
-                            </div>
-                            {currentPackage && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
+                  {hasActiveSubscription && !isAdmin && (
+                    <Card className="border-emerald-200 bg-emerald-50/60 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-start gap-3">
+                          <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
+                          <div>
+                            <p className="font-bold text-slate-900 dark:text-white">Your payment is already approved</p>
+                            <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                              The payment form stays hidden while your current access is active. You can renew or upgrade after the current period expires.
+                            </p>
                           </div>
-                          <p className="text-3xl font-bold text-slate-900 dark:text-white mb-4">{formatCurrency(pkg.price, pkg.currency)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
-                          {pkg.featureBullets.length > 0 && (
-                            <div className="mb-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                              {pkg.featureBullets.map((bullet) => (
-                                <p key={bullet} className="flex items-center gap-2">
-                                  <Check className="h-4 w-4 shrink-0 text-emerald-500" /> {bullet}
-                                </p>
-                              ))}
-                            </div>
-                          )}
-                          <Button onClick={() => activateSubscription(pkg.id)} disabled={isSubscriptionPending || currentPackage} className="w-full">
-                            {currentPackage ? 'Current Package' : `Choose ${pkg.interval === 'YEARLY' ? 'Yearly' : 'Monthly'}`}
-                          </Button>
                         </div>
-                      );
-                    })}
-                  </div>
+                        <Link href="/subscription/payment" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-emerald-300 px-4 py-2 text-sm font-bold text-emerald-700 transition hover:bg-emerald-100 dark:border-emerald-500/40 dark:text-emerald-200 dark:hover:bg-emerald-500/10">
+                          View status <ArrowRight className="h-4 w-4" />
+                        </Link>
+                      </div>
+                    </Card>
+                  )}
 
-                </Card>
+                  <div>
+                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                      <div>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Available packages</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          {hasActiveSubscription && !isAdmin ? 'Package changes are available when your current access expires.' : 'Choose a package and submit payment details for admin approval.'}
+                        </p>
+                      </div>
+                      {currentPackage && (
+                        <div className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
+                          <ReceiptText className="h-4 w-4" />
+                          Current: {currentPackage.name}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {packages.length === 0 ? (
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-400 md:col-span-2">
+                          No subscription packages are currently available.
+                        </div>
+                      ) : packages.map((pkg) => {
+                        const currentPlan = isCurrentPackage(pkg.id, pkg.interval);
+                        const canPayNow = !isAdmin && !hasActiveSubscription;
+                        return (
+                          <div key={pkg.id} className={`flex min-h-full flex-col rounded-2xl border p-5 ${pkg.isFeatured ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : 'border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/30'}`}>
+                            <div className="mb-4 flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{pkg.name}</h3>
+                                  {pkg.isFeatured && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Recommended</span>}
+                                  {pkg.discountLabel && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">{pkg.discountLabel}</span>}
+                                </div>
+                                <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">{pkg.description}</p>
+                              </div>
+                              {currentPlan && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
+                            </div>
+                            <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(pkg.price, pkg.currency)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
+                            <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
+                              <CalendarClock className="h-4 w-4" />
+                              {pkg.interval === 'YEARLY' ? 'Yearly access' : 'Monthly access'}
+                            </div>
+                            {pkg.featureBullets.length > 0 && (
+                              <div className="my-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">
+                                {pkg.featureBullets.map((bullet) => (
+                                  <p key={bullet} className="flex items-center gap-2">
+                                    <Check className="h-4 w-4 shrink-0 text-emerald-500" /> {bullet}
+                                  </p>
+                                ))}
+                              </div>
+                            )}
+                            <div className="mt-auto">
+                              {canPayNow ? (
+                                <Link href={`/subscription/payment?packageId=${encodeURIComponent(pkg.id)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-700 hover:to-emerald-700">
+                                  Pay manually <ArrowRight className="h-4 w-4" />
+                                </Link>
+                              ) : (
+                                <button
+                                  type="button"
+                                  disabled
+                                  className="inline-flex w-full cursor-not-allowed items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-400 dark:border-slate-700 dark:text-slate-500"
+                                >
+                                  {currentPlan ? 'Current package' : isAdmin ? 'Admin access active' : 'Available after expiry'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
               )}
 
               {currentTab === 'security' && (

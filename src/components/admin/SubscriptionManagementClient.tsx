@@ -1,7 +1,8 @@
 'use client';
 
+import Link from 'next/link';
 import { useMemo, useState, useTransition, type FormEvent } from 'react';
-import { CheckCircle2, Clock3, Copy, CreditCard, Edit2, Infinity, Package, Power, ReceiptText, Smartphone, Timer, UserX, XCircle } from 'lucide-react';
+import { ArrowUpRight, CheckCircle2, Clock3, Copy, CreditCard, Edit2, Infinity, Package, Power, ReceiptText, Smartphone, Timer, UserX, XCircle } from 'lucide-react';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -259,7 +260,15 @@ export default function SubscriptionManagementClient({
             <h2 className="font-semibold text-slate-900 dark:text-white">Manual Payment Review</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">Confirm bKash or Nagad payments from wallet history before approving access.</p>
           </div>
-          <Button size="sm" variant="outline" onClick={refreshPaymentRequests} disabled={isPending}>Refresh</Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" variant="outline" onClick={refreshPaymentRequests} disabled={isPending}>Refresh</Button>
+            <Link
+              href="/admin/payments"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-white/5"
+            >
+              Open review page <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
         </div>
         <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
           {paymentRequests.length === 0 ? (

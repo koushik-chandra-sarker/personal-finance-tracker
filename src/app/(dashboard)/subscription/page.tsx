@@ -3,7 +3,8 @@ import {
   getActiveSubscriptionPackagesAction,
   getMyManualPaymentRequestsAction,
 } from '@/actions/settings.actions';
-import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getSubscriptionBlockReason, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getCurrentUserAccess } from '@/lib/rbac';
 import { redirect } from 'next/navigation';
 import SubscriptionPageClient from '@/components/subscription/SubscriptionPageClient';
 
@@ -15,9 +16,8 @@ export default async function SubscriptionPage({ searchParams }: SubscriptionPag
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  if (hasActiveSubscriptionAccess(session.user)) {
-    redirect('/dashboard');
-  }
+  const access = await getCurrentUserAccess();
+  const hasActiveAccess = hasActiveSubscriptionAccess(access);
 
   const params = await searchParams;
   const reasonParam = Array.isArray(params.reason) ? params.reason[0] : params.reason;
@@ -27,14 +27,15 @@ export default async function SubscriptionPage({ searchParams }: SubscriptionPag
   ]);
 
   const hasPendingPayment = paymentRequests.some((request) => request.status === 'PENDING');
-  if (hasPendingPayment) {
+  if (!hasActiveAccess && hasPendingPayment) {
     redirect('/subscription/payment');
   }
 
   return (
     <SubscriptionPageClient
-      reason={reasonParam || 'missing'}
+      reason={reasonParam || getSubscriptionBlockReason(access)}
       packages={packages}
+      accessState={hasActiveAccess ? 'active' : 'blocked'}
     />
   );
 }

@@ -29,6 +29,7 @@ export type AdminMessageRow = {
   displayMode: AdminMessageDisplayMode;
   frequency: AdminMessageFrequency;
   audience: AdminMessageAudience;
+  showToUnsubscribed: boolean;
   actionLabel: string | null;
   actionUrl: string | null;
   startsAt: string | null;
@@ -78,6 +79,7 @@ function serializeAdminMessage(message: Awaited<ReturnType<typeof adminMessageSe
     displayMode: message.displayMode,
     frequency: message.frequency,
     audience: message.audience,
+    showToUnsubscribed: message.showToUnsubscribed,
     actionLabel: message.actionLabel,
     actionUrl: message.actionUrl,
     startsAt: message.startsAt?.toISOString() || null,
@@ -137,6 +139,7 @@ function parseAdminMessageForm(formData: FormData): { success: true; input: Upda
       displayMode,
       frequency,
       audience,
+      showToUnsubscribed: formData.get('showToUnsubscribed') === 'on',
       actionLabel,
       actionUrl,
       startsAt,
@@ -150,7 +153,7 @@ function parseAdminMessageForm(formData: FormData): { success: true; input: Upda
 export async function getAdminMessageUsersAction(): Promise<AdminMessageUserOption[]> {
   await requireRole('ADMIN');
   const users = await prisma.user.findMany({
-    where: { status: 'ACTIVE' },
+    where: { status: 'ACTIVE', role: 'USER' },
     select: { id: true, name: true, email: true, role: true },
     orderBy: [{ role: 'asc' }, { name: 'asc' }],
     take: 200,

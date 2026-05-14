@@ -5,6 +5,8 @@ import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
 import type { ActionResponse } from '@/types';
 import type { ManualPaymentProvider, ManualPaymentStatus, SubscriptionInterval } from '@prisma/client';
+import { createNotification } from '@/services/notification.service';
+import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 
 export type SubscriptionPackageRow = {
   id: string;
@@ -140,6 +142,52 @@ function isValidScreenshotUrl(value: string) {
   }
 }
 
+async function notifyAdminsOfManualPaymentRequest(input: {
+  paymentRequestId: string;
+  senderId: string;
+  senderName: string;
+  packageName: string;
+  amount: number;
+  currency: string;
+  provider: ManualPaymentProvider;
+}) {
+  try {
+    const admins = await prisma.user.findMany({
+      where: {
+        role: 'ADMIN',
+        status: 'ACTIVE',
+        id: { not: input.senderId },
+      },
+      select: { id: true },
+      take: 50,
+    });
+
+    await Promise.all(admins.map((admin) => createNotification(admin.id, {
+      title: 'New manual payment submitted',
+      message: `${input.senderName} submitted ${formatAdminPaymentAmount(input.amount, input.currency)} for ${input.packageName} via ${input.provider === 'BKASH' ? 'bKash' : 'Nagad'}.`,
+      type: 'SYSTEM',
+      severity: 'INFO',
+      sourceType: 'SYSTEM',
+      sourceId: input.paymentRequestId,
+      actionUrl: '/admin/payments',
+    })));
+  } catch (error) {
+    console.error('Failed to notify admins about manual payment request:', error);
+  }
+}
+
+function formatAdminPaymentAmount(amount: number, currency: string) {
+  try {
+    return new Intl.NumberFormat('en-BD', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${currency} ${amount}`;
+  }
+}
+
 export async function getActiveSubscriptionPackagesAction(): Promise<SubscriptionPackageRow[]> {
   const packages = await prisma.subscriptionPackage.findMany({
     where: { isActive: true },
@@ -246,6 +294,33 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
 
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      role: true,
+      status: true,
+      subscription: {
+        select: {
+          plan: true,
+          status: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  if (!currentUser) return { success: false, message: 'Unauthorized' };
+
+  if (hasActiveSubscriptionAccess({
+    role: currentUser.role,
+    status: currentUser.status,
+    subscriptionPlan: currentUser.subscription?.plan || null,
+    subscriptionStatus: currentUser.subscription?.status || null,
+    subscriptionCurrentPeriodEnd: currentUser.subscription?.currentPeriodEnd || null,
+  })) {
+    return { success: false, message: 'Your subscription is already active. You can renew or upgrade after it expires.' };
+  }
+
   const packageId = String(formData.get('packageId') || '').trim();
   const methodId = String(formData.get('methodId') || '').trim();
   const provider = String(formData.get('provider') || '').trim() as ManualPaymentProvider;
@@ -298,7 +373,7 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
   }
 
   try {
-    await prisma.manualPaymentRequest.create({
+    const paymentRequest = await prisma.manualPaymentRequest.create({
       data: {
         userId: session.user.id,
         packageId: subscriptionPackage.id,
@@ -313,11 +388,23 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
         screenshotUrl,
         note,
       },
+      select: { id: true },
+    });
+
+    await notifyAdminsOfManualPaymentRequest({
+      paymentRequestId: paymentRequest.id,
+      senderId: session.user.id,
+      senderName: session.user.name || session.user.email || 'A user',
+      packageName: subscriptionPackage.name,
+      amount: Number(subscriptionPackage.price),
+      currency: subscriptionPackage.currency,
+      provider: paymentProvider,
     });
 
     revalidatePath('/subscription');
     revalidatePath('/subscription/payment');
     revalidatePath('/admin/subscriptions');
+    revalidatePath('/admin/payments');
     return { success: true, message: 'Payment submitted. Admin will verify it from the wallet transaction history.' };
   } catch (error) {
     if (typeof error === 'object' && error && 'code' in error && error.code === 'P2002') {

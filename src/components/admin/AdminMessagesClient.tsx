@@ -238,6 +238,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
                       <p className="font-semibold">{message.audience === 'ALL' ? 'All users' : `${message.recipients.length} selected`}</p>
+                      <p className="text-xs text-slate-400">{message.showToUnsubscribed ? 'Includes unsubscribed users' : 'Subscribed users only'}</p>
                       <p className="text-xs text-slate-400">{message.createdBy}</p>
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 dark:text-slate-400">
@@ -381,6 +382,13 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
             <input type="checkbox" name="isActive" defaultChecked={editingMessage?.isActive ?? true} />
             <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Publish immediately</span>
+          </label>
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
+            <input type="checkbox" name="showToUnsubscribed" defaultChecked={editingMessage?.showToUnsubscribed ?? false} className="mt-1" />
+            <span>
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Show to unsubscribed users</span>
+              <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">Keep this off for normal in-app announcements. Turn it on only for billing or access notices.</span>
+            </span>
           </label>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal} disabled={isPending}>Cancel</Button>

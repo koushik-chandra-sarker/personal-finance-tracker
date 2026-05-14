@@ -5,6 +5,7 @@ import {
   getMyManualPaymentRequestsAction,
 } from '@/actions/settings.actions';
 import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getCurrentUserAccess } from '@/lib/rbac';
 import { redirect } from 'next/navigation';
 import PaymentPageClient from '@/components/subscription/PaymentPageClient';
 
@@ -24,9 +25,8 @@ export default async function SubscriptionPaymentPage({
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
 
-  if (hasActiveSubscriptionAccess(session.user)) {
-    redirect('/dashboard');
-  }
+  const access = await getCurrentUserAccess();
+  const hasActiveAccess = hasActiveSubscriptionAccess(access);
 
   const params = await searchParams;
   const [packages, paymentMethods, paymentRequests] = await Promise.all([
@@ -41,6 +41,7 @@ export default async function SubscriptionPaymentPage({
       selectedPackageId={firstParam(params.packageId) || null}
       paymentMethods={paymentMethods}
       paymentRequests={paymentRequests}
+      accessState={hasActiveAccess ? 'active' : 'blocked'}
     />
   );
 }

@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma';
 import type { AdminMessageAudience, AdminMessageDisplayMode, AdminMessageFrequency, NotificationSeverity, Prisma } from '@prisma/client';
+import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 
 export type AdminMessageInput = {
   title: string;
@@ -8,6 +9,7 @@ export type AdminMessageInput = {
   displayMode: AdminMessageDisplayMode;
   frequency: AdminMessageFrequency;
   audience: AdminMessageAudience;
+  showToUnsubscribed: boolean;
   actionLabel?: string | null;
   actionUrl?: string | null;
   startsAt?: Date | null;
@@ -47,6 +49,7 @@ export async function createAdminMessage(input: AdminMessageInput) {
       displayMode: input.displayMode,
       frequency: input.frequency,
       audience: input.audience,
+      showToUnsubscribed: input.showToUnsubscribed,
       actionLabel: input.actionLabel || null,
       actionUrl: input.actionUrl || null,
       startsAt: input.startsAt || null,
@@ -76,6 +79,7 @@ export async function updateAdminMessage(id: string, input: UpdateAdminMessageIn
         displayMode: input.displayMode,
         frequency: input.frequency,
         audience: input.audience,
+        showToUnsubscribed: input.showToUnsubscribed,
         actionLabel: input.actionLabel || null,
         actionUrl: input.actionUrl || null,
         startsAt: input.startsAt || null,
@@ -106,6 +110,31 @@ export async function deleteAdminMessage(id: string) {
 }
 
 export async function getVisibleAdminMessagesForUser(userId: string, now = new Date()) {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      status: true,
+      subscription: {
+        select: {
+          plan: true,
+          status: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  if (!user || user.role === 'ADMIN') return [];
+
+  const canSeeSubscribedOnlyMessages = hasActiveSubscriptionAccess({
+    role: user.role,
+    status: user.status,
+    subscriptionPlan: user.subscription?.plan || null,
+    subscriptionStatus: user.subscription?.status || null,
+    subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd || null,
+  });
+
   const messages = await prisma.adminMessage.findMany({
     where: {
       isActive: true,
@@ -126,6 +155,9 @@ export async function getVisibleAdminMessagesForUser(userId: string, now = new D
             { recipients: { some: { userId } } },
           ],
         },
+        canSeeSubscribedOnlyMessages
+          ? {}
+          : { showToUnsubscribed: true },
       ],
     },
     include: {

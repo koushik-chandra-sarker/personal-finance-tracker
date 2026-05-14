@@ -8,7 +8,7 @@ import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/su
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
-  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy,
+  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -47,6 +47,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
+  { href: '/admin/payments', label: 'Payments', icon: ReceiptText },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },

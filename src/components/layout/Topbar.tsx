@@ -15,7 +15,7 @@ import {
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
-  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy,
+  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -56,6 +56,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
   { href: '/admin/users', label: 'Users', icon: Users },
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
+  { href: '/admin/payments', label: 'Payments', icon: ReceiptText },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
@@ -364,6 +365,19 @@ export default function Topbar() {
           {/* Right side */}
           <div className="flex items-center gap-2">
             <WorkspaceSwitcher />
+            {isAdmin && (
+              <Link
+                href="/admin/payments"
+                title="Manual payment review"
+                aria-label="Manual payment review"
+                className={cn(
+                  'hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white sm:inline-flex',
+                  isActiveRoute(pathname, '/admin/payments') && 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300'
+                )}
+              >
+                <ReceiptText className="h-5 w-5" />
+              </Link>
+            )}
             <ThemeToggle />
             <div className="relative" ref={notificationRef}>
               <button

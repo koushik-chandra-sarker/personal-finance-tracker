@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, CreditCard, ReceiptText, ShieldAlert, Smartphone } from 'lucide-react';
+import Link from 'next/link';
+import { Check, CheckCircle2, CreditCard, ReceiptText, ShieldAlert, Smartphone } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ContinuePaymentButton from '@/components/subscription/ContinuePaymentButton';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
@@ -17,11 +18,37 @@ const MESSAGE_BY_REASON: Record<string, string> = {
 interface SubscriptionPageClientProps {
   reason: string;
   packages: SubscriptionPackageRow[];
+  accessState?: 'blocked' | 'active' | 'pending';
 }
 
-export default function SubscriptionPageClient({ reason, packages }: SubscriptionPageClientProps) {
+export default function SubscriptionPageClient({ reason, packages, accessState = 'blocked' }: SubscriptionPageClientProps) {
   const reasonMessage = MESSAGE_BY_REASON[reason] || MESSAGE_BY_REASON.invalid;
   const featuredPackage = packages.find((pkg) => pkg.isFeatured) || packages[0] || null;
+
+  if (accessState === 'active') {
+    return (
+      <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-3xl flex-col justify-center">
+        <div className="rounded-2xl border border-emerald-200 bg-white p-6 text-center shadow-sm dark:border-emerald-500/30 dark:bg-slate-900/60 sm:p-8">
+          <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
+            <CheckCircle2 className="h-7 w-7" />
+          </div>
+          <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Subscription active</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Your access is already active</h1>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
+            You do not need to submit another payment now. When the current period expires, this page will let you renew or upgrade.
+          </p>
+          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+            <Link href="/dashboard" className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
+              Go to dashboard
+            </Link>
+            <Link href="/settings" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
+              View subscription
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto flex min-h-[calc(100dvh-8rem)] max-w-6xl flex-col justify-center gap-6">
