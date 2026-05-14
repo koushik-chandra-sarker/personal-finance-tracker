@@ -46,6 +46,7 @@ model User {
   ownedShares   SharedAccess[]         @relation("OwnedShares")
   grantedSubscriptions UserSubscription[] @relation("GrantedSubscriptions")
   manualPaymentRequests ManualPaymentRequest[] @relation("ManualPaymentRequests")
+  personalSubscriptions PersonalSubscription[]
   reviewedManualPayments ManualPaymentRequest[] @relation("ReviewedManualPayments")
   sentInvites    UserInvite[]           @relation("SentUserInvites")
   subscription  UserSubscription?
@@ -217,6 +218,7 @@ model Account {
   updatedById  String?
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  trackedSubscriptions PersonalSubscription[]
   investments  Investment[]
   investmentCashflows InvestmentCashflow[]
 
@@ -237,6 +239,7 @@ model Category {
   budgets      Budget[]
   user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
+  trackedSubscriptions PersonalSubscription[]
 
   @@unique([userId, name, type])
   @@index([userId])
@@ -306,6 +309,38 @@ model RecurringTransaction {
 
   @@index([userId])
   @@index([nextRunDate])
+}
+
+model PersonalSubscription {
+  id              String                     @id @default(cuid())
+  userId          String
+  accountId       String?
+  categoryId      String?
+  name            String
+  provider        String
+  planName        String?
+  amount          Decimal                    @db.Decimal(12, 2)
+  currency        String                     @default("USD")
+  billingCycle    PersonalSubscriptionCycle  @default(MONTHLY)
+  nextBillingDate DateTime
+  status          PersonalSubscriptionStatus @default(ACTIVE)
+  autoRenew       Boolean                    @default(true)
+  reminderDays    Int                        @default(3)
+  websiteUrl      String?
+  notes           String?
+  color           String                     @default("#6366f1")
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+  createdById     String?
+  updatedById     String?
+  account         Account?                   @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  category        Category?                  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  user            User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, nextBillingDate])
+  @@index([accountId])
+  @@index([categoryId])
 }
 
 model Goal {
@@ -586,6 +621,7 @@ enum Feature {
   ACCOUNTS
   BUDGETS
   GOALS
+  SUBSCRIPTIONS
   INVESTMENTS
   REPORTS
   SETTINGS
@@ -641,6 +677,20 @@ enum ManualPaymentStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+enum PersonalSubscriptionCycle {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+  CUSTOM
+}
+
+enum PersonalSubscriptionStatus {
+  ACTIVE
+  PAUSED
+  CANCELLED
 }
 
 enum AccountType {

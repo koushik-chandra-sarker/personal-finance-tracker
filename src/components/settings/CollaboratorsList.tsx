@@ -11,23 +11,35 @@ import {
   removeCollaboratorAction, 
   updateFeatureAccessAction 
 } from '@/actions/share.actions';
+import type { AccessLevel, Feature } from '@prisma/client';
 
-const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'NOTES', 'REPORTS', 'SETTINGS'];
+const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'SUBSCRIPTIONS', 'NOTES', 'REPORTS', 'SETTINGS'] as const;
+type Collaborator = Awaited<ReturnType<typeof getCollaboratorsAction>>[number];
 
 export default function CollaboratorsList() {
-  const [collaborators, setCollaborators] = useState<any[]>([]);
+  const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [email, setEmail] = useState('');
   const [isPending, startTransition] = useTransition();
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    getCollaboratorsAction().then((data) => {
+      if (isMounted) {
+        setCollaborators(data);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const fetchCollaborators = async () => {
     const data = await getCollaboratorsAction();
     setCollaborators(data);
   };
-
-  useEffect(() => {
-    fetchCollaborators();
-  }, []);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,10 +69,10 @@ export default function CollaboratorsList() {
     });
   };
 
-  const handleLevelChange = (sharedAccessId: string, feature: string, accessLevel: any) => {
+  const handleLevelChange = (sharedAccessId: string, feature: Feature, accessLevel: AccessLevel) => {
     startTransition(async () => {
       // Optimistic update of local state not implemented for brevity
-      await updateFeatureAccessAction(sharedAccessId, feature as any, accessLevel);
+      await updateFeatureAccessAction(sharedAccessId, feature, accessLevel);
       await fetchCollaborators();
     });
   };
@@ -97,7 +109,7 @@ export default function CollaboratorsList() {
 
       {collaborators.length === 0 ? (
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-4">
-          You haven't shared your tracker with anyone yet.
+          You haven&apos;t shared your tracker with anyone yet.
         </p>
       ) : (
         <div className="space-y-6">
@@ -125,7 +137,7 @@ export default function CollaboratorsList() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                   {FEATURES.map(feature => {
-                    const permission = collab.permissions.find((p: any) => p.feature === feature);
+                    const permission = collab.permissions.find((p) => p.feature === feature);
                     const level = permission ? permission.accessLevel : 'NONE';
                     
                     return (
@@ -135,7 +147,7 @@ export default function CollaboratorsList() {
                         </label>
                         <select
                           value={level}
-                          onChange={(e) => handleLevelChange(collab.id, feature, e.target.value)}
+                          onChange={(e) => handleLevelChange(collab.id, feature, e.target.value as AccessLevel)}
                           disabled={isPending}
                           className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs p-1.5 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-none"
                         >

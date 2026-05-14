@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
-  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText,
+  RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText, CreditCard,
   Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
@@ -25,6 +25,7 @@ const primaryNavItems: NavItem[] = [
   { href: '/accounts', label: 'Accounts', icon: Wallet },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
 ];
 
 const investmentNavItems: NavItem[] = [

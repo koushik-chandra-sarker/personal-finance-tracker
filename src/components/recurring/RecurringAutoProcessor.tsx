@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { processDueRecurringAction } from '@/actions/recurring.actions';
+import { processDuePersonalSubscriptionsAction } from '@/actions/personal-subscription.actions';
 
 const EXCLUDED_PATH_PREFIXES = ['/subscription', '/change-password'];
 
@@ -36,14 +37,17 @@ export default function RecurringAutoProcessor() {
       return;
     }
 
-    console.log('Processing due recurring transactions...');
-    processDueRecurringAction()
-      .then((result) => {
-        console.log('Recurring transactions processed:', result);
-        if (result.processed > 0) router.refresh();
+    console.log('Processing due recurring transactions and subscription payments...');
+    Promise.all([
+      processDueRecurringAction(),
+      processDuePersonalSubscriptionsAction(),
+    ])
+      .then(([recurringResult, subscriptionResult]) => {
+        console.log('Due transactions processed:', { recurringResult, subscriptionResult });
+        if (recurringResult.processed > 0 || subscriptionResult.processed > 0) router.refresh();
       })
       .catch((error) => {
-        console.error('Failed to process due recurring transactions:', error);
+        console.error('Failed to process due scheduled transactions:', error);
       });
   }, [
     pathname,

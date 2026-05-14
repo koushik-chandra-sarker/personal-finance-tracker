@@ -14,7 +14,7 @@ import {
 } from '@/actions/notification.actions';
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
-  LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target,
+  LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, CreditCard,
   RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -34,6 +34,7 @@ const primaryNavItems: NavItem[] = [
   { href: '/accounts', label: 'Accounts', icon: Wallet },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
+  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
 ];
 
 const investmentNavItems: NavItem[] = [
