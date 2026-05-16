@@ -656,6 +656,7 @@ async function createMainWorkspace(users) {
       { sharedAccessId: sharedAccess.id, feature: 'BUDGETS', accessLevel: 'VIEW' },
       { sharedAccessId: sharedAccess.id, feature: 'GOALS', accessLevel: 'EDIT' },
       { sharedAccessId: sharedAccess.id, feature: 'INVESTMENTS', accessLevel: 'VIEW' },
+      { sharedAccessId: sharedAccess.id, feature: 'SALARY_PLANNER', accessLevel: 'EDIT' },
       { sharedAccessId: sharedAccess.id, feature: 'REPORTS', accessLevel: 'VIEW' },
       { sharedAccessId: sharedAccess.id, feature: 'NOTES', accessLevel: 'EDIT' },
     ],

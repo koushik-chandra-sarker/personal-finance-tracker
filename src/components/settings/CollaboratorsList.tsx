@@ -13,7 +13,7 @@ import {
 } from '@/actions/share.actions';
 import type { AccessLevel, Feature } from '@prisma/client';
 
-const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'SUBSCRIPTIONS', 'NOTES', 'REPORTS', 'SETTINGS'] as const;
+const FEATURES = ['TRANSACTIONS', 'ACCOUNTS', 'BUDGETS', 'GOALS', 'SUBSCRIPTIONS', 'SALARY_PLANNER', 'NOTES', 'REPORTS', 'SETTINGS'] as const;
 type Collaborator = Awaited<ReturnType<typeof getCollaboratorsAction>>[number];
 
 export default function CollaboratorsList() {

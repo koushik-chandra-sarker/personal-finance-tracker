@@ -1,6 +1,17 @@
 import { prisma } from '@/lib/prisma';
 import { TaxCategory } from '@prisma/client';
 
+type TaxConfigSourceInput = {
+  fiscalYear: string;
+  category: TaxCategory;
+  slabIndex: number;
+  minAmount: number;
+  maxAmount: number | null;
+  rate: number;
+  label: string;
+  source?: string;
+};
+
 export async function getTaxConfigs(fiscalYear?: string) {
   const where = fiscalYear ? { fiscalYear } : {};
   return prisma.taxConfig.findMany({
@@ -11,6 +22,17 @@ export async function getTaxConfigs(fiscalYear?: string) {
       { slabIndex: 'asc' },
     ],
   });
+}
+
+export async function getTaxConfigFiscalYears() {
+  const rows = await prisma.taxConfig.findMany({
+    where: { isActive: true },
+    distinct: ['fiscalYear'],
+    select: { fiscalYear: true },
+    orderBy: { fiscalYear: 'desc' },
+  });
+
+  return rows.map((row) => row.fiscalYear);
 }
 
 export async function createTaxConfig(data: {
@@ -47,7 +69,7 @@ export async function deleteTaxConfig(id: string) {
   });
 }
 
-export async function syncTaxConfigsFromSource(fiscalYear: string, configs: any[]) {
+export async function syncTaxConfigsFromSource(fiscalYear: string, configs: TaxConfigSourceInput[]) {
   // We perform this inside a transaction to ensure clean replacement
   return prisma.$transaction(async (tx) => {
     // Optionally delete or mark inactive old configs for this FY

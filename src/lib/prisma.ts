@@ -16,6 +16,7 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   const hasTutorialPremiumFlag = tutorialFields?.some((field) => field.name === 'isPremium') ?? false;
   const hasAdminMessageModel = Boolean(runtimeClient?._runtimeDataModel?.models?.AdminMessage);
   const hasManualPaymentModel = Boolean(runtimeClient?._runtimeDataModel?.models?.ManualPaymentRequest);
+  const hasSalaryScenarioModel = Boolean(runtimeClient?._runtimeDataModel?.models?.SalaryScenario);
 
   return Boolean(
     client &&
@@ -24,7 +25,8 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
     'userActivity' in client &&
     hasTutorialPremiumFlag &&
     hasAdminMessageModel &&
-    hasManualPaymentModel
+    hasManualPaymentModel &&
+    hasSalaryScenarioModel
   );
 }
 

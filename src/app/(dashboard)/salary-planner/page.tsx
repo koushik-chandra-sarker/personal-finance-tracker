@@ -1,32 +1,54 @@
-import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import SalaryPlannerClient from '@/components/salary-planner/SalaryPlannerClient';
+import { auth } from '@/lib/auth';
+import { getBangladeshFiscalYear } from '@/lib/salary-calculator';
+import { getEffectiveUserId, validateAccess } from '@/lib/access';
+import { prisma } from '@/lib/prisma';
 import { getTaxConfigs } from '@/services/tax-config.service';
+import { getSalaryScenarios } from '@/services/salary-scenario.service';
 
 export default async function SalaryPlannerPage() {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
+  await validateAccess('SALARY_PLANNER', 'VIEW');
 
-  const currency = session.user.currency || 'BDT';
-  const configs = await getTaxConfigs('2025-26');
+  const userId = await getEffectiveUserId();
+  const [user, configs, scenarios] = await Promise.all([
+    prisma.user.findUnique({ where: { id: userId }, select: { currency: true } }),
+    getTaxConfigs(),
+    getSalaryScenarios(userId),
+  ]);
+
+  const currency = user?.currency || session.user.currency || 'BDT';
+  const activeFiscalYear = getBangladeshFiscalYear();
+  const fiscalYears = Array.from(new Set([activeFiscalYear, ...configs.map((config) => config.fiscalYear)])).sort((a, b) => b.localeCompare(a));
+  const taxConfigsByYear = fiscalYears.reduce<Record<string, {
+    male: Array<{ min: number; max: number | null; rate: number; label: string }>;
+    female: Array<{ min: number; max: number | null; rate: number; label: string }>;
+  }>>((acc, fiscalYear) => {
+    const yearConfigs = configs.filter((config) => config.fiscalYear === fiscalYear && config.isActive);
+    acc[fiscalYear] = {
+      male: yearConfigs.filter((config) => config.category === 'MALE').map((config) => ({
+        min: Number(config.minAmount),
+        max: config.maxAmount ? Number(config.maxAmount) : null,
+        rate: Number(config.rate),
+        label: config.label,
+      })),
+      female: yearConfigs.filter((config) => config.category === 'FEMALE').map((config) => ({
+        min: Number(config.minAmount),
+        max: config.maxAmount ? Number(config.maxAmount) : null,
+        rate: Number(config.rate),
+        label: config.label,
+      })),
+    };
+    return acc;
+  }, {});
   
-  const maleSlabs = configs.filter(c => c.category === 'MALE' && c.isActive).map(c => ({
-    min: Number(c.minAmount),
-    max: c.maxAmount ? Number(c.maxAmount) : null,
-    rate: Number(c.rate),
-    label: c.label,
-  }));
-
-  const femaleSlabs = configs.filter(c => c.category === 'FEMALE' && c.isActive).map(c => ({
-    min: Number(c.minAmount),
-    max: c.maxAmount ? Number(c.maxAmount) : null,
-    rate: Number(c.rate),
-    label: c.label,
-  }));
-
   return <SalaryPlannerClient 
     currency={currency} 
-    customMaleSlabs={maleSlabs.length > 0 ? maleSlabs : undefined}
-    customFemaleSlabs={femaleSlabs.length > 0 ? femaleSlabs : undefined}
+    initialFiscalYear={activeFiscalYear}
+    fiscalYears={fiscalYears}
+    taxConfigsByYear={taxConfigsByYear}
+    initialScenarios={scenarios}
   />;
 }

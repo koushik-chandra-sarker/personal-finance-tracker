@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import {
   Lightbulb, Home, ShoppingBag, PiggyBank, Heart, Utensils,
@@ -9,16 +9,10 @@ import {
   CheckCircle2, Target,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import type { SalaryBudgetCategory, SalaryBudgetRule } from '@/types/salary-planner';
 
-type BudgetRule = '50-30-20' | '60-20-20' | '70-20-10' | 'custom';
-
-type ExpenseCategory = {
-  id: string;
-  label: string;
+type ExpenseCategory = SalaryBudgetCategory & {
   icon: React.ElementType;
-  percent: number;
-  color: string;
-  group: 'needs' | 'wants' | 'savings';
 };
 
 const DEFAULT_CATEGORIES: ExpenseCategory[] = [
@@ -37,7 +31,19 @@ const DEFAULT_CATEGORIES: ExpenseCategory[] = [
   { id: 'savings', label: 'General Savings', icon: PiggyBank, percent: 5, color: '#22c55e', group: 'savings' },
 ];
 
-const RULES: Record<BudgetRule, { needs: number; wants: number; savings: number; label: string; description: string }> = {
+function toBudgetCategory(category: ExpenseCategory): SalaryBudgetCategory {
+  return {
+    id: category.id,
+    label: category.label,
+    percent: category.percent,
+    color: category.color,
+    group: category.group,
+  };
+}
+
+export const DEFAULT_SALARY_BUDGET_CATEGORIES: SalaryBudgetCategory[] = DEFAULT_CATEGORIES.map(toBudgetCategory);
+
+const RULES: Record<SalaryBudgetRule, { needs: number; wants: number; savings: number; label: string; description: string }> = {
   '50-30-20': { needs: 50, wants: 30, savings: 20, label: '50/30/20', description: 'Balanced — popular worldwide for a healthy financial life' },
   '60-20-20': { needs: 60, wants: 20, savings: 20, label: '60/20/20', description: 'Conservative — higher essentials, lower discretionary' },
   '70-20-10': { needs: 70, wants: 20, savings: 10, label: '70/20/10', description: 'Starter — when living costs are high relative to income' },
@@ -47,6 +53,17 @@ const RULES: Record<BudgetRule, { needs: number; wants: number; savings: number;
 function fmt(n: number, currency: string) {
   const sym: Record<string, string> = { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹' };
   return (sym[currency] || currency + ' ') + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function BudgetTooltip({ active, payload, netMonthly, currency }: { active?: boolean; payload?: Array<{ value: number; name: string; payload: { color: string } }>; netMonthly: number; currency: string }) {
+  if (!active || !payload?.length) return null;
+  const p = payload[0];
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
+      <p className="font-semibold text-slate-900 dark:text-white">{p.name}</p>
+      <p className="text-slate-600 dark:text-slate-300">{p.value}% — {fmt((netMonthly * p.value) / 100, currency)}/mo</p>
+    </div>
+  );
 }
 
 const TIPS = [
@@ -60,11 +77,40 @@ const TIPS = [
 
 type Props = { netMonthly: number; currency: string };
 
-export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
-  const [rule, setRule] = useState<BudgetRule>('50-30-20');
-  const [categories, setCategories] = useState<ExpenseCategory[]>(DEFAULT_CATEGORIES.map(c => ({ ...c })));
+function withIcons(categories: SalaryBudgetCategory[]) {
+  return categories.map((category) => ({
+    ...category,
+    icon: DEFAULT_CATEGORIES.find((item) => item.id === category.id)?.icon ?? Target,
+  }));
+}
+
+function serializeCategories(categories: ExpenseCategory[]): SalaryBudgetCategory[] {
+  return categories.map(toBudgetCategory);
+}
+
+type ExtendedProps = Props & {
+  budgetRule?: SalaryBudgetRule;
+  budgetCategories?: SalaryBudgetCategory[];
+  onBudgetChange?: (state: { rule: SalaryBudgetRule; categories: SalaryBudgetCategory[] }) => void;
+};
+
+export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule = '50-30-20', budgetCategories, onBudgetChange }: ExtendedProps) {
+  const [rule, setRule] = useState<SalaryBudgetRule>(budgetRule);
+  const [categories, setCategories] = useState<ExpenseCategory[]>(withIcons(budgetCategories?.length ? budgetCategories : DEFAULT_SALARY_BUDGET_CATEGORIES));
   const [showDetails, setShowDetails] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setRule(budgetRule);
+  }, [budgetRule]);
+
+  useEffect(() => {
+    setCategories(withIcons(budgetCategories?.length ? budgetCategories : DEFAULT_SALARY_BUDGET_CATEGORIES));
+  }, [budgetCategories]);
+
+  const pushBudgetChange = (nextRule: SalaryBudgetRule, nextCategories: ExpenseCategory[]) => {
+    onBudgetChange?.({ rule: nextRule, categories: serializeCategories(nextCategories) });
+  };
 
   const ruleConfig = RULES[rule];
 
@@ -78,9 +124,12 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
     return { needs, wants, savings, needsTotal, wantsTotal, savingsTotal, total: needsTotal + wantsTotal + savingsTotal };
   }, [categories]);
 
-  const applyRule = (r: BudgetRule) => {
+  const applyRule = (r: SalaryBudgetRule) => {
     setRule(r);
-    if (r === 'custom') return;
+    if (r === 'custom') {
+      pushBudgetChange(r, categories);
+      return;
+    }
     const config = RULES[r];
     const scaleGroup = (group: 'needs' | 'wants' | 'savings', target: number) => {
       const items = DEFAULT_CATEGORIES.filter(c => c.group === group);
@@ -95,10 +144,15 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
       ...scaleGroup('savings', config.savings),
     ];
     setCategories(newCats);
+    pushBudgetChange(r, newCats);
   };
 
   const updatePercent = (id: string, newPercent: number) => {
-    setCategories(prev => prev.map(c => c.id === id ? { ...c, percent: Math.max(0, Math.min(100, newPercent)) } : c));
+    setCategories(prev => {
+      const next = prev.map(c => c.id === id ? { ...c, percent: Math.max(0, Math.min(100, newPercent)) } : c);
+      pushBudgetChange('custom', next);
+      return next;
+    });
     setRule('custom');
   };
 
@@ -117,17 +171,6 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
     if (savingsRatio >= 10) return { score: 'Fair', color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50 dark:bg-amber-500/10', icon: AlertTriangle };
     return { score: 'Needs Improvement', color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50 dark:bg-rose-500/10', icon: AlertTriangle };
   }, [grouped.savingsTotal]);
-
-  const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ value: number; name: string; payload: { color: string } }> }) => {
-    if (!active || !payload?.length) return null;
-    const p = payload[0];
-    return (
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
-        <p className="font-semibold text-slate-900 dark:text-white">{p.name}</p>
-        <p className="text-slate-600 dark:text-slate-300">{p.value}% — {fmt((netMonthly * p.value) / 100, currency)}/mo</p>
-      </div>
-    );
-  };
 
   return (
     <div className="space-y-4 animate-fade-in">
@@ -152,7 +195,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
           <p className="text-xs font-semibold text-slate-900 dark:text-white mb-3">Budget Rule</p>
           <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(RULES) as BudgetRule[]).map(r => (
+            {(Object.keys(RULES) as SalaryBudgetRule[]).map(r => (
               <button key={r} onClick={() => applyRule(r)}
                 className={cn('px-3 py-2 rounded-xl text-xs font-semibold transition-all border',
                   rule === r
@@ -197,7 +240,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
                 <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
                   {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} />} />
                 <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
               </PieChart>
             </ResponsiveContainer>
@@ -209,7 +252,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
                 <Pie data={detailPieData} cx="50%" cy="50%" outerRadius={80} paddingAngle={2} dataKey="value">
                   {detailPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
                 </Pie>
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} />} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -220,7 +263,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency }: Props) {
           <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700/50">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Spending Categories</h3>
             <div className="flex items-center gap-2">
-              <button onClick={() => { setCategories(DEFAULT_CATEGORIES.map(c => ({ ...c }))); applyRule('50-30-20'); }}
+              <button onClick={() => applyRule('50-30-20')}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Reset">
                 <RotateCcw className="h-3.5 w-3.5" />
               </button>

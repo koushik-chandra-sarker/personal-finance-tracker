@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Calculator, DollarSign, TrendingUp, Minus, Plus, Trash2, PieChart, BarChart3, Info, ChevronDown, ChevronUp } from 'lucide-react';
+import { useCallback, useState, useMemo, useTransition } from 'react';
+import { Calculator, DollarSign, TrendingUp, Minus, Plus, Trash2, PieChart, BarChart3, Info, ChevronDown, ChevronUp, Save, FolderOpen, AlertTriangle, ArrowLeftRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { calculateSalary, DEFAULT_STRUCTURE, DEFAULT_DEDUCTIONS, type SalaryStructure, type DeductionItem } from '@/lib/salary-calculator';
+import { calculateSalary, DEFAULT_STRUCTURE, DEFAULT_DEDUCTIONS, getSalaryValidationMessages, type SalaryStructure, type DeductionItem, type TaxSlab } from '@/lib/salary-calculator';
+import { deleteSalaryScenarioAction, saveSalaryScenarioAction } from '@/actions/salary-planner.actions';
+import type { SalaryBudgetCategory, SalaryBudgetRule, SalaryScenarioPayload, SalaryScenarioRow, SalaryTaxCategory } from '@/types/salary-planner';
 import SalaryCharts from './SalaryCharts';
-import SalaryBudgetPlanner from './SalaryBudgetPlanner';
+import SalaryBudgetPlanner, { DEFAULT_SALARY_BUDGET_CATEGORIES } from './SalaryBudgetPlanner';
 
 function fmt(n: number, currency: string) {
   const sym: Record<string, string> = { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹' };
@@ -15,22 +17,146 @@ function fmt(n: number, currency: string) {
 
 export default function SalaryPlannerClient({ 
   currency, 
-  customMaleSlabs, 
-  customFemaleSlabs 
+  initialFiscalYear,
+  fiscalYears,
+  taxConfigsByYear,
+  initialScenarios,
 }: { 
   currency: string;
-  customMaleSlabs?: any[];
-  customFemaleSlabs?: any[];
+  initialFiscalYear: string;
+  fiscalYears: string[];
+  taxConfigsByYear: Record<string, { male: TaxSlab[]; female: TaxSlab[] }>;
+  initialScenarios: SalaryScenarioRow[];
 }) {
   const [grossMonthly, setGrossMonthly] = useState(50000);
   const [structure, setStructure] = useState<SalaryStructure>({ ...DEFAULT_STRUCTURE });
   const [deductions, setDeductions] = useState<DeductionItem[]>(DEFAULT_DEDUCTIONS.map(d => ({ ...d })));
-  const [taxCategory, setTaxCategory] = useState<'male' | 'female'>('male');
+  const [taxCategory, setTaxCategory] = useState<SalaryTaxCategory>('male');
   const [bonusMonths, setBonusMonths] = useState(2);
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState(initialFiscalYear);
+  const [planName, setPlanName] = useState('Current Salary Plan');
+  const [scenarios, setScenarios] = useState<SalaryScenarioRow[]>(initialScenarios);
+  const [selectedScenarioId, setSelectedScenarioId] = useState(initialScenarios[0]?.id ?? '');
+  const [editingScenarioId, setEditingScenarioId] = useState<string | undefined>();
+  const [compareScenarioId, setCompareScenarioId] = useState(initialScenarios[0]?.id ?? '');
+  const [budgetRule, setBudgetRule] = useState<SalaryBudgetRule>('50-30-20');
+  const [budgetCategories, setBudgetCategories] = useState<SalaryBudgetCategory[]>(DEFAULT_SALARY_BUDGET_CATEGORIES.map(category => ({ ...category })));
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isPending, startTransition] = useTransition();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tax' | 'charts' | 'planner'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'tax' | 'compare' | 'charts' | 'planner'>('overview');
 
-  const result = useMemo(() => calculateSalary(grossMonthly, structure, deductions, taxCategory, bonusMonths, customMaleSlabs, customFemaleSlabs), [grossMonthly, structure, deductions, taxCategory, bonusMonths, customMaleSlabs, customFemaleSlabs]);
+  const getSlabs = useCallback((fiscalYear: string, category: SalaryTaxCategory) => {
+    const yearConfig = taxConfigsByYear[fiscalYear];
+    const slabs = category === 'female' ? yearConfig?.female : yearConfig?.male;
+    return slabs?.length ? slabs : undefined;
+  }, [taxConfigsByYear]);
+
+  const result = useMemo(() => calculateSalary(grossMonthly, structure, deductions, taxCategory, bonusMonths, getSlabs(selectedFiscalYear, 'male'), getSlabs(selectedFiscalYear, 'female')), [grossMonthly, structure, deductions, taxCategory, bonusMonths, selectedFiscalYear, getSlabs]);
+
+  const budgetTotal = useMemo(() => budgetCategories.reduce((sum, category) => sum + category.percent, 0), [budgetCategories]);
+  const validationMessages = useMemo(() => {
+    const messages = getSalaryValidationMessages(grossMonthly, structure, deductions, bonusMonths);
+    const activeConfig = taxConfigsByYear[selectedFiscalYear];
+    if (!activeConfig?.male?.length && !activeConfig?.female?.length) {
+      messages.push(`No active tax config was found for FY ${selectedFiscalYear}. Default Bangladesh slabs are being used.`);
+    }
+    if (budgetTotal !== 100) {
+      messages.push(`Budget allocation is ${budgetTotal}%. Keep it at 100% before using this as a monthly plan.`);
+    }
+    return messages;
+  }, [grossMonthly, structure, deductions, bonusMonths, selectedFiscalYear, taxConfigsByYear, budgetTotal]);
+
+  const buildPayload = (name = planName): SalaryScenarioPayload => ({
+    name: name.trim() || 'Salary Plan',
+    fiscalYear: selectedFiscalYear,
+    currency,
+    taxCategory,
+    grossMonthly,
+    bonusMonths,
+    structure,
+    deductions,
+    budgetRule,
+    budgetCategories,
+  });
+
+  const upsertLocalScenario = (scenario: SalaryScenarioRow) => {
+    setScenarios(prev => {
+      const exists = prev.some(item => item.id === scenario.id);
+      const next = exists ? prev.map(item => item.id === scenario.id ? scenario : item) : [scenario, ...prev];
+      return next.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    });
+    setSelectedScenarioId(scenario.id);
+    setCompareScenarioId(current => current || scenario.id);
+    setEditingScenarioId(scenario.id);
+  };
+
+  const handleSave = (mode: 'update' | 'new') => {
+    setMessage(null);
+    const id = mode === 'update' ? editingScenarioId : undefined;
+    const payload = buildPayload(mode === 'new' && editingScenarioId ? `${planName} Copy` : planName);
+    startTransition(async () => {
+      const res = await saveSalaryScenarioAction(payload, id);
+      if (res.success && res.data) {
+        upsertLocalScenario(res.data);
+        setPlanName(res.data.name);
+        setMessage({ type: 'success', text: res.message });
+      } else {
+        setMessage({ type: 'error', text: res.message });
+      }
+    });
+  };
+
+  const loadScenario = (scenario: SalaryScenarioRow) => {
+    setPlanName(scenario.name);
+    setSelectedFiscalYear(scenario.fiscalYear);
+    setTaxCategory(scenario.taxCategory);
+    setGrossMonthly(scenario.grossMonthly);
+    setBonusMonths(scenario.bonusMonths);
+    setStructure({ ...scenario.structure });
+    setDeductions(scenario.deductions.map(deduction => ({ ...deduction })));
+    setBudgetRule(scenario.budgetRule);
+    setBudgetCategories(scenario.budgetCategories.map(category => ({ ...category })));
+    setSelectedScenarioId(scenario.id);
+    setEditingScenarioId(scenario.id);
+    setMessage({ type: 'success', text: `${scenario.name} loaded.` });
+  };
+
+  const handleLoadSelected = () => {
+    const scenario = scenarios.find(item => item.id === selectedScenarioId);
+    if (scenario) loadScenario(scenario);
+  };
+
+  const handleDeleteSelected = () => {
+    const scenario = scenarios.find(item => item.id === selectedScenarioId);
+    if (!scenario || !confirm(`Delete salary plan "${scenario.name}"?`)) return;
+    setMessage(null);
+    startTransition(async () => {
+      const res = await deleteSalaryScenarioAction(scenario.id);
+      if (res.success) {
+        setScenarios(prev => prev.filter(item => item.id !== scenario.id));
+        if (editingScenarioId === scenario.id) setEditingScenarioId(undefined);
+        if (compareScenarioId === scenario.id) setCompareScenarioId('');
+        setSelectedScenarioId('');
+        setMessage({ type: 'success', text: res.message });
+      } else {
+        setMessage({ type: 'error', text: res.message });
+      }
+    });
+  };
+
+  const compareScenario = scenarios.find(item => item.id === compareScenarioId);
+  const compareResult = compareScenario
+    ? calculateSalary(
+      compareScenario.grossMonthly,
+      compareScenario.structure,
+      compareScenario.deductions,
+      compareScenario.taxCategory,
+      compareScenario.bonusMonths,
+      getSlabs(compareScenario.fiscalYear, 'male'),
+      getSlabs(compareScenario.fiscalYear, 'female'),
+    )
+    : null;
 
   const addDeduction = () => {
     setDeductions(prev => [...prev, { id: `custom-${Date.now()}`, label: 'New Deduction', amount: 0, isPercentage: false }]);
@@ -44,12 +170,6 @@ export default function SalaryPlannerClient({
     setDeductions(prev => prev.filter((_, i) => i !== index));
   };
 
-  const currentFY = (() => {
-    const now = new Date();
-    const y = now.getFullYear();
-    return now.getMonth() >= 6 ? `${y}-${(y + 1).toString().slice(2)}` : `${y - 1}-${y.toString().slice(2)}`;
-  })();
-
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
       {/* Header */}
@@ -62,11 +182,20 @@ export default function SalaryPlannerClient({
             Salary Planner
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Bangladesh Fiscal Year {currentFY} &middot; Tax Calculation &amp; Breakdown
+            Bangladesh Fiscal Year {selectedFiscalYear} &middot; Tax Calculation &amp; Saved Scenarios
           </p>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Tax Category:</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+            FY
+            <select
+              value={selectedFiscalYear}
+              onChange={(event) => setSelectedFiscalYear(event.target.value)}
+              className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
+            >
+              {fiscalYears.map(year => <option key={year} value={year}>{year}</option>)}
+            </select>
+          </label>
           <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             {(['male', 'female'] as const).map(cat => (
               <button key={cat} onClick={() => setTaxCategory(cat)}
@@ -76,6 +205,78 @@ export default function SalaryPlannerClient({
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)_auto] lg:items-end">
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Plan Name</label>
+            <input
+              type="text"
+              value={planName}
+              onChange={(event) => setPlanName(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Saved Plans</label>
+            <select
+              value={selectedScenarioId}
+              onChange={(event) => setSelectedScenarioId(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+            >
+              <option value="">No saved plan selected</option>
+              {scenarios.map(scenario => (
+                <option key={scenario.id} value={scenario.id}>{scenario.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleLoadSelected}
+              disabled={!selectedScenarioId || isPending}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-600 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
+            >
+              <FolderOpen className="h-3.5 w-3.5" /> Load
+            </button>
+            <button
+              onClick={() => handleSave('update')}
+              disabled={!editingScenarioId || isPending}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
+            >
+              <Save className="h-3.5 w-3.5" /> Update
+            </button>
+            <button
+              onClick={() => handleSave('new')}
+              disabled={isPending}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              <Plus className="h-3.5 w-3.5" /> Save New
+            </button>
+            <button
+              onClick={handleDeleteSelected}
+              disabled={!selectedScenarioId || isPending}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10 disabled:opacity-50"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </button>
+          </div>
+        </div>
+        {message && (
+          <div className={cn('mt-3 rounded-xl px-3 py-2 text-xs font-medium', message.type === 'success' ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300')}>
+            {message.text}
+          </div>
+        )}
+        {validationMessages.length > 0 && (
+          <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <div className="flex items-start gap-2 text-xs text-amber-800 dark:text-amber-200">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <div className="space-y-1">
+                {validationMessages.map(item => <p key={item}>{item}</p>)}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Summary Cards */}
@@ -184,7 +385,7 @@ export default function SalaryPlannerClient({
         <div className="lg:col-span-3 space-y-4">
           {/* Tab Navigation */}
           <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {([['overview', 'Overview'], ['tax', 'Tax Breakdown'], ['charts', 'Charts'], ['planner', 'Budget Planner']] as const).map(([key, label]) => (
+            {([['overview', 'Overview'], ['tax', 'Tax Breakdown'], ['compare', 'Compare'], ['charts', 'Charts'], ['planner', 'Budget Planner']] as const).map(([key, label]) => (
               <button key={key} onClick={() => setActiveTab(key)}
                 className={cn('flex-1 px-4 py-2.5 text-xs font-semibold transition-all', activeTab === key ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700')}>
                 {label}
@@ -255,7 +456,7 @@ export default function SalaryPlannerClient({
           {activeTab === 'tax' && (
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700/50">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Tax Slab Breakdown — FY {currentFY}</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Tax Slab Breakdown — FY {selectedFiscalYear}</h3>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
                   <Info className="h-3 w-3" /> {taxCategory === 'female' ? 'Female/Senior/Disabled' : 'Male (General)'} tax slabs applied
                 </p>
@@ -301,12 +502,106 @@ export default function SalaryPlannerClient({
             </div>
           )}
 
+          {activeTab === 'compare' && (
+            <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
+              <div className="flex flex-col gap-3 p-5 border-b border-slate-100 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                    <ArrowLeftRight className="h-4 w-4 text-indigo-500" /> Compare With Saved Plan
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Current inputs are compared against one saved salary scenario.</p>
+                </div>
+                <select
+                  value={compareScenarioId}
+                  onChange={(event) => setCompareScenarioId(event.target.value)}
+                  className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">Choose saved plan</option>
+                  {scenarios.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}
+                </select>
+              </div>
+              {compareScenario && compareResult ? (
+                <div className="p-5 space-y-4">
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {[
+                      { label: 'Current Plan', name: planName, fiscalYear: selectedFiscalYear, net: result.netMonthly, tax: result.totalTax },
+                      { label: 'Saved Plan', name: compareScenario.name, fiscalYear: compareScenario.fiscalYear, net: compareResult.netMonthly, tax: compareResult.totalTax },
+                    ].map(item => (
+                      <div key={item.label} className="rounded-xl border border-slate-200 dark:border-slate-700/50 p-4">
+                        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.label}</p>
+                        <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{item.name}</p>
+                        <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">FY {item.fiscalYear}</p>
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Net Monthly</p>
+                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmt(item.net, currency)}</p>
+                          </div>
+                          <div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Annual Tax</p>
+                            <p className="text-sm font-bold text-rose-600 dark:text-rose-400">{fmt(item.tax, currency)}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="bg-slate-50 dark:bg-slate-700/30">
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Metric</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Current</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Saved</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Difference</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                        {[
+                          ['Monthly Gross', result.grossMonthly, compareResult.grossMonthly],
+                          ['Monthly Net', result.netMonthly, compareResult.netMonthly],
+                          ['Annual Gross', result.grossAnnual, compareResult.grossAnnual],
+                          ['Annual Net', result.netAnnual, compareResult.netAnnual],
+                          ['Annual Tax', result.totalTax, compareResult.totalTax],
+                        ].map(([label, current, saved]) => {
+                          const diff = Number(current) - Number(saved);
+                          return (
+                            <tr key={label}>
+                              <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">{label}</td>
+                              <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(current), currency)}</td>
+                              <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{fmt(Number(saved), currency)}</td>
+                              <td className={cn('px-4 py-3 text-right text-xs font-bold', diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
+                                {diff >= 0 ? '+' : ''}{fmt(diff, currency)}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-8 text-center">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Save at least one salary plan to compare.</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Use Save New after entering a salary, then return here to compare offers or revisions.</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {activeTab === 'charts' && (
             <SalaryCharts result={result} currency={currency} />
           )}
 
           {activeTab === 'planner' && (
-            <SalaryBudgetPlanner netMonthly={result.netMonthly} currency={currency} />
+            <SalaryBudgetPlanner
+              netMonthly={result.netMonthly}
+              currency={currency}
+              budgetRule={budgetRule}
+              budgetCategories={budgetCategories}
+              onBudgetChange={({ rule, categories }) => {
+                setBudgetRule(rule);
+                setBudgetCategories(categories);
+              }}
+            />
           )}
         </div>
       </div>

@@ -1,19 +1,50 @@
 'use client';
 
 import { useState } from 'react';
-import { DownloadCloud, Plus, Pencil, Trash2, CheckCircle2, XCircle, AlertCircle, Save } from 'lucide-react';
+import { DownloadCloud, Plus, Trash2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
 import { autoFetchTaxConfigsAction, deleteTaxConfigAction, createTaxConfigAction } from '@/actions/tax-config.actions';
-import { TaxCategory, TaxConfig } from '@prisma/client';
 import Modal from '@/components/ui/Modal';
-import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
-export default function TaxConfigClient({ initialConfigs }: { initialConfigs: TaxConfig[] }) {
+export type TaxConfigClientRow = {
+  id: string;
+  fiscalYear: string;
+  category: 'MALE' | 'FEMALE';
+  slabIndex: number;
+  minAmount: string;
+  maxAmount: string | null;
+  rate: string;
+  label: string;
+  isActive: boolean;
+  source: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+const DEFAULT_SOURCE_URL = 'https://taxsummaries.pwc.com/bangladesh/individual/taxes-on-personal-income';
+
+function getCurrentBangladeshFiscalYear() {
+  const now = new Date();
+  const year = now.getFullYear();
+  return now.getMonth() >= 6 ? `${year}-${String(year + 1).slice(2)}` : `${year - 1}-${String(year).slice(2)}`;
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : 'An error occurred.';
+}
+
+function formatAmount(value: string | null) {
+  if (!value) return '∞';
+  return Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+export default function TaxConfigClient({ initialConfigs }: { initialConfigs: TaxConfigClientRow[] }) {
   const [configs, setConfigs] = useState(initialConfigs);
   const [isFetching, setIsFetching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [fiscalYear, setFiscalYear] = useState('2025-26');
+  const [fiscalYear, setFiscalYear] = useState(getCurrentBangladeshFiscalYear());
+  const [sourceUrl, setSourceUrl] = useState(DEFAULT_SOURCE_URL);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
@@ -23,15 +54,16 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
     setError(null);
     setSuccess(null);
     try {
-      const res = await autoFetchTaxConfigsAction(fiscalYear);
+      const res = await autoFetchTaxConfigsAction(fiscalYear, sourceUrl);
       if (res.success) {
+        if (res.data?.configs) setConfigs(res.data.configs);
         setSuccess(res.message || 'Successfully fetched tax configs.');
         router.refresh();
       } else {
         setError(res.message || 'Failed to fetch tax configs.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred.');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setIsFetching(false);
     }
@@ -48,8 +80,8 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
       } else {
         setError(res.message || 'Failed to delete config.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred.');
+    } catch (err) {
+      setError(getErrorMessage(err));
     }
   };
 
@@ -61,23 +93,27 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
       const formData = new FormData(e.currentTarget);
       const res = await createTaxConfigAction(formData);
       if (res.success) {
+        if (res.data) setConfigs(prev => [...prev.filter(config => config.id !== res.data!.id), res.data!]);
         setIsModalOpen(false);
         setSuccess('Successfully added tax slab.');
         router.refresh(); // Server action handles revalidation, wait for data to refresh
       } else {
         setError(res.message || 'Failed to create tax slab.');
       }
-    } catch (err: any) {
-      setError(err.message || 'An error occurred.');
+    } catch (err) {
+      setError(getErrorMessage(err));
     } finally {
       setSubmitting(false);
     }
   };
 
+  const fiscalYearOptions = Array.from(new Set([fiscalYear, getCurrentBangladeshFiscalYear(), ...configs.map(c => c.fiscalYear)])).sort((a, b) => b.localeCompare(a));
   const maleConfigs = configs.filter(c => c.category === 'MALE' && c.fiscalYear === fiscalYear);
   const femaleConfigs = configs.filter(c => c.category === 'FEMALE' && c.fiscalYear === fiscalYear);
+  const visibleConfigs = [...maleConfigs, ...femaleConfigs];
+  const latestSource = visibleConfigs.find(config => config.source)?.source;
 
-  const renderTable = (data: TaxConfig[], title: string) => (
+  const renderTable = (data: TaxConfigClientRow[], title: string) => (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden mb-6">
       <div className="p-4 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title} Slabs</h3>
@@ -102,9 +138,9 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
               data.map(config => (
                 <tr key={config.id}>
                   <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{config.label}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{config.minAmount.toString()}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{config.maxAmount ? config.maxAmount.toString() : '∞'}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{config.rate.toString()}</td>
+                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{formatAmount(config.minAmount)}</td>
+                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{formatAmount(config.maxAmount)}</td>
+                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{Number(config.rate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
                   <td className="px-4 py-3 text-right">
                     <button onClick={() => handleDelete(config.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
                       <Trash2 className="h-4 w-4" />
@@ -121,20 +157,33 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
 
   return (
     <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Tax Configuration</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Manage tax slabs for the salary planner.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Manage live tax slabs for the salary planner.</p>
         </div>
-        <div className="flex gap-2">
-          <select 
-            value={fiscalYear} 
-            onChange={(e) => setFiscalYear(e.target.value)}
-            className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none"
-          >
-            <option value="2025-26">2025-26</option>
-            <option value="2024-25">2024-25</option>
-          </select>
+        <div className="grid gap-2 sm:grid-cols-[140px_minmax(260px,1fr)_auto_auto]">
+          <div className="relative">
+            <input
+              list="taxFiscalYears"
+              value={fiscalYear}
+              onChange={(e) => setFiscalYear(e.target.value)}
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none"
+              placeholder="2025-26"
+              aria-label="Fiscal year"
+            />
+            <datalist id="taxFiscalYears">
+              {fiscalYearOptions.map(year => <option key={year} value={year} />)}
+            </datalist>
+          </div>
+          <input
+            type="url"
+            value={sourceUrl}
+            onChange={(e) => setSourceUrl(e.target.value)}
+            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none"
+            placeholder="Source URL"
+            aria-label="Tax source URL"
+          />
           <button 
             onClick={() => setIsModalOpen(true)}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
@@ -147,9 +196,35 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
             className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
             {isFetching ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
-            Auto-Fetch from Internet
+            Fetch
           </button>
         </div>
+      </div>
+
+      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <div>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Selected FY</p>
+            <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{fiscalYear}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Slabs</p>
+            <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{visibleConfigs.length}</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest Source</p>
+            {latestSource ? (
+              <a href={latestSource.split('|').at(-1)?.trim()} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
+                Open source <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            ) : (
+              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">Manual or not fetched</p>
+            )}
+          </div>
+        </div>
+        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+          The fetcher reads the selected internet source and imports the resident individual table plus the women/senior exemption note. It replaces only the selected fiscal year.
+        </p>
       </div>
 
       {error && (

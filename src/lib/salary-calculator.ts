@@ -3,6 +3,7 @@
 
 export type TaxSlab = { min: number; max: number | null; rate: number; label: string };
 export type DeductionItem = { id: string; label: string; amount: number; isPercentage: boolean; percentOf?: 'basic' | 'gross' };
+export type SalaryTaxCategory = 'male' | 'female';
 export type SalaryBreakdown = {
   grossAnnual: number;
   grossMonthly: number;
@@ -67,6 +68,44 @@ export const DEFAULT_STRUCTURE: SalaryStructure = {
   conveyanceFlat: 2500,
 };
 
+export function getBangladeshFiscalYear(date = new Date()) {
+  const year = date.getFullYear();
+  return date.getMonth() >= 6 ? `${year}-${(year + 1).toString().slice(2)}` : `${year - 1}-${year.toString().slice(2)}`;
+}
+
+export function getSalaryValidationMessages(
+  grossMonthly: number,
+  structure: SalaryStructure,
+  deductions: DeductionItem[],
+  bonusMonths: number,
+) {
+  const messages: string[] = [];
+  const basicMonthly = (grossMonthly * structure.basicPercent) / 100;
+  const houseRentMonthly = (basicMonthly * structure.houseRentPercent) / 100;
+  const medicalMonthly = (basicMonthly * structure.medicalPercent) / 100;
+  const fixedStructureTotal = basicMonthly + houseRentMonthly + medicalMonthly + structure.conveyanceFlat;
+  const totalDeductionsMonthly = deductions.reduce((sum, item) => {
+    const base = item.percentOf === 'basic' ? basicMonthly : grossMonthly;
+    return sum + (item.isPercentage ? (base * item.amount) / 100 : item.amount);
+  }, 0);
+  const grossAnnual = grossMonthly * 12 + basicMonthly * bonusMonths;
+
+  if (fixedStructureTotal > grossMonthly) {
+    messages.push('Salary structure exceeds gross monthly salary. Reduce basic, allowances, or conveyance.');
+  }
+  if (deductions.some((item) => item.isPercentage && item.amount > 50)) {
+    messages.push('One or more percentage deductions are above 50%. Confirm that this is intentional.');
+  }
+  if (totalDeductionsMonthly > grossMonthly) {
+    messages.push('Monthly deductions are higher than gross salary.');
+  }
+  if (grossAnnual <= 0) {
+    messages.push('Gross salary must be greater than zero.');
+  }
+
+  return messages;
+}
+
 export function calculateTax(taxableIncome: number, slabs: TaxSlab[]): { total: number; breakdown: { slab: TaxSlab; taxableAmount: number; tax: number }[] } {
   let remaining = taxableIncome;
   const breakdown: { slab: TaxSlab; taxableAmount: number; tax: number }[] = [];
@@ -92,7 +131,7 @@ export function calculateSalary(
   grossMonthly: number,
   structure: SalaryStructure,
   deductions: DeductionItem[],
-  taxCategory: 'male' | 'female',
+  taxCategory: SalaryTaxCategory,
   bonusMonths: number = 2,
   customMaleSlabs?: TaxSlab[],
   customFemaleSlabs?: TaxSlab[]

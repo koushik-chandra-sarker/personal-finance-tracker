@@ -10,6 +10,20 @@ function fmt(n: number, currency: string) {
   return (sym[currency] || currency + ' ') + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
+function SalaryChartTooltip({ active, payload, label, currency }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string; currency: string }) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
+      {label && <p className="font-semibold text-slate-900 dark:text-white mb-1">{label}</p>}
+      {payload.map((p, i) => (
+        <p key={i} className="text-slate-600 dark:text-slate-300">
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmt(p.value, currency)}
+        </p>
+      ))}
+    </div>
+  );
+}
+
 export default function SalaryCharts({ result, currency }: { result: SalaryBreakdown; currency: string }) {
   const structureData = [
     { name: 'Basic', value: result.basicMonthly },
@@ -32,20 +46,6 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
     tax: result.monthlyTax,
   }));
 
-  const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string }) => {
-    if (!active || !payload?.length) return null;
-    return (
-      <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
-        {label && <p className="font-semibold text-slate-900 dark:text-white mb-1">{label}</p>}
-        {payload.map((p, i) => (
-          <p key={i} className="text-slate-600 dark:text-slate-300">
-            <span style={{ color: p.color }}>●</span> {p.name}: {fmt(p.value, currency)}
-          </p>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="space-y-4">
       <div className="grid sm:grid-cols-2 gap-4">
@@ -57,7 +57,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
               <Pie data={structureData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
                 {structureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<SalaryChartTooltip currency={currency} />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -73,7 +73,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
                 <Cell fill="#ef4444" />
                 <Cell fill="#f59e0b" />
               </Pie>
-              <Tooltip content={<CustomTooltip />} />
+              <Tooltip content={<SalaryChartTooltip currency={currency} />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -88,7 +88,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
             <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<SalaryChartTooltip currency={currency} />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
             <Bar dataKey="gross" name="Gross" fill="#6366f1" radius={[4, 4, 0, 0]} />
             <Bar dataKey="net" name="Net" fill="#10b981" radius={[4, 4, 0, 0]} />
