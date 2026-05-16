@@ -9,7 +9,8 @@ type TaxConfigSourceInput = {
   maxAmount: number | null;
   rate: number;
   label: string;
-  source?: string;
+  source?: string | null;
+  isActive?: boolean;
 };
 
 export async function getTaxConfigs(fiscalYear?: string) {
@@ -69,15 +70,12 @@ export async function deleteTaxConfig(id: string) {
   });
 }
 
-export async function syncTaxConfigsFromSource(fiscalYear: string, configs: TaxConfigSourceInput[]) {
-  // We perform this inside a transaction to ensure clean replacement
+export async function replaceTaxConfigsForFiscalYear(fiscalYear: string, configs: TaxConfigSourceInput[]) {
   return prisma.$transaction(async (tx) => {
-    // Optionally delete or mark inactive old configs for this FY
     await tx.taxConfig.deleteMany({
       where: { fiscalYear },
     });
 
-    // Insert new configs
     await tx.taxConfig.createMany({
       data: configs,
     });

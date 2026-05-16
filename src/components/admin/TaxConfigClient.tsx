@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { DownloadCloud, Plus, Trash2, CheckCircle2, AlertCircle, ExternalLink } from 'lucide-react';
-import { autoFetchTaxConfigsAction, deleteTaxConfigAction, createTaxConfigAction } from '@/actions/tax-config.actions';
+import { useMemo, useState } from 'react';
+import { AlertCircle, CheckCircle2, Plus, Save, Settings2, Trash2, X } from 'lucide-react';
+import { deleteTaxConfigAction, saveManualTaxYearConfigsAction, type ManualTaxConfigInput } from '@/actions/tax-config.actions';
 import Modal from '@/components/ui/Modal';
 import { useRouter } from 'next/navigation';
 
@@ -21,7 +21,14 @@ export type TaxConfigClientRow = {
   updatedAt: string;
 };
 
-const DEFAULT_SOURCE_URL = 'https://taxsummaries.pwc.com/bangladesh/individual/taxes-on-personal-income';
+type DraftRow = {
+  id: string;
+  category: 'MALE' | 'FEMALE';
+  label: string;
+  minAmount: string;
+  maxAmount: string;
+  rate: string;
+};
 
 function getCurrentBangladeshFiscalYear() {
   const now = new Date();
@@ -38,45 +45,126 @@ function formatAmount(value: string | null) {
   return Number(value).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 }
 
+function newDraftRow(category: 'MALE' | 'FEMALE' = 'MALE'): DraftRow {
+  return {
+    id: `draft-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+    category,
+    label: '',
+    minAmount: '',
+    maxAmount: '',
+    rate: '',
+  };
+}
+
+function rowsFromExisting(rows: TaxConfigClientRow[]) {
+  if (rows.length === 0) return [newDraftRow('MALE'), newDraftRow('FEMALE')];
+  return rows
+    .sort((a, b) => a.category.localeCompare(b.category) || a.slabIndex - b.slabIndex)
+    .map((row) => ({
+      id: row.id,
+      category: row.category,
+      label: row.label,
+      minAmount: row.minAmount,
+      maxAmount: row.maxAmount ?? '',
+      rate: row.rate,
+    }));
+}
+
 export default function TaxConfigClient({ initialConfigs }: { initialConfigs: TaxConfigClientRow[] }) {
   const [configs, setConfigs] = useState(initialConfigs);
-  const [isFetching, setIsFetching] = useState(false);
+  const [fiscalYear, setFiscalYear] = useState(getCurrentBangladeshFiscalYear());
+  const [draftRows, setDraftRows] = useState<DraftRow[]>([newDraftRow('MALE'), newDraftRow('FEMALE')]);
+  const [isYearModalOpen, setIsYearModalOpen] = useState(false);
+  const [savingYear, setSavingYear] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [fiscalYear, setFiscalYear] = useState(getCurrentBangladeshFiscalYear());
-  const [sourceUrl, setSourceUrl] = useState(DEFAULT_SOURCE_URL);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const router = useRouter();
 
-  const handleAutoFetch = async () => {
-    setIsFetching(true);
+  const groupedByYear = useMemo(() => {
+    const grouped = configs.reduce<Record<string, TaxConfigClientRow[]>>((acc, config) => {
+      acc[config.fiscalYear] = acc[config.fiscalYear] ?? [];
+      acc[config.fiscalYear].push(config);
+      return acc;
+    }, {});
+
+    return Object.entries(grouped)
+      .sort(([a], [b]) => b.localeCompare(a))
+      .map(([year, rows]) => ({
+        year,
+        rows: rows.sort((a, b) => a.category.localeCompare(b.category) || a.slabIndex - b.slabIndex),
+      }));
+  }, [configs]);
+
+  const fiscalYearOptions = Array.from(new Set([fiscalYear, getCurrentBangladeshFiscalYear(), ...configs.map((config) => config.fiscalYear)])).sort((a, b) => b.localeCompare(a));
+
+  const openYearEditor = (year = fiscalYear) => {
+    setFiscalYear(year);
+    setDraftRows(rowsFromExisting(configs.filter((config) => config.fiscalYear === year)));
+    setError(null);
+    setSuccess(null);
+    setIsYearModalOpen(true);
+  };
+
+  const updateDraftRow = (id: string, field: keyof DraftRow, value: string) => {
+    setDraftRows((prev) => prev.map((row) => row.id === id ? { ...row, [field]: value } : row));
+  };
+
+  const removeDraftRow = (id: string) => {
+    setDraftRows((prev) => prev.filter((row) => row.id !== id));
+  };
+
+  const addDraftRow = (category: 'MALE' | 'FEMALE') => {
+    setDraftRows((prev) => [...prev, newDraftRow(category)]);
+  };
+
+  const buildManualRows = (): ManualTaxConfigInput[] => {
+    const counters: Record<'MALE' | 'FEMALE', number> = { MALE: 0, FEMALE: 0 };
+    return draftRows
+      .filter((row) => row.label.trim() || row.minAmount.trim() || row.rate.trim())
+      .map((row) => {
+        const slabIndex = counters[row.category];
+        counters[row.category] += 1;
+        return {
+          category: row.category,
+          slabIndex,
+          minAmount: Number(row.minAmount),
+          maxAmount: row.maxAmount.trim() ? Number(row.maxAmount) : null,
+          rate: Number(row.rate),
+          label: row.label.trim(),
+        };
+      });
+  };
+
+  const handleSaveYear = async () => {
+    setSavingYear(true);
     setError(null);
     setSuccess(null);
     try {
-      const res = await autoFetchTaxConfigsAction(fiscalYear, sourceUrl);
-      if (res.success) {
-        if (res.data?.configs) setConfigs(res.data.configs);
-        setSuccess(res.message || 'Successfully fetched tax configs.');
+      const res = await saveManualTaxYearConfigsAction(fiscalYear, buildManualRows());
+      if (res.success && res.data?.configs) {
+        setConfigs(res.data.configs);
+        setSuccess(res.message || 'Tax year saved.');
+        setIsYearModalOpen(false);
         router.refresh();
       } else {
-        setError(res.message || 'Failed to fetch tax configs.');
+        setError(res.message || 'Failed to save tax year.');
       }
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
-      setIsFetching(false);
+      setSavingYear(false);
     }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this tax slab?')) return;
-    
     setError(null);
+    setSuccess(null);
     try {
       const res = await deleteTaxConfigAction(id);
       if (res.success) {
-        setConfigs(prev => prev.filter(c => c.id !== id));
+        setConfigs((prev) => prev.filter((config) => config.id !== id));
+        setSuccess('Tax slab deleted.');
       } else {
         setError(res.message || 'Failed to delete config.');
       }
@@ -85,64 +173,36 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
     }
   };
 
-  const handleCreate = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setSubmitting(true);
-    setError(null);
-    try {
-      const formData = new FormData(e.currentTarget);
-      const res = await createTaxConfigAction(formData);
-      if (res.success) {
-        if (res.data) setConfigs(prev => [...prev.filter(config => config.id !== res.data!.id), res.data!]);
-        setIsModalOpen(false);
-        setSuccess('Successfully added tax slab.');
-        router.refresh(); // Server action handles revalidation, wait for data to refresh
-      } else {
-        setError(res.message || 'Failed to create tax slab.');
-      }
-    } catch (err) {
-      setError(getErrorMessage(err));
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const fiscalYearOptions = Array.from(new Set([fiscalYear, getCurrentBangladeshFiscalYear(), ...configs.map(c => c.fiscalYear)])).sort((a, b) => b.localeCompare(a));
-  const maleConfigs = configs.filter(c => c.category === 'MALE' && c.fiscalYear === fiscalYear);
-  const femaleConfigs = configs.filter(c => c.category === 'FEMALE' && c.fiscalYear === fiscalYear);
-  const visibleConfigs = [...maleConfigs, ...femaleConfigs];
-  const latestSource = visibleConfigs.find(config => config.source)?.source;
-
   const renderTable = (data: TaxConfigClientRow[], title: string) => (
-    <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden mb-6">
-      <div className="p-4 border-b border-slate-100 dark:border-slate-700/50 flex justify-between items-center">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{title} Slabs</h3>
+    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/50">
+      <div className="border-b border-slate-100 p-3 dark:border-slate-700/50">
+        <h3 className="text-xs font-semibold text-slate-900 dark:text-white">{title}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-slate-50 dark:bg-slate-700/30">
-              <th className="text-left px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">Label</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">Min</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">Max</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">Rate (%)</th>
-              <th className="text-right px-4 py-3 font-semibold text-slate-500 dark:text-slate-400">Actions</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Label</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Min</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Max</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Rate</th>
+              <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
             {data.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-slate-500">No slabs found for {title}.</td>
+                <td colSpan={5} className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">No slabs added.</td>
               </tr>
             ) : (
-              data.map(config => (
+              data.map((config) => (
                 <tr key={config.id}>
-                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">{config.label}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{formatAmount(config.minAmount)}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{formatAmount(config.maxAmount)}</td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">{Number(config.rate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-3 text-xs font-medium text-slate-900 dark:text-slate-100">{config.label}</td>
+                  <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{formatAmount(config.minAmount)}</td>
+                  <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{formatAmount(config.maxAmount)}</td>
+                  <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{Number(config.rate).toLocaleString('en-IN', { maximumFractionDigits: 2 })}%</td>
                   <td className="px-4 py-3 text-right">
-                    <button onClick={() => handleDelete(config.id)} className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors">
+                    <button onClick={() => handleDelete(config.id)} className="rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </td>
@@ -156,144 +216,203 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="flex flex-col xl:flex-row xl:items-start justify-between gap-4">
+    <div className="mx-auto max-w-6xl space-y-6">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Tax Configuration</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Manage live tax slabs for the salary planner.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Manually maintain salary planner tax slabs by fiscal year.</p>
         </div>
-        <div className="grid gap-2 sm:grid-cols-[140px_minmax(260px,1fr)_auto_auto]">
-          <div className="relative">
+        <div className="grid gap-2 sm:grid-cols-[160px_auto]">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Fiscal Year</label>
             <input
               list="taxFiscalYears"
               value={fiscalYear}
-              onChange={(e) => setFiscalYear(e.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none"
+              onChange={(event) => setFiscalYear(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white"
               placeholder="2025-26"
-              aria-label="Fiscal year"
             />
             <datalist id="taxFiscalYears">
-              {fiscalYearOptions.map(year => <option key={year} value={year} />)}
+              {fiscalYearOptions.map((year) => <option key={year} value={year} />)}
             </datalist>
           </div>
-          <input
-            type="url"
-            value={sourceUrl}
-            onChange={(e) => setSourceUrl(e.target.value)}
-            className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none"
-            placeholder="Source URL"
-            aria-label="Tax source URL"
-          />
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-sm font-semibold hover:bg-slate-200 dark:hover:bg-slate-600 transition-colors"
+          <button
+            onClick={() => openYearEditor(fiscalYear)}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700"
           >
-            <Plus className="h-4 w-4" /> Add Slab
-          </button>
-          <button 
-            onClick={handleAutoFetch} 
-            disabled={isFetching}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
-          >
-            {isFetching ? <div className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <DownloadCloud className="h-4 w-4" />}
-            Fetch
+            <Settings2 className="h-4 w-4" /> Setup Tax Year
           </button>
         </div>
-      </div>
-
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4">
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Selected FY</p>
-            <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{fiscalYear}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Active Slabs</p>
-            <p className="mt-1 text-sm font-bold text-slate-900 dark:text-white">{visibleConfigs.length}</p>
-          </div>
-          <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Latest Source</p>
-            {latestSource ? (
-              <a href={latestSource.split('|').at(-1)?.trim()} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
-                Open source <ExternalLink className="h-3.5 w-3.5" />
-              </a>
-            ) : (
-              <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">Manual or not fetched</p>
-            )}
-          </div>
-        </div>
-        <p className="mt-3 text-xs text-slate-500 dark:text-slate-400">
-          The fetcher reads the selected internet source and imports the resident individual table plus the women/senior exemption note. It replaces only the selected fiscal year.
-        </p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 p-4 text-sm text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-xl">
+        <div className="flex items-center gap-2 rounded-xl bg-rose-50 p-4 text-sm text-rose-600 dark:bg-rose-500/10">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <p>{error}</p>
         </div>
       )}
 
       {success && (
-        <div className="flex items-center gap-2 p-4 text-sm text-emerald-600 bg-emerald-50 dark:bg-emerald-500/10 rounded-xl">
+        <div className="flex items-center gap-2 rounded-xl bg-emerald-50 p-4 text-sm text-emerald-600 dark:bg-emerald-500/10">
           <CheckCircle2 className="h-5 w-5 flex-shrink-0" />
           <p>{success}</p>
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div>
-          {renderTable(maleConfigs, 'Male (General)')}
+      <div className="grid gap-3 sm:grid-cols-3">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Visible Tax Years</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{groupedByYear.length}</p>
         </div>
-        <div>
-          {renderTable(femaleConfigs, 'Female / Senior / Disabled')}
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Total Slabs</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{configs.length}</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Current Editor FY</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{fiscalYear}</p>
         </div>
       </div>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Add Tax Slab">
-        <form onSubmit={handleCreate} className="space-y-4">
-          <input type="hidden" name="fiscalYear" value={fiscalYear} />
-          
-          <div className="grid grid-cols-2 gap-4">
+      {groupedByYear.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center dark:border-slate-700 dark:bg-slate-800/50">
+          <p className="text-sm font-semibold text-slate-800 dark:text-slate-100">No tax years configured yet.</p>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Choose a fiscal year and use Setup Tax Year to add all slabs manually.</p>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {groupedByYear.map(({ year, rows }) => {
+            const maleRows = rows.filter((row) => row.category === 'MALE');
+            const femaleRows = rows.filter((row) => row.category === 'FEMALE');
+            return (
+              <section key={year} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+                <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">Fiscal Year {year}</h2>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{rows.length} manual slabs saved in database</p>
+                  </div>
+                  <button
+                    onClick={() => openYearEditor(year)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700"
+                  >
+                    <Settings2 className="h-3.5 w-3.5" /> Edit Year
+                  </button>
+                </div>
+                <div className="grid gap-4 xl:grid-cols-2">
+                  {renderTable(maleRows, 'Male / General')}
+                  {renderTable(femaleRows, 'Female / Senior / Disabled')}
+                </div>
+              </section>
+            );
+          })}
+        </div>
+      )}
+
+      <Modal isOpen={isYearModalOpen} onClose={() => setIsYearModalOpen(false)} title={`Manual Tax Year Setup - ${fiscalYear}`} size="2xl">
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Category</label>
-              <select name="category" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                <option value="MALE">Male (General)</option>
-                <option value="FEMALE">Female / Senior / Disabled</option>
-              </select>
+              <label className="mb-1 block text-xs font-medium text-slate-500 dark:text-slate-400">Fiscal Year</label>
+              <input
+                value={fiscalYear}
+                onChange={(event) => setFiscalYear(event.target.value)}
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                placeholder="2025-26"
+              />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Slab Index</label>
-              <input type="number" name="slabIndex" required className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0 for first slab" />
+            <div className="flex items-end gap-2">
+              <button onClick={() => addDraftRow('MALE')} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
+                <Plus className="h-3.5 w-3.5" /> Male Slab
+              </button>
+              <button onClick={() => addDraftRow('FEMALE')} className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
+                <Plus className="h-3.5 w-3.5" /> Female Slab
+              </button>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Label</label>
-            <input type="text" name="label" required className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="e.g. Up to ৳3,50,000" />
+          <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-700/50">
+            <table className="w-full min-w-[820px] text-sm">
+              <thead>
+                <tr className="bg-slate-50 dark:bg-slate-700/30">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Category</th>
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Label</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Min</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Max</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Rate</th>
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
+                {draftRows.map((row) => (
+                  <tr key={row.id}>
+                    <td className="px-3 py-2">
+                      <select
+                        value={row.category}
+                        onChange={(event) => updateDraftRow(row.id, 'category', event.target.value)}
+                        className="w-36 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      >
+                        <option value="MALE">Male</option>
+                        <option value="FEMALE">Female/Senior</option>
+                      </select>
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        value={row.label}
+                        onChange={(event) => updateDraftRow(row.id, 'label', event.target.value)}
+                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        placeholder="Up to BDT 375,000"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        value={row.minAmount}
+                        onChange={(event) => updateDraftRow(row.id, 'minAmount', event.target.value)}
+                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        value={row.maxAmount}
+                        onChange={(event) => updateDraftRow(row.id, 'maxAmount', event.target.value)}
+                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        placeholder="No max"
+                      />
+                    </td>
+                    <td className="px-3 py-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={row.rate}
+                        onChange={(event) => updateDraftRow(row.id, 'rate', event.target.value)}
+                        className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      />
+                    </td>
+                    <td className="px-3 py-2 text-right">
+                      <button onClick={() => removeDraftRow(row.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Min Amount</label>
-              <input type="number" name="minAmount" required className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Max Amount</label>
-              <input type="number" name="maxAmount" className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Leave empty if None" />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Tax Rate (%)</label>
-              <input type="number" step="0.01" name="rate" required className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
-            </div>
+          <div className="rounded-xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-200">
+            Saving replaces all slabs for this fiscal year. Other fiscal years stay unchanged.
           </div>
 
-          <div className="flex justify-end pt-4">
-            <button type="submit" disabled={submitting} className="px-5 py-2 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-              {submitting ? 'Saving...' : 'Save Slab'}
+          <div className="flex justify-end gap-2 pt-2">
+            <button onClick={() => setIsYearModalOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">
+              Cancel
+            </button>
+            <button onClick={handleSaveYear} disabled={savingYear} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">
+              <Save className="h-4 w-4" /> {savingYear ? 'Saving...' : 'Save Tax Year'}
             </button>
           </div>
-        </form>
+        </div>
       </Modal>
     </div>
   );

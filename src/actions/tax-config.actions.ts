@@ -1,10 +1,18 @@
 'use server';
 
-import { getTaxConfigs, createTaxConfig, updateTaxConfig, deleteTaxConfig, syncTaxConfigsFromSource } from '@/services/tax-config.service';
+import { getTaxConfigs, createTaxConfig, updateTaxConfig, deleteTaxConfig, replaceTaxConfigsForFiscalYear } from '@/services/tax-config.service';
 import { revalidatePath } from 'next/cache';
 import { validateAccess } from '@/lib/access';
 import { TaxCategory } from '@prisma/client';
-import { fetchBangladeshPersonalTaxConfigs } from '@/lib/tax-config-fetcher';
+
+export type ManualTaxConfigInput = {
+  category: TaxCategory;
+  slabIndex: number;
+  minAmount: number;
+  maxAmount: number | null;
+  rate: number;
+  label: string;
+};
 
 function getErrorMessage(error: unknown) {
   return error instanceof Error ? error.message : 'An error occurred.';
@@ -87,23 +95,53 @@ export async function deleteTaxConfigAction(id: string) {
   }
 }
 
-export async function autoFetchTaxConfigsAction(fiscalYear: string, sourceUrl?: string) {
+function validateManualTaxRows(fiscalYear: string, rows: ManualTaxConfigInput[]) {
+  const cleanFiscalYear = fiscalYear.trim();
+  if (!/^\d{4}-\d{2}$/.test(cleanFiscalYear)) {
+    throw new Error('Use fiscal year format like 2025-26.');
+  }
+  if (rows.length === 0) {
+    throw new Error('Add at least one tax slab.');
+  }
+
+  return rows.map((row, index) => {
+    if (!row.label.trim()) throw new Error(`Row ${index + 1}: label is required.`);
+    if (!['MALE', 'FEMALE'].includes(row.category)) throw new Error(`Row ${index + 1}: category is invalid.`);
+    if (!Number.isFinite(row.minAmount) || row.minAmount < 0) throw new Error(`Row ${index + 1}: min amount is invalid.`);
+    if (row.maxAmount !== null && (!Number.isFinite(row.maxAmount) || row.maxAmount <= row.minAmount)) {
+      throw new Error(`Row ${index + 1}: max amount must be greater than min amount.`);
+    }
+    if (!Number.isFinite(row.rate) || row.rate < 0 || row.rate > 100) throw new Error(`Row ${index + 1}: rate must be between 0 and 100.`);
+
+    return {
+      fiscalYear: cleanFiscalYear,
+      category: row.category,
+      slabIndex: row.slabIndex,
+      minAmount: row.minAmount,
+      maxAmount: row.maxAmount,
+      rate: row.rate,
+      label: row.label.trim(),
+      source: 'manual',
+      isActive: true,
+    };
+  });
+}
+
+export async function saveManualTaxYearConfigsAction(fiscalYear: string, rows: ManualTaxConfigInput[]) {
   try {
     await validateAccess('SETTINGS', 'EDIT');
 
-    const importResult = await fetchBangladeshPersonalTaxConfigs(fiscalYear, sourceUrl);
-    await syncTaxConfigsFromSource(fiscalYear, importResult.configs);
+    const data = validateManualTaxRows(fiscalYear, rows);
+    await replaceTaxConfigsForFiscalYear(fiscalYear.trim(), data);
     const configs = await getTaxConfigs();
     revalidatePath('/admin/tax-config');
     revalidatePath('/salary-planner');
     
     return {
       success: true,
-      message: `Fetched ${importResult.configs.length} slabs for ${fiscalYear} from ${importResult.sourceTitle}.`,
+      message: `Saved ${data.length} manual tax slabs for ${fiscalYear.trim()}.`,
       data: {
         configs: configs.map(serializeTaxConfig),
-        sourceUrl: importResult.sourceUrl,
-        sourceTitle: importResult.sourceTitle,
       },
     };
   } catch (error) {
