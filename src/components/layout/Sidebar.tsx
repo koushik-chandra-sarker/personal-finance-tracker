@@ -8,7 +8,7 @@ import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/su
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText, CreditCard,
-  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
+  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -40,6 +40,7 @@ const secondaryNavItems: NavItem[] = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
+  { href: '/salary-planner', label: 'Salary Planner', icon: Calculator },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
 ];
@@ -53,6 +54,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
   { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
+  { href: '/admin/tax-config', label: 'Tax Config', icon: Calculator },
 ];
 
 function isActiveRoute(pathname: string, href: string) {

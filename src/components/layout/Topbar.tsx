@@ -15,7 +15,7 @@ import {
 import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, CreditCard,
-  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText,
+  RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -49,6 +49,7 @@ const secondaryNavItems: NavItem[] = [
   { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/recurring', label: 'Recurring', icon: RefreshCw },
   { href: '/reports', label: 'Reports', icon: FileBarChart },
+  { href: '/salary-planner', label: 'Salary Planner', icon: Calculator },
   { href: '/settings', label: 'Settings', icon: Settings },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
 ];
@@ -62,6 +63,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
   { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },
+  { href: '/admin/tax-config', label: 'Tax Config', icon: Calculator },
 ];
 
 function isActiveRoute(pathname: string, href: string) {

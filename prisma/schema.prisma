@@ -1013,3 +1013,26 @@ model Tutorial {
 
   @@index([isActive, sortOrder])
 }
+
+model TaxConfig {
+  id             String   @id @default(cuid())
+  fiscalYear     String                          // e.g. "2025-26"
+  category       TaxCategory @default(MALE)      // MALE, FEMALE
+  slabIndex      Int                             // ordering within the FY+category
+  minAmount      Decimal  @db.Decimal(14, 2)
+  maxAmount      Decimal? @db.Decimal(14, 2)     // null = no upper limit
+  rate           Decimal  @db.Decimal(5, 2)      // percentage
+  label          String                          // e.g. "Up to ৳3,50,000"
+  isActive       Boolean  @default(true)
+  source         String?                         // "manual" or "auto-fetched"
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([fiscalYear, category, slabIndex])
+  @@index([fiscalYear, category, isActive])
+}
+
+enum TaxCategory {
+  MALE
+  FEMALE
+}
