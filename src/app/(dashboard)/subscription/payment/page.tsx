@@ -42,6 +42,11 @@ export default async function SubscriptionPaymentPage({
       paymentMethods={paymentMethods}
       paymentRequests={paymentRequests}
       accessState={hasActiveAccess ? 'active' : 'blocked'}
+      activeSubscription={hasActiveAccess ? {
+        packageId: access.subscriptionPackageId,
+        source: access.subscriptionSource,
+        currentPeriodEnd: access.subscriptionCurrentPeriodEnd?.toISOString() || null,
+      } : null}
     />
   );
 }

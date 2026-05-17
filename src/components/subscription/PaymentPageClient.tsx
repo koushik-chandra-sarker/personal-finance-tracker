@@ -45,6 +45,11 @@ type PaymentPageClientProps = {
   paymentMethods: ManualPaymentMethodRow[];
   paymentRequests: ManualPaymentRequestRow[];
   accessState?: 'blocked' | 'active';
+  activeSubscription?: {
+    packageId: string | null;
+    source: string | null;
+    currentPeriodEnd: string | null;
+  } | null;
 };
 
 type PaymentProvider = 'BKASH' | 'NAGAD';
@@ -77,6 +82,7 @@ export default function PaymentPageClient({
   paymentMethods,
   paymentRequests: initialPaymentRequests,
   accessState = 'blocked',
+  activeSubscription = null,
 }: PaymentPageClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -106,8 +112,10 @@ export default function PaymentPageClient({
   const latestApprovedRequest = requests.find((request) => request.status === 'APPROVED') || null;
   const canSubmit = Boolean(selectedPackage && !pendingRequest);
   const canUseProviderTabs = paymentMethods.length > 0;
-  const activePackage = packages.find((pkg) => pkg.id === session?.user?.subscriptionPackageId) || null;
-  const accessEndDate = session?.user?.subscriptionCurrentPeriodEnd ? new Date(session.user.subscriptionCurrentPeriodEnd) : null;
+  const activePackageId = activeSubscription?.packageId || session?.user?.subscriptionPackageId || null;
+  const activePackage = packages.find((pkg) => pkg.id === activePackageId) || null;
+  const activePeriodEnd = activeSubscription?.currentPeriodEnd || session?.user?.subscriptionCurrentPeriodEnd || null;
+  const accessEndDate = activePeriodEnd ? new Date(activePeriodEnd) : null;
   const accessEndLabel = accessEndDate ? formatDate(accessEndDate, undefined, locale) : copy.noExpiry;
   const daysRemaining = accessEndDate
     ? Math.max(0, Math.ceil((accessEndDate.getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
@@ -185,7 +193,7 @@ export default function PaymentPageClient({
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.currentPlan}</p>
               <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{session?.user?.subscriptionSource === 'ADMIN_GRANT' ? 'Admin granted' : messages.subscription.payManually}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(activeSubscription?.source || session?.user?.subscriptionSource) === 'ADMIN_GRANT' ? 'Admin granted' : messages.subscription.payManually}</p>
             </div>
             <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">

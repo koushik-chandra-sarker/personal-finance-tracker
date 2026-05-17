@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
-import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getSubscriptionLockedHref, hasActiveSubscriptionAccess, type SubscriptionAccessUser } from '@/lib/subscription-access';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText, CreditCard,
@@ -67,16 +67,20 @@ function isActiveInvestmentRoute(pathname: string, href: string) {
   return isActiveRoute(pathname, href);
 }
 
-export default function Sidebar() {
+type SidebarProps = {
+  subscriptionAccessUser?: SubscriptionAccessUser | null;
+};
+
+export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
   const pathname = usePathname();
-  const { data: session, status } = useSession();
+  const { data: session } = useSession();
   const { messages } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [investmentsOpen, setInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'));
-  const currentUser = session?.user;
+  const currentUser = subscriptionAccessUser || session?.user;
   const isAdmin = currentUser?.role === 'ADMIN';
-  const isSubscriptionLocked = status === 'authenticated' && !hasActiveSubscriptionAccess(currentUser);
+  const isSubscriptionLocked = Boolean(currentUser) && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
   const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);

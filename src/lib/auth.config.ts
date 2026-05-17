@@ -1,6 +1,5 @@
 import type { NextAuthConfig } from 'next-auth';
 import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@/types';
-import { getSubscriptionBlockReason, hasActiveSubscriptionAccess, isSubscriptionUnlockedPath } from '@/lib/subscription-access';
 
 type SessionUpdate = {
   id?: string;
@@ -43,7 +42,6 @@ export const authConfig = {
         nextUrl.pathname.startsWith('/reports') || 
         nextUrl.pathname.startsWith('/settings') ||
         nextUrl.pathname.startsWith('/subscription');
-      const isSubscriptionAllowedRoute = isSubscriptionUnlockedPath(nextUrl.pathname);
 
       if (isPasswordChangeRoute) {
         if (!isLoggedIn) return false;
@@ -58,11 +56,7 @@ export const authConfig = {
           passwordUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
           return Response.redirect(passwordUrl);
         }
-        if (isSubscriptionAllowedRoute || hasActiveSubscriptionAccess(auth.user)) return true;
-        const subscriptionUrl = new URL('/subscription', nextUrl);
-        subscriptionUrl.searchParams.set('reason', getSubscriptionBlockReason(auth.user));
-        subscriptionUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
-        return Response.redirect(subscriptionUrl);
+        return true;
       } else if (isAuthPage) {
         if (isLoggedIn) {
           return Response.redirect(new URL('/dashboard', nextUrl));

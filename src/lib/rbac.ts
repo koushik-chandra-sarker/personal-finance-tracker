@@ -26,6 +26,7 @@ export async function getCurrentUserAccess() {
       lockedUntil: true,
       subscription: {
         select: {
+          packageId: true,
           plan: true,
           interval: true,
           source: true,
@@ -45,6 +46,7 @@ export async function getCurrentUserAccess() {
     id: user.id,
     role: user.role,
     status: user.status,
+    subscriptionPackageId: user.subscription?.packageId || null,
     subscriptionPlan: user.subscription?.plan || null,
     subscriptionInterval: user.subscription?.interval || null,
     subscriptionSource: user.subscription?.source || null,

@@ -20,7 +20,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
 import AppLogo from '@/components/brand/AppLogo';
-import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getSubscriptionLockedHref, hasActiveSubscriptionAccess, type SubscriptionAccessUser } from '@/lib/subscription-access';
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
 import { useI18n } from '@/i18n/client';
 
@@ -92,8 +92,12 @@ type NotificationItem = {
 
 const NOTIFICATION_STALE_MS = 5 * 60 * 1000;
 
-export default function Topbar() {
-  const { data: session, status } = useSession();
+type TopbarProps = {
+  subscriptionAccessUser?: SubscriptionAccessUser | null;
+};
+
+export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
+  const { data: session } = useSession();
   const { messages } = useI18n();
   const notificationCopy = messages.pages.notifications;
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -108,13 +112,14 @@ export default function Topbar() {
   const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
   const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
   const currentUser = session?.user;
+  const accessUser = subscriptionAccessUser || currentUser;
   const userLocale = currentUser?.preferredLocale;
-  const isAdmin = currentUser?.role === 'ADMIN';
-  const isSubscriptionLocked = status === 'authenticated' && !hasActiveSubscriptionAccess(currentUser);
+  const isAdmin = accessUser?.role === 'ADMIN';
+  const isSubscriptionLocked = Boolean(accessUser) && !hasActiveSubscriptionAccess(accessUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
-  const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
-  const navLabel = useCallback((label: string) => messages.navigation[label as keyof typeof messages.navigation] || label, [messages.navigation]);
+  const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? accessUser : null);
+  const navLabel = useCallback((label: string) => messages.navigation[label as keyof typeof messages.navigation] || label, [messages]);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const latestNotificationIdRef = useRef<string | null>(null);
