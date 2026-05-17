@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { formatCurrency, cn } from '@/lib/utils';
 import { Calculator, Info, ChevronDown } from 'lucide-react';
+import { useI18n } from '@/i18n/client';
 
 export default function SanchayapatraCalculator({ 
   currency = 'BDT',
@@ -13,6 +14,8 @@ export default function SanchayapatraCalculator({
   systemConfigs?: any[];
   initialAmount?: number | string;
 }) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.investments;
   const [amount, setAmount] = useState<number | ''>(Number(initialAmount) || '');
   const [selectedTypeId, setSelectedTypeId] = useState<string>('');
   const [isCustomRate, setIsCustomRate] = useState(false);
@@ -67,13 +70,13 @@ export default function SanchayapatraCalculator({
 
     if (selectedType.payoutFrequency === 'MONTHLY') {
       profitPerInstallment = netYearly / 12;
-      frequencyLabel = 'Estimated Monthly Profit';
+      frequencyLabel = copy.estimatedMonthlyProfit;
     } else if (selectedType.payoutFrequency === 'QUARTERLY') {
       profitPerInstallment = netYearly / 4;
-      frequencyLabel = 'Estimated Quarterly Profit';
+      frequencyLabel = copy.estimatedQuarterlyProfit;
     } else {
       profitPerInstallment = netYearly * 5; 
-      frequencyLabel = 'Net Profit at Maturity';
+      frequencyLabel = copy.netProfitAtMaturity;
     }
 
     return {
@@ -85,7 +88,7 @@ export default function SanchayapatraCalculator({
       taxRate,
       activeRate
     };
-  }, [amount, selectedType, isCustomRate, customRate]);
+  }, [amount, selectedType, isCustomRate, customRate, copy.estimatedMonthlyProfit, copy.estimatedQuarterlyProfit, copy.netProfitAtMaturity]);
 
   if (!systemConfigs || systemConfigs.length === 0) return null;
 
@@ -94,10 +97,10 @@ export default function SanchayapatraCalculator({
       <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Calculator className="h-4 w-4 text-indigo-500" />
-          <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">Calculator</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{copy.calculator}</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-500 uppercase">Custom Rate</span>
+          <span className="text-[10px] font-bold text-slate-500 uppercase">{copy.customRate}</span>
           <input 
             type="checkbox" 
             checked={isCustomRate} 
@@ -110,18 +113,18 @@ export default function SanchayapatraCalculator({
       <div className="p-5 space-y-6">
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Amount ({currency})</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">{copy.amount} ({currency})</label>
             <input 
               type="number" 
               value={amount} 
               onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
-              placeholder="Enter amount..."
+              placeholder={copy.enterAmount}
               className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-white rounded-lg focus:border-indigo-500 outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Scheme Type</label>
+            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">{copy.schemeType}</label>
             <div className="relative">
               <select
                 value={selectedTypeId}
@@ -138,7 +141,7 @@ export default function SanchayapatraCalculator({
 
           {!isCustomRate && selectedType && (
             <div>
-              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">Official Rate (%)</label>
+              <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 uppercase">{copy.officialRate}</label>
               <div className="px-4 py-2 border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-sm font-bold text-indigo-600 dark:text-indigo-400 rounded-lg">
                 {selectedType.rate}%
               </div>
@@ -147,7 +150,7 @@ export default function SanchayapatraCalculator({
 
           {isCustomRate && (
             <div className="animate-in fade-in duration-200">
-              <label className="block text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1.5 uppercase">Manual Rate (%)</label>
+              <label className="block text-xs font-semibold text-indigo-600 dark:text-indigo-400 mb-1.5 uppercase">{copy.manualRate}</label>
               <input 
                 type="number" 
                 step="0.01"
@@ -163,17 +166,17 @@ export default function SanchayapatraCalculator({
           <div className="p-5 rounded-xl bg-indigo-600 text-white space-y-4">
             <div>
               <p className="text-indigo-100 text-[10px] font-bold uppercase tracking-widest mb-1">{results.frequencyLabel}</p>
-              <p className="text-3xl font-black">{formatCurrency(results.profitPerInstallment, currency)}</p>
+              <p className="text-3xl font-black">{formatCurrency(results.profitPerInstallment, currency, locale)}</p>
             </div>
             
             <div className="pt-4 border-t border-indigo-500 grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <p className="text-indigo-200 text-[10px] font-bold uppercase mb-0.5">Yearly Net</p>
-                <p className="text-base font-bold">{formatCurrency(results.netYearly, currency)}</p>
+                <p className="text-indigo-200 text-[10px] font-bold uppercase mb-0.5">{copy.yearlyNet}</p>
+                <p className="text-base font-bold">{formatCurrency(results.netYearly, currency, locale)}</p>
               </div>
               <div>
-                <p className="text-indigo-200 text-[10px] font-bold uppercase mb-0.5">Yearly Tax ({results.taxRate}%)</p>
-                <p className="text-base font-bold text-indigo-100">{formatCurrency(results.taxAmount, currency)}</p>
+                <p className="text-indigo-200 text-[10px] font-bold uppercase mb-0.5">{copy.yearlyTax} ({results.taxRate}%)</p>
+                <p className="text-base font-bold text-indigo-100">{formatCurrency(results.taxAmount, currency, locale)}</p>
               </div>
             </div>
           </div>
@@ -187,7 +190,7 @@ export default function SanchayapatraCalculator({
                 <span className="font-bold text-slate-700 dark:text-slate-300">{selectedType.name}</span>: {selectedType.description}
               </p>
               <p className="text-[10px] bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded inline-block">
-                Tax: {selectedType.taxRateBelow}% (below {formatCurrency(selectedType.taxThreshold, currency)}), {selectedType.taxRateAbove}% (above)
+                {copy.taxBelowAbove}: {selectedType.taxRateBelow}% (below {formatCurrency(selectedType.taxThreshold, currency, locale)}), {selectedType.taxRateAbove}% (above)
               </p>
             </div>
           </div>

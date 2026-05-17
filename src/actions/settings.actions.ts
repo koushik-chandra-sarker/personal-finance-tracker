@@ -7,6 +7,8 @@ import type { ActionResponse } from '@/types';
 import type { ManualPaymentProvider, ManualPaymentStatus, SubscriptionInterval } from '@prisma/client';
 import { createNotification } from '@/services/notification.service';
 import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { normalizeLocale, type AppLocale } from '@/i18n/config';
+import { setLocaleCookie } from '@/i18n/server';
 
 export type SubscriptionPackageRow = {
   id: string;
@@ -264,6 +266,29 @@ export async function updateCurrencyAction(currency: string): Promise<ActionResp
     return { success: true, message: 'Currency updated successfully' };
   } catch {
     return { success: false, message: 'Failed to update currency' };
+  }
+}
+
+export async function updateLocaleAction(locale: string): Promise<ActionResponse<{ preferredLocale: AppLocale }>> {
+  const preferredLocale = normalizeLocale(locale);
+  const session = await auth();
+
+  try {
+    await setLocaleCookie(preferredLocale);
+
+    if (session?.user?.id) {
+      await prisma.user.update({
+        where: { id: session.user.id },
+        data: { preferredLocale },
+      });
+    }
+
+    revalidatePath('/');
+    revalidatePath('/settings');
+    revalidatePath('/dashboard');
+    return { success: true, message: 'Language updated', data: { preferredLocale } };
+  } catch {
+    return { success: false, message: 'Failed to update language' };
   }
 }
 

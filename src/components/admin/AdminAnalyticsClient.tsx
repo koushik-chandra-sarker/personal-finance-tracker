@@ -38,6 +38,7 @@ import Button from '@/components/ui/Button';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import type { AdminAnalyticsResult } from '@/actions/admin.actions';
 import { APP_NAME } from '@/components/brand/AppLogo';
+import { useI18n } from '@/i18n/client';
 
 const metricIcons = [Users, ShieldCheck, CreditCard, TrendingUp, AlertTriangle, Activity, Globe2];
 
@@ -56,8 +57,8 @@ type AdminAnalyticsClientProps = {
   analytics: AdminAnalyticsResult;
 };
 
-function numberLabel(value: number) {
-  return new Intl.NumberFormat('en-US', { maximumFractionDigits: 0 }).format(value);
+function numberLabel(value: number, locale = 'en-US') {
+  return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(value);
 }
 
 function sourceLabel(source: string) {
@@ -65,30 +66,46 @@ function sourceLabel(source: string) {
 }
 
 export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClientProps) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.admin.analytics;
+  const common = messages.pages.admin.common;
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [lastRefresh, setLastRefresh] = useState(analytics.generatedAt);
   const packageChartData = analytics.packageMix.filter((pkg) => pkg.subscriptions > 0);
   const accessRows = [
-    { label: 'Active', value: analytics.access.activeSubscriptions, color: 'bg-emerald-500' },
-    { label: 'Trialing', value: analytics.access.trialingSubscriptions, color: 'bg-sky-500' },
-    { label: 'Past due', value: analytics.access.pastDueSubscriptions, color: 'bg-amber-500' },
-    { label: 'Canceled', value: analytics.access.canceledSubscriptions, color: 'bg-rose-500' },
-    { label: 'No access', value: analytics.access.withoutAccess, color: 'bg-slate-400' },
+    { label: copy.labels.active, value: analytics.access.activeSubscriptions, color: 'bg-emerald-500' },
+    { label: copy.labels.trialing, value: analytics.access.trialingSubscriptions, color: 'bg-sky-500' },
+    { label: copy.labels.pastDue, value: analytics.access.pastDueSubscriptions, color: 'bg-amber-500' },
+    { label: copy.labels.canceled, value: analytics.access.canceledSubscriptions, color: 'bg-rose-500' },
+    { label: copy.labels.noAccess, value: analytics.access.withoutAccess, color: 'bg-slate-400' },
   ];
   const accessTotal = Math.max(accessRows.reduce((sum, row) => sum + row.value, 0), 1);
   const siteVisitCards = [
-    { label: 'Views Today', value: analytics.siteVisits.viewsToday, helper: `${analytics.siteVisits.uniqueVisitorsToday} unique visitors` },
-    { label: '30-Day Views', value: analytics.siteVisits.viewsLast30Days, helper: `${analytics.siteVisits.uniqueVisitorsLast30Days} unique visitors` },
-    { label: 'Logged-In Views', value: analytics.siteVisits.loggedInViewsLast30Days, helper: 'Last 30 days' },
-    { label: 'Anonymous Views', value: analytics.siteVisits.anonymousViewsLast30Days, helper: 'Last 30 days' },
+    { label: copy.labels.viewsToday, value: analytics.siteVisits.viewsToday, helper: `${numberLabel(analytics.siteVisits.uniqueVisitorsToday, locale)} ${copy.labels.uniqueVisitors}` },
+    { label: copy.labels.views30, value: analytics.siteVisits.viewsLast30Days, helper: `${numberLabel(analytics.siteVisits.uniqueVisitorsLast30Days, locale)} ${copy.labels.uniqueVisitors}` },
+    { label: copy.labels.loggedInViews, value: analytics.siteVisits.loggedInViewsLast30Days, helper: copy.labels.last30Days },
+    { label: copy.labels.anonymousViews, value: analytics.siteVisits.anonymousViewsLast30Days, helper: copy.labels.last30Days },
   ];
   const liveActivityCards = [
-    { label: 'Online Now', value: analytics.liveActivity.onlineUsersNow, helper: 'Unique users in the last 5 minutes' },
-    { label: 'Active Sessions', value: analytics.liveActivity.activeSessionsNow, helper: 'Open sessions sending heartbeat' },
-    { label: 'Active Today', value: analytics.liveActivity.activeUsersToday, helper: 'Unique users seen today' },
-    { label: 'Active This Week', value: analytics.liveActivity.activeUsersThisWeek, helper: 'Unique users seen in 7 days' },
+    { label: copy.labels.onlineNow, value: analytics.liveActivity.onlineUsersNow, helper: copy.noActiveUsers },
+    { label: copy.labels.activeSessions, value: analytics.liveActivity.activeSessionsNow, helper: 'Heartbeat sessions' },
+    { label: copy.labels.activeToday, value: analytics.liveActivity.activeUsersToday, helper: copy.labels.activeToday },
+    { label: copy.labels.activeThisWeek, value: analytics.liveActivity.activeUsersThisWeek, helper: copy.labels.activeThisWeek },
   ];
+  const metricLabel = (label: string) => {
+    const labels: Record<string, string> = {
+      'Total Users': messages.pages.admin.users.totalUsers,
+      'Active Users': messages.pages.admin.users.activeAccounts,
+      'Active Access': messages.pages.admin.subscriptions.activeAccess,
+      'Growth Delta': 'গ্রোথ ডেল্টা',
+      'Churn Risk': 'চর্ন ঝুঁকি',
+      '30-Day Transactions': '৩০ দিনের লেনদেন',
+      '30-Day Visits': copy.labels.views30,
+      'Online Now': copy.labels.onlineNow,
+    };
+    return locale === 'bn-BD' ? labels[label] || label : label;
+  };
 
   const refreshAnalytics = () => {
     startTransition(() => {
@@ -101,16 +118,16 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Admin Analytics</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Platform health, access status, subscription value, and finance activity across {APP_NAME}.
+            {copy.subtitle.replace('{appName}', APP_NAME)}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Badge variant="info">Updated {formatDate(analytics.generatedAt, 'MMM d, h:mm a')}</Badge>
+          <Badge variant="info">{copy.updated} {formatDate(analytics.generatedAt, 'MMM d, h:mm a')}</Badge>
           <Button variant="outline" size="sm" onClick={refreshAnalytics} disabled={isPending}>
             <RefreshCw className={`h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
-            Refresh
+            {common.refresh}
           </Button>
         </div>
       </div>
@@ -122,8 +139,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
             <Card key={metric.label} className="p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{metric.label}</p>
-                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{numberLabel(metric.value)}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{metricLabel(metric.label)}</p>
+                  <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{numberLabel(metric.value, locale)}</p>
                 </div>
                 <span className={`rounded-xl p-2 ${toneClasses[metric.tone]}`}>
                   <Icon className="h-5 w-5" />
@@ -139,8 +156,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Growth Trend</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">New users, subscriptions, and transaction activity.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.growthTrend}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.growthTrendHelp}</p>
             </div>
             <UserPlus className="h-5 w-5 text-indigo-500" />
           </div>
@@ -162,10 +179,10 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                 <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={36} />
                 <Tooltip />
                 <Legend />
-                <Area type="monotone" dataKey="users" name="Users" stroke="#2563eb" fill="url(#usersFill)" strokeWidth={2} />
-                <Area type="monotone" dataKey="subscriptions" name="Subscriptions" stroke="#7c3aed" fill="transparent" strokeWidth={2} />
-                <Area type="monotone" dataKey="transactions" name="Transactions" stroke="#10b981" fill="url(#transactionsFill)" strokeWidth={2} />
-                <Area type="monotone" dataKey="visits" name="Visits" stroke="#f59e0b" fill="transparent" strokeWidth={2} />
+                <Area type="monotone" dataKey="users" name={messages.pages.admin.users.users} stroke="#2563eb" fill="url(#usersFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="subscriptions" name={messages.pages.admin.subscriptions.subscriptions} stroke="#7c3aed" fill="transparent" strokeWidth={2} />
+                <Area type="monotone" dataKey="transactions" name={messages.navigation.Transactions} stroke="#10b981" fill="url(#transactionsFill)" strokeWidth={2} />
+                <Area type="monotone" dataKey="visits" name={copy.siteVisits} stroke="#f59e0b" fill="transparent" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -174,8 +191,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Access Health</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Current subscription and access state.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.accessHealth}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.accessHealthHelp}</p>
             </div>
             <ShieldCheck className="h-5 w-5 text-emerald-500" />
           </div>
@@ -199,8 +216,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Live Activity</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Currently active users are based on recent heartbeat data.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.liveActivity}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.liveActivityHelp}</p>
             </div>
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-emerald-500" />
@@ -208,8 +225,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                 type="button"
                 onClick={refreshAnalytics}
                 disabled={isPending}
-                aria-label="Refresh live activity"
-                title="Refresh live activity"
+                aria-label={copy.refreshLive}
+                title={copy.refreshLive}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700/50 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               >
                 <RefreshCw className={`h-4 w-4 ${isPending ? 'animate-spin' : ''}`} />
@@ -220,25 +237,25 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
             {liveActivityCards.map((card) => (
               <div key={card.label} className="rounded-xl bg-slate-100/70 p-4 dark:bg-slate-800/60">
                 <p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{numberLabel(card.value)}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{numberLabel(card.value, locale)}</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{card.helper}</p>
               </div>
             ))}
           </div>
-          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">Last refresh requested {formatDate(lastRefresh, 'MMM d, h:mm a')}.</p>
+          <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">{copy.lastRefresh} {formatDate(lastRefresh, 'MMM d, h:mm a')}.</p>
         </Card>
 
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Active Routes</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Where online users are currently browsing.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.activeRoutes}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.activeRoutesHelp}</p>
             </div>
             <Globe2 className="h-5 w-5 text-emerald-500" />
           </div>
           <div className="space-y-3">
             {analytics.liveActivity.activeRoutes.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No active users in the last 5 minutes.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noActiveUsers}</p>
             ) : analytics.liveActivity.activeRoutes.map((route) => {
               const maxViews = Math.max(...analytics.liveActivity.activeRoutes.map((item) => item.views), 1);
               return (
@@ -259,23 +276,23 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
 
       <Card className="overflow-hidden p-0">
         <div className="border-b border-slate-200 p-5 dark:border-slate-700/50">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Currently Active Users</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Users seen in the last 5 minutes, grouped by browser session.</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">{copy.currentlyActiveUsers}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.currentlyActiveUsersHelp}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[680px] text-sm">
             <thead className="bg-slate-100/70 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
               <tr>
-                <th className="px-5 py-3 font-semibold">User</th>
-                <th className="px-5 py-3 font-semibold">Current Route</th>
-                <th className="px-5 py-3 font-semibold">Device</th>
-                <th className="px-5 py-3 font-semibold">Last Seen</th>
+                <th className="px-5 py-3 font-semibold">{common.user}</th>
+                <th className="px-5 py-3 font-semibold">{copy.currentRoute}</th>
+                <th className="px-5 py-3 font-semibold">{copy.device}</th>
+                <th className="px-5 py-3 font-semibold">{copy.lastSeen}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {analytics.liveActivity.recentActiveUsers.length === 0 ? (
                 <tr>
-                  <td colSpan={4} className="px-5 py-6 text-center text-slate-500 dark:text-slate-400">No active users in the last 5 minutes.</td>
+                  <td colSpan={4} className="px-5 py-6 text-center text-slate-500 dark:text-slate-400">{copy.noActiveUsers}</td>
                 </tr>
               ) : analytics.liveActivity.recentActiveUsers.map((user) => (
                 <tr key={user.id} className="text-slate-700 dark:text-slate-300">
@@ -285,8 +302,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                   </td>
                   <td className="px-5 py-3 font-medium text-slate-900 dark:text-white">{user.currentPath}</td>
                   <td className="px-5 py-3">
-                    <p>{user.deviceType || 'Unknown'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{user.browser || 'Unknown browser'}</p>
+                    <p>{user.deviceType || common.unknown}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{user.browser || common.unknown}</p>
                   </td>
                   <td className="px-5 py-3">{formatDate(user.lastSeenAt, 'MMM d, h:mm a')}</td>
                 </tr>
@@ -300,8 +317,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Site Visits</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Route visits captured across public and authenticated pages.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.siteVisits}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.siteVisitsHelp}</p>
             </div>
             <MousePointerClick className="h-5 w-5 text-violet-500" />
           </div>
@@ -309,28 +326,28 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
             {siteVisitCards.map((card) => (
               <div key={card.label} className="rounded-xl bg-slate-100/70 p-4 dark:bg-slate-800/60">
                 <p className="text-sm text-slate-500 dark:text-slate-400">{card.label}</p>
-                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{numberLabel(card.value)}</p>
+                <p className="mt-2 text-2xl font-bold text-slate-900 dark:text-white">{numberLabel(card.value, locale)}</p>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{card.helper}</p>
               </div>
             ))}
           </div>
           <div className="mt-4 rounded-xl bg-slate-100/70 p-4 dark:bg-slate-800/60">
-            <p className="text-sm text-slate-500 dark:text-slate-400">All-time tracked page views</p>
-            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{numberLabel(analytics.siteVisits.totalViews)}</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.allTimeViews}</p>
+            <p className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{numberLabel(analytics.siteVisits.totalViews, locale)}</p>
           </div>
         </Card>
 
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Top Routes</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Most visited routes in the last 30 days.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.topRoutes}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.topRoutesHelp}</p>
             </div>
             <Globe2 className="h-5 w-5 text-sky-500" />
           </div>
           <div className="space-y-3">
             {analytics.siteVisits.topRoutes.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-slate-400">No page views tracked yet.</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noPageViews}</p>
             ) : analytics.siteVisits.topRoutes.map((route) => {
               const maxViews = Math.max(...analytics.siteVisits.topRoutes.map((item) => item.views), 1);
               return (
@@ -352,8 +369,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
       <div className="grid gap-6 xl:grid-cols-2">
         <Card className="p-5">
           <div className="mb-5">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Device Mix</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Visitor device types in the last 30 days.</p>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.deviceMix}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.deviceMixHelp}</p>
           </div>
           <div className="h-56 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -370,8 +387,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
 
         <Card className="p-5">
           <div className="mb-5">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Browser Mix</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Detected browsers in the last 30 days.</p>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.browserMix}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.browserMixHelp}</p>
           </div>
           <div className="h-56 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
@@ -389,24 +406,24 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
 
       <Card className="overflow-hidden p-0">
         <div className="border-b border-slate-200 p-5 dark:border-slate-700/50">
-          <h2 className="font-semibold text-slate-900 dark:text-white">Recent Page Views</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Latest tracked site visits with user and device context.</p>
+          <h2 className="font-semibold text-slate-900 dark:text-white">{copy.recentPageViews}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.recentPageViewsHelp}</p>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] text-sm">
             <thead className="bg-slate-100/70 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
               <tr>
-                <th className="px-5 py-3 font-semibold">Route</th>
-                <th className="px-5 py-3 font-semibold">Visitor</th>
-                <th className="px-5 py-3 font-semibold">Device</th>
-                <th className="px-5 py-3 font-semibold">Referrer</th>
-                <th className="px-5 py-3 font-semibold">Time</th>
+                <th className="px-5 py-3 font-semibold">{copy.route}</th>
+                <th className="px-5 py-3 font-semibold">{copy.visitor}</th>
+                <th className="px-5 py-3 font-semibold">{copy.device}</th>
+                <th className="px-5 py-3 font-semibold">{copy.referrer}</th>
+                <th className="px-5 py-3 font-semibold">{copy.time}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {analytics.siteVisits.recentViews.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-6 text-center text-slate-500 dark:text-slate-400">No page views tracked yet.</td>
+                  <td colSpan={5} className="px-5 py-6 text-center text-slate-500 dark:text-slate-400">{copy.noPageViews}</td>
                 </tr>
               ) : analytics.siteVisits.recentViews.map((view) => (
                 <tr key={view.id} className="text-slate-700 dark:text-slate-300">
@@ -418,14 +435,14 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                         <p className="text-xs text-slate-500 dark:text-slate-400">{view.user.email}</p>
                       </div>
                     ) : (
-                      <Badge variant="default">Anonymous</Badge>
+                      <Badge variant="default">{copy.anonymous}</Badge>
                     )}
                   </td>
                   <td className="px-5 py-3">
-                    <p>{view.deviceType || 'Unknown'}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">{view.browser || 'Unknown browser'}</p>
+                    <p>{view.deviceType || common.unknown}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">{view.browser || common.unknown}</p>
                   </td>
-                  <td className="max-w-[220px] truncate px-5 py-3 text-slate-500 dark:text-slate-400">{view.referrer || 'Direct'}</td>
+                  <td className="max-w-[220px] truncate px-5 py-3 text-slate-500 dark:text-slate-400">{view.referrer || copy.direct}</td>
                   <td className="px-5 py-3">{formatDate(view.createdAt, 'MMM d, h:mm a')}</td>
                 </tr>
               ))}
@@ -438,8 +455,8 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5 xl:col-span-2">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Package Mix</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Active package distribution and estimated monthly value.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.packageMix}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.packageMixHelp}</p>
             </div>
             <BadgeDollarSign className="h-5 w-5 text-sky-500" />
           </div>
@@ -458,7 +475,7 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
             </div>
             <div className="space-y-3">
               {analytics.packageMix.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">No packages configured yet.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noPackages}</p>
               ) : analytics.packageMix.map((pkg, index) => (
                 <div key={pkg.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/60">
                   <div className="min-w-0">
@@ -467,7 +484,7 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{pkg.name}</p>
                     </div>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                      {pkg.subscriptions} subscriptions · {formatCurrency(pkg.price, pkg.currency)} {pkg.interval.toLowerCase()}
+                      {pkg.subscriptions} {copy.subscriptions} · {formatCurrency(pkg.price, pkg.currency)} {pkg.interval === 'MONTHLY' ? common.monthly : common.yearly}
                     </p>
                   </div>
                   <p className="shrink-0 text-sm font-semibold text-slate-900 dark:text-white">
@@ -482,31 +499,31 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Estimated Value</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Package value, not payment-settled revenue.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.estimatedValue}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.estimatedValueHelp}</p>
             </div>
             <CircleDollarSign className="h-5 w-5 text-emerald-500" />
           </div>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-slate-500 dark:text-slate-400">Monthly recurring value</p>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.monthlyRecurringValue}</p>
               <p className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">
                 {formatCurrency(analytics.estimatedRevenue.monthlyRecurringValue, analytics.estimatedRevenue.currency)}
               </p>
             </div>
             <div className="rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/60">
-              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">Annualized</p>
+              <p className="text-xs uppercase text-slate-500 dark:text-slate-400">{copy.annualized}</p>
               <p className="mt-1 text-lg font-semibold text-slate-900 dark:text-white">
                 {formatCurrency(analytics.estimatedRevenue.annualRecurringValue, analytics.estimatedRevenue.currency)}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/60">
-                <p className="text-xs text-slate-500 dark:text-slate-400">Self service</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{copy.selfService}</p>
                 <p className="text-lg font-semibold text-slate-900 dark:text-white">{analytics.access.selfService}</p>
               </div>
               <div className="rounded-xl bg-slate-100/70 p-3 dark:bg-slate-800/60">
-                <p className="text-xs text-slate-500 dark:text-slate-400">Admin grants</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{copy.adminGrants}</p>
                 <p className="text-lg font-semibold text-slate-900 dark:text-white">{analytics.access.adminGranted}</p>
               </div>
             </div>
@@ -518,18 +535,18 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
         <Card className="p-5">
           <div className="mb-5 flex items-center justify-between gap-3">
             <div>
-              <h2 className="font-semibold text-slate-900 dark:text-white">Finance Activity</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">App-wide money movement and portfolio footprint.</p>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.financeActivity}</h2>
+              <p className="text-sm text-slate-500 dark:text-slate-400">{copy.financeActivityHelp}</p>
             </div>
             <Banknote className="h-5 w-5 text-amber-500" />
           </div>
           <div className="h-56 min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={[
-                { label: 'Income', value: analytics.finance.last30DaysIncome, fill: '#10b981' },
-                { label: 'Expense', value: analytics.finance.last30DaysExpense, fill: '#e11d48' },
-                { label: 'Balance', value: analytics.finance.totalAccountBalance, fill: '#2563eb' },
-                { label: 'Invested', value: analytics.finance.totalInvestedValue, fill: '#f59e0b' },
+                { label: copy.labels.income, value: analytics.finance.last30DaysIncome, fill: '#10b981' },
+                { label: copy.labels.expense, value: analytics.finance.last30DaysExpense, fill: '#e11d48' },
+                { label: copy.labels.balance, value: analytics.finance.totalAccountBalance, fill: '#2563eb' },
+                { label: copy.labels.invested, value: analytics.finance.totalInvestedValue, fill: '#f59e0b' },
               ]}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.25} />
                 <XAxis dataKey="label" tickLine={false} axisLine={false} />
@@ -547,18 +564,18 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
 
         <Card className="overflow-hidden p-0">
           <div className="border-b border-slate-200 p-5 dark:border-slate-700/50">
-            <h2 className="font-semibold text-slate-900 dark:text-white">Recent Signups</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Newest accounts and their current access source.</p>
+            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.recentSignups}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.recentSignupsHelp}</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[680px] text-sm">
               <thead className="bg-slate-100/70 text-left text-xs uppercase text-slate-500 dark:bg-slate-800/60 dark:text-slate-400">
                 <tr>
-                  <th className="px-5 py-3 font-semibold">User</th>
-                  <th className="px-5 py-3 font-semibold">Role</th>
-                  <th className="px-5 py-3 font-semibold">Access</th>
-                  <th className="px-5 py-3 font-semibold">Joined</th>
-                  <th className="px-5 py-3 font-semibold">Last login</th>
+                  <th className="px-5 py-3 font-semibold">{common.user}</th>
+                  <th className="px-5 py-3 font-semibold">{common.role}</th>
+                  <th className="px-5 py-3 font-semibold">{copy.access}</th>
+                  <th className="px-5 py-3 font-semibold">{copy.joined}</th>
+                  <th className="px-5 py-3 font-semibold">{copy.lastLogin}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -574,17 +591,17 @@ export default function AdminAnalyticsClient({ analytics }: AdminAnalyticsClient
                     <td className="px-5 py-3">
                       {user.subscription ? (
                         <div>
-                          <Badge variant={user.subscription.status === 'ACTIVE' ? 'success' : 'warning'}>{user.subscription.status}</Badge>
+                          <Badge variant={user.subscription.status === 'ACTIVE' ? 'success' : 'warning'}>{user.subscription.status === 'ACTIVE' ? common.active : user.subscription.status}</Badge>
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                             {user.subscription.packageName || sourceLabel(user.subscription.source)}
                           </p>
                         </div>
                       ) : (
-                        <Badge variant={user.role === 'ADMIN' ? 'success' : 'danger'}>{user.role === 'ADMIN' ? 'Admin' : 'No access'}</Badge>
+                        <Badge variant={user.role === 'ADMIN' ? 'success' : 'danger'}>{user.role === 'ADMIN' ? common.admin : common.noAccess}</Badge>
                       )}
                     </td>
                     <td className="px-5 py-3">{formatDate(user.createdAt, 'MMM d, yyyy')}</td>
-                    <td className="px-5 py-3">{user.lastLoginAt ? formatDate(user.lastLoginAt, 'MMM d, yyyy') : 'Never'}</td>
+                    <td className="px-5 py-3">{user.lastLoginAt ? formatDate(user.lastLoginAt, 'MMM d, yyyy') : common.never}</td>
                   </tr>
                 ))}
               </tbody>

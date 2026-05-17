@@ -14,6 +14,7 @@ import Loader from '@/components/ui/Loader';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import { cn, formatCurrency, formatDate, formatRelativeDate } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 import {
   AlertTriangle,
   Banknote,
@@ -52,51 +53,6 @@ type FinancialNote = {
   updatedAt: string;
   createdByName?: string | null;
   updatedByName?: string | null;
-};
-
-const modeOptions = [
-  { value: 'ALL', label: 'All modes' },
-  { value: 'SIMPLE', label: 'Simple' },
-  { value: 'EXTENDED', label: 'Extended' },
-];
-
-const valueTypeOptions = [
-  { value: 'ALL', label: 'All value types' },
-  { value: 'MONEY', label: 'Money' },
-  { value: 'ASSET', label: 'Asset' },
-  { value: 'MONEY_AND_ASSET', label: 'Money + asset' },
-  { value: 'OTHER', label: 'Other' },
-];
-
-const statusOptions = [
-  { value: 'ALL', label: 'All statuses' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'PARTIAL', label: 'Partial' },
-  { value: 'RETURNED', label: 'Returned' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
-
-const noteStatusOptions = statusOptions.filter(option => option.value !== 'ALL');
-
-const sortOptions = [
-  { value: 'createdAt_desc', label: 'Newest first' },
-  { value: 'createdAt_asc', label: 'Oldest first' },
-  { value: 'due_asc', label: 'Due soon' },
-  { value: 'title_asc', label: 'Title A-Z' },
-];
-
-const valueTypeLabels: Record<NoteValueType, string> = {
-  MONEY: 'Money',
-  ASSET: 'Asset',
-  MONEY_AND_ASSET: 'Money + asset',
-  OTHER: 'Other',
-};
-
-const statusLabels: Record<NoteStatus, string> = {
-  OPEN: 'Open',
-  PARTIAL: 'Partial',
-  RETURNED: 'Returned',
-  CANCELLED: 'Cancelled',
 };
 
 function toDateInput(value?: string | null) {
@@ -178,6 +134,64 @@ export default function NotesPageClient({
   });
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.notes;
+  const common = messages.pages.common;
+  const modeOptions = [
+    { value: 'ALL', label: copy.allModes },
+    { value: 'SIMPLE', label: copy.simple },
+    { value: 'EXTENDED', label: copy.extended },
+  ];
+  const valueTypeOptions = [
+    { value: 'ALL', label: copy.allValueTypes },
+    { value: 'MONEY', label: copy.money },
+    { value: 'ASSET', label: copy.asset },
+    { value: 'MONEY_AND_ASSET', label: copy.moneyAndAsset },
+    { value: 'OTHER', label: copy.other },
+  ];
+  const statusOptions = [
+    { value: 'ALL', label: copy.allStatuses },
+    { value: 'OPEN', label: copy.open },
+    { value: 'PARTIAL', label: copy.partial },
+    { value: 'RETURNED', label: copy.returned },
+    { value: 'CANCELLED', label: copy.cancelled },
+  ];
+  const noteStatusOptions = statusOptions.filter(option => option.value !== 'ALL');
+  const sortOptions = [
+    { value: 'createdAt_desc', label: copy.newestFirst },
+    { value: 'createdAt_asc', label: copy.oldestFirst },
+    { value: 'due_asc', label: copy.dueSoonSort },
+    { value: 'title_asc', label: copy.titleAz },
+  ];
+  const valueTypeLabels: Record<NoteValueType, string> = {
+    MONEY: copy.money,
+    ASSET: copy.asset,
+    MONEY_AND_ASSET: copy.moneyAndAsset,
+    OTHER: copy.other,
+  };
+  const statusLabels: Record<NoteStatus, string> = {
+    OPEN: copy.open,
+    PARTIAL: copy.partial,
+    RETURNED: copy.returned,
+    CANCELLED: copy.cancelled,
+  };
+  const actionMessageMap: Record<string, string> = {
+    'Validation failed': copy.messages.validationFailed,
+    'Note created': copy.messages.created,
+    'Note updated': copy.messages.updated,
+    'Note deleted': copy.messages.deleted,
+    'Failed to create note': copy.messages.createFailed,
+    'Failed to update note': copy.messages.updateFailed,
+    'Failed to delete note': copy.messages.deleteFailed,
+    'তথ্য যাচাই করা যায়নি': copy.messages.validationFailed,
+    'নোট তৈরি হয়েছে': copy.messages.created,
+    'নোট আপডেট হয়েছে': copy.messages.updated,
+    'নোট ডিলিট হয়েছে': copy.messages.deleted,
+    'নোট তৈরি করা যায়নি': copy.messages.createFailed,
+    'নোট আপডেট করা যায়নি': copy.messages.updateFailed,
+    'নোট ডিলিট করা যায়নি': copy.messages.deleteFailed,
+  };
+  const localizeActionMessage = (text: string) => actionMessageMap[text] || text;
 
   const {
     register,
@@ -320,20 +334,20 @@ export default function NotesPageClient({
 
       if (result.success) {
         closeModal();
-        showMessage('success', result.message);
+        showMessage('success', localizeActionMessage(result.message));
         router.refresh();
       } else {
-        showMessage('error', result.message);
+        showMessage('error', localizeActionMessage(result.message));
       }
     });
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this note?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
 
     startTransition(async () => {
       const result = await deleteFinancialNoteAction(id);
-      showMessage(result.success ? 'success' : 'error', result.message);
+      showMessage(result.success ? 'success' : 'error', localizeActionMessage(result.message));
       if (result.success) {
         setDetailsNote(prev => prev?.id === id ? null : prev);
         router.refresh();
@@ -349,25 +363,25 @@ export default function NotesPageClient({
 
     startTransition(async () => {
       const result = await updateFinancialNoteAction(note.id, formData);
-      showMessage(result.success ? 'success' : 'error', result.message);
+      showMessage(result.success ? 'success' : 'error', localizeActionMessage(result.message));
       if (result.success) router.refresh();
     });
   };
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message="Saving note..." />
+      <Loader show={isPending} message={copy.saving} />
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Notes</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            {notes.length} saved {notes.length === 1 ? 'record' : 'records'}
+            {notes.length} {notes.length === 1 ? copy.savedRecord : copy.savedRecords}
           </p>
         </div>
         {canEdit && (
           <Button onClick={openCreateModal}>
-            <Plus className="h-4 w-4" /> Add Note
+            <Plus className="h-4 w-4" /> {copy.addNote}
           </Button>
         )}
       </div>
@@ -386,7 +400,7 @@ export default function NotesPageClient({
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_11rem_11rem_11rem] gap-3">
         <Input
           id="noteSearch"
-          placeholder="Search notes, people, assets, tags..."
+          placeholder={copy.searchPlaceholder}
           icon={<Search className="h-4 w-4" />}
           value={filters.search}
           onChange={(event) => setFilters(prev => ({ ...prev, search: event.target.value }))}
@@ -420,7 +434,7 @@ export default function NotesPageClient({
         />
         <Input
           id="noteTagFilter"
-          placeholder="Tags"
+          placeholder={copy.tagsPlaceholder}
           value={filters.tags}
           onChange={(event) => setFilters(prev => ({ ...prev, tags: event.target.value }))}
         />
@@ -440,10 +454,10 @@ export default function NotesPageClient({
 
       {filteredNotes.length === 0 ? (
         <EmptyState
-          title={notes.length === 0 ? 'No notes yet' : 'No matching notes'}
-          description={notes.length === 0 ? 'Create a simple note or track something you expect to get back' : 'Adjust the filters to find another record'}
+          title={notes.length === 0 ? copy.noNotes : copy.noMatching}
+          description={notes.length === 0 ? copy.noNotesHelp : copy.noMatchingHelp}
           icon={<FileText className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
-          action={canEdit ? <Button onClick={openCreateModal}><Plus className="h-4 w-4" /> Add Note</Button> : undefined}
+          action={canEdit ? <Button onClick={openCreateModal}><Plus className="h-4 w-4" /> {copy.addNote}</Button> : undefined}
         />
       ) : (
         <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
@@ -451,14 +465,14 @@ export default function NotesPageClient({
             <table className="w-full min-w-[980px] text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase text-slate-500 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-400">
                 <tr>
-                  <th className="px-4 py-3 font-semibold">Note</th>
-                  <th className="px-4 py-3 font-semibold">Type</th>
-                  <th className="px-4 py-3 font-semibold">Person / Asset</th>
-                  <th className="px-4 py-3 font-semibold">Amount</th>
-                  <th className="px-4 py-3 font-semibold">Due</th>
-                  <th className="px-4 py-3 font-semibold">Status</th>
-                  <th className="px-4 py-3 font-semibold">Updated</th>
-                  {canEdit && <th className="px-4 py-3 text-right font-semibold">Actions</th>}
+                  <th className="px-4 py-3 font-semibold">{copy.note}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.type}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.personAsset}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.amount}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.due}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.status}</th>
+                  <th className="px-4 py-3 font-semibold">{copy.updated}</th>
+                  {canEdit && <th className="px-4 py-3 text-right font-semibold">{copy.actions}</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -490,7 +504,7 @@ export default function NotesPageClient({
                       </td>
                       <td className="px-4 py-3 align-top">
                         <div className="space-y-1.5">
-                          <Badge variant={isExtended ? 'info' : 'default'}>{isExtended ? 'Extended' : 'Simple'}</Badge>
+                          <Badge variant={isExtended ? 'info' : 'default'}>{isExtended ? copy.extended : copy.simple}</Badge>
                           {note.valueType && <p className="text-xs text-slate-500 dark:text-slate-400">{valueTypeLabels[note.valueType]}</p>}
                         </div>
                       </td>
@@ -501,14 +515,14 @@ export default function NotesPageClient({
                         </div>
                       </td>
                       <td className="px-4 py-3 align-top font-medium text-slate-900 dark:text-white">
-                        {note.amount !== null ? formatCurrency(Number(note.amount), userCurrency) : '-'}
+                        {note.amount !== null ? formatCurrency(Number(note.amount), userCurrency, locale) : '-'}
                       </td>
                       <td className="px-4 py-3 align-top">
                         {note.expectedReturnDate ? (
                           <div className="space-y-1">
-                            <p className="text-slate-700 dark:text-slate-200">{formatDate(note.expectedReturnDate)}</p>
-                            {dueState === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> Overdue</Badge>}
-                            {dueState === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> Due soon</Badge>}
+                            <p className="text-slate-700 dark:text-slate-200">{formatDate(note.expectedReturnDate, undefined, locale)}</p>
+                            {dueState === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> {copy.overdue}</Badge>}
+                            {dueState === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> {copy.dueSoon}</Badge>}
                           </div>
                         ) : (
                           <span className="text-slate-400">-</span>
@@ -532,7 +546,7 @@ export default function NotesPageClient({
                         )}
                       </td>
                       <td className="px-4 py-3 align-top text-xs text-slate-500 dark:text-slate-400">
-                        {formatRelativeDate(note.updatedAt)}
+                        {formatRelativeDate(note.updatedAt, locale)}
                       </td>
                       {canEdit && (
                         <td className="px-4 py-3 align-top">
@@ -543,7 +557,7 @@ export default function NotesPageClient({
                                 openEditModal(note);
                               }}
                               className="rounded-lg p-2 text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-400"
-                              aria-label="Edit note"
+                              aria-label={copy.editAria}
                             >
                               <Edit2 className="h-4 w-4" />
                             </button>
@@ -553,7 +567,7 @@ export default function NotesPageClient({
                                 handleDelete(note.id);
                               }}
                               className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
-                              aria-label="Delete note"
+                              aria-label={copy.deleteAria}
                             >
                               <Trash2 className="h-4 w-4" />
                             </button>
@@ -569,14 +583,14 @@ export default function NotesPageClient({
         </div>
       )}
 
-      <Modal isOpen={!!detailsNote} onClose={() => setDetailsNote(null)} title={detailsNote?.title || 'Note Details'} className="max-w-2xl">
+      <Modal isOpen={!!detailsNote} onClose={() => setDetailsNote(null)} title={detailsNote?.title || copy.noteDetails} className="max-w-2xl">
         {detailsNote && (
           <div className="space-y-5">
             <div className="flex flex-wrap gap-2">
-              <Badge variant={detailsNote.mode === 'EXTENDED' ? 'info' : 'default'}>{detailsNote.mode === 'EXTENDED' ? 'Extended' : 'Simple'}</Badge>
+              <Badge variant={detailsNote.mode === 'EXTENDED' ? 'info' : 'default'}>{detailsNote.mode === 'EXTENDED' ? copy.extended : copy.simple}</Badge>
               {detailsNote.status && <Badge variant={statusVariant(detailsNote.status)}>{statusLabels[detailsNote.status]}</Badge>}
-              {getDueState(detailsNote) === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> Overdue</Badge>}
-              {getDueState(detailsNote) === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> Due soon</Badge>}
+              {getDueState(detailsNote) === 'overdue' && <Badge variant="danger"><AlertTriangle className="mr-1 h-3 w-3" /> {copy.overdue}</Badge>}
+              {getDueState(detailsNote) === 'soon' && <Badge variant="warning"><Clock3 className="mr-1 h-3 w-3" /> {copy.dueSoon}</Badge>}
             </div>
 
             <p className="whitespace-pre-wrap break-words text-sm leading-6 text-slate-700 dark:text-slate-300">
@@ -600,7 +614,7 @@ export default function NotesPageClient({
                 {detailsNote.amount !== null && (
                   <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
                     <Banknote className="h-4 w-4 text-emerald-500" />
-                    <span>{formatCurrency(Number(detailsNote.amount), userCurrency)}</span>
+                    <span>{formatCurrency(Number(detailsNote.amount), userCurrency, locale)}</span>
                   </div>
                 )}
                 {detailsNote.assetName && (
@@ -612,19 +626,19 @@ export default function NotesPageClient({
                 {detailsNote.providedDate && (
                   <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                     <CalendarClock className="h-4 w-4 text-slate-400" />
-                    <span>Provided {formatDate(detailsNote.providedDate)}</span>
+                    <span>{copy.provided} {formatDate(detailsNote.providedDate, undefined, locale)}</span>
                   </div>
                 )}
                 {detailsNote.expectedReturnDate && (
                   <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
                     <Clock3 className="h-4 w-4 text-slate-400" />
-                    <span>Expected {formatDate(detailsNote.expectedReturnDate)}</span>
+                    <span>{copy.expected} {formatDate(detailsNote.expectedReturnDate, undefined, locale)}</span>
                   </div>
                 )}
                 {detailsNote.returnedDate && (
                   <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-400">
                     <CheckCircle2 className="h-4 w-4" />
-                    <span>Returned {formatDate(detailsNote.returnedDate)}</span>
+                    <span>{copy.returned} {formatDate(detailsNote.returnedDate, undefined, locale)}</span>
                   </div>
                 )}
               </div>
@@ -632,7 +646,7 @@ export default function NotesPageClient({
 
             {detailsNote.assetDetails && (
               <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
-                <p className="mb-1 font-medium text-slate-900 dark:text-white">Asset Details</p>
+                <p className="mb-1 font-medium text-slate-900 dark:text-white">{copy.assetDetails}</p>
                 <p className="whitespace-pre-wrap break-words">{detailsNote.assetDetails}</p>
               </div>
             )}
@@ -641,16 +655,16 @@ export default function NotesPageClient({
               <div className="flex flex-wrap gap-1.5">
                 {detailsNote.tags.map(tag => <Badge key={tag} variant="default">#{tag}</Badge>)}
               </div>
-              <p className="text-xs text-slate-400 dark:text-slate-500">Updated {formatRelativeDate(detailsNote.updatedAt)}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{copy.updatedPrefix} {formatRelativeDate(detailsNote.updatedAt, locale)}</p>
             </div>
 
             {canEdit && (
               <div className="flex justify-end gap-2">
                 <Button type="button" variant="outline" onClick={() => openEditModal(detailsNote)}>
-                  <Edit2 className="h-4 w-4" /> Edit
+                  <Edit2 className="h-4 w-4" /> {common.edit}
                 </Button>
                 <Button type="button" variant="danger" onClick={() => handleDelete(detailsNote.id)}>
-                  <Trash2 className="h-4 w-4" /> Delete
+                  <Trash2 className="h-4 w-4" /> {common.delete}
                 </Button>
               </div>
             )}
@@ -658,7 +672,7 @@ export default function NotesPageClient({
         )}
       </Modal>
 
-      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingNote ? 'Edit Note' : 'Add Note'} className="max-w-2xl">
+      <Modal isOpen={isModalOpen} onClose={closeModal} title={editingNote ? copy.editNote : copy.addNote} className="max-w-2xl">
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             <label className={cn(
@@ -668,7 +682,7 @@ export default function NotesPageClient({
                 : 'border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300'
             )}>
               <input type="radio" value="SIMPLE" {...modeField} className="hidden" />
-              Simple
+              {copy.simple}
             </label>
             <label className={cn(
               'flex items-center justify-center rounded-xl border px-3 py-2 text-sm font-medium cursor-pointer transition-colors',
@@ -677,14 +691,14 @@ export default function NotesPageClient({
                 : 'border-slate-300 text-slate-600 dark:border-slate-600 dark:text-slate-300'
             )}>
               <input type="radio" value="EXTENDED" {...modeField} className="hidden" />
-              Extended
+              {copy.extended}
             </label>
           </div>
 
-          <Input id="title" label="Title" error={errors.title?.message} {...register('title')} />
+          <Input id="title" label={copy.titleLabel} error={errors.title?.message} {...register('title')} />
           <div className="space-y-1.5">
             <label htmlFor="description" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              Description
+              {copy.description}
             </label>
             <textarea
               id="description"
@@ -700,26 +714,26 @@ export default function NotesPageClient({
             {errors.description && <p className="text-xs text-red-500 dark:text-red-400">{errors.description.message}</p>}
           </div>
 
-          <Input id="tags" label="Tags" placeholder="loan, land, document" {...register('tags')} />
+          <Input id="tags" label={copy.tags} placeholder={copy.tagsExample} {...register('tags')} />
 
           {selectedMode === 'EXTENDED' && (
             <div className="space-y-4 rounded-2xl border border-slate-200 dark:border-slate-700/50 p-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input id="counterpartyName" label="Person or Organization" {...register('counterpartyName')} />
-                <Select id="valueType" label="Value Type" options={valueTypeOptions.filter(option => option.value !== 'ALL')} {...register('valueType')} />
-                <Input id="amount" label={`Amount (${userCurrency})`} type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
-                <Input id="assetName" label="Asset or Item" placeholder="Land, document, gold, equipment" {...register('assetName')} />
-                <Input id="providedDate" label="Provided Date" type="date" {...register('providedDate')} />
-                <Input id="expectedReturnDate" label="Expected Return Date" type="date" {...register('expectedReturnDate')} />
-                <Select id="status" label="Status" options={noteStatusOptions} {...statusField} />
+                <Input id="counterpartyName" label={copy.personOrg} {...register('counterpartyName')} />
+                <Select id="valueType" label={copy.valueType} options={valueTypeOptions.filter(option => option.value !== 'ALL')} {...register('valueType')} />
+                <Input id="amount" label={`${copy.amount} (${userCurrency})`} type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
+                <Input id="assetName" label={copy.assetItem} placeholder={copy.assetItemPlaceholder} {...register('assetName')} />
+                <Input id="providedDate" label={copy.providedDate} type="date" {...register('providedDate')} />
+                <Input id="expectedReturnDate" label={copy.expectedReturnDate} type="date" {...register('expectedReturnDate')} />
+                <Select id="status" label={copy.status} options={noteStatusOptions} {...statusField} />
                 {selectedStatus === 'RETURNED' && (
-                  <Input id="returnedDate" label="Returned Date" type="date" error={errors.returnedDate?.message} {...register('returnedDate')} />
+                  <Input id="returnedDate" label={copy.returnedDate} type="date" error={errors.returnedDate?.message} {...register('returnedDate')} />
                 )}
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="assetDetails" className="block text-sm font-medium text-slate-700 dark:text-slate-300">
-                  Asset Details
+                  {copy.assetDetails}
                 </label>
                 <textarea
                   id="assetDetails"
@@ -732,7 +746,7 @@ export default function NotesPageClient({
           )}
 
           <Button type="submit" className="w-full" isLoading={isPending} disabled={!canEdit}>
-            {editingNote ? 'Update Note' : 'Create Note'}
+            {editingNote ? copy.updateNote : copy.createNote}
           </Button>
         </form>
       </Modal>

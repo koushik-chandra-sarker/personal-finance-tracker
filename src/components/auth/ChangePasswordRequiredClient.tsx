@@ -10,6 +10,7 @@ import { completeFirstLoginPasswordAction } from '@/actions/auth.actions';
 import { firstLoginPasswordSchema, type FirstLoginPasswordInput } from '@/lib/validations/auth';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
+import { useI18n } from '@/i18n/client';
 
 type ChangePasswordRequiredClientProps = {
   searchParams: { next?: string | string[] };
@@ -25,6 +26,8 @@ function getNextPath(value: string | string[] | undefined) {
 export default function ChangePasswordRequiredClient({ searchParams }: ChangePasswordRequiredClientProps) {
   const router = useRouter();
   const { update } = useSession();
+  const { messages } = useI18n();
+  const copy = messages.auth;
   const nextPath = getNextPath(searchParams.next);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -61,8 +64,8 @@ export default function ChangePasswordRequiredClient({ searchParams }: ChangePas
             <LockKeyhole className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Update Your Password</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400">This step is required before you can continue.</p>
+            <h1 className="text-xl font-bold text-slate-900 dark:text-white">{copy.updatePassword}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.updatePasswordSubtitle}</p>
           </div>
         </div>
 
@@ -75,7 +78,7 @@ export default function ChangePasswordRequiredClient({ searchParams }: ChangePas
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Input
             id="newPassword"
-            label="New Password"
+            label={copy.newPassword}
             type="password"
             icon={<ShieldCheck className="h-4 w-4" />}
             error={errors.newPassword?.message}
@@ -83,18 +86,18 @@ export default function ChangePasswordRequiredClient({ searchParams }: ChangePas
           />
           <Input
             id="confirmPassword"
-            label="Confirm New Password"
+            label={copy.confirmNewPassword}
             type="password"
             icon={<ShieldCheck className="h-4 w-4" />}
             error={errors.confirmPassword?.message}
             {...register('confirmPassword')}
           />
           <Button type="submit" className="w-full" size="lg" isLoading={isPending}>
-            Update Password
+            {copy.updatePassword}
           </Button>
         </form>
         <p className="mt-4 text-center text-xs text-slate-500 dark:text-slate-400">
-          For security, this cannot be skipped or postponed.
+          {copy.cannotSkip}
         </p>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { AlertTriangle, CheckCircle2, Info, X } from 'lucide-react';
 import type { UserAdminMessage } from '@/actions/admin-message.actions';
 import { markAdminMessageSeenAction } from '@/actions/admin-message.actions';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   initialMessages: UserAdminMessage[];
@@ -39,6 +40,8 @@ const severityStyles = {
 };
 
 export default function AdminMessagePresenter({ initialMessages }: Props) {
+  const { messages } = useI18n();
+  const copy = messages.pages.adminMessages;
   const [hiddenIds, setHiddenIds] = useState<string[]>([]);
   const [activeModalIndex, setActiveModalIndex] = useState(0);
   const markedSeenIds = useRef<Set<string>>(new Set());
@@ -97,7 +100,7 @@ export default function AdminMessagePresenter({ initialMessages }: Props) {
                         onClick={() => hideMessage(message, true)}
                         className={cn('mt-3 inline-flex rounded-lg px-3 py-2 text-xs font-bold text-white transition-colors', style.button)}
                       >
-                        {message.actionLabel || 'Open'}
+                        {message.actionLabel || copy.open}
                       </Link>
                     )}
                   </div>
@@ -105,7 +108,7 @@ export default function AdminMessagePresenter({ initialMessages }: Props) {
                     type="button"
                     onClick={() => hideMessage(message, message.frequency !== 'EVERY_REFRESH')}
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg opacity-70 transition-colors hover:bg-black/5 hover:opacity-100 dark:hover:bg-white/10"
-                    aria-label="Dismiss message"
+                    aria-label={copy.dismiss}
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -135,7 +138,7 @@ export default function AdminMessagePresenter({ initialMessages }: Props) {
                       onClick={() => hideMessage(activeModal, activeModal.frequency !== 'EVERY_REFRESH')}
                       className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-slate-200 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
-                      {activeModal.frequency === 'UNTIL_DISMISSED' ? 'Dismiss' : 'Close'}
+                      {activeModal.frequency === 'UNTIL_DISMISSED' ? copy.dismiss : copy.close}
                     </button>
                     {activeModal.actionUrl && (
                       <Link
@@ -143,7 +146,7 @@ export default function AdminMessagePresenter({ initialMessages }: Props) {
                         onClick={() => hideMessage(activeModal, true)}
                         className={cn('inline-flex h-11 flex-1 items-center justify-center rounded-xl px-4 text-sm font-bold text-white transition-colors', style.button)}
                       >
-                        {activeModal.actionLabel || 'Open'}
+                        {activeModal.actionLabel || copy.open}
                       </Link>
                     )}
                   </div>

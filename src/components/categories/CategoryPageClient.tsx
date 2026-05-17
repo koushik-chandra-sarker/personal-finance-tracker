@@ -24,7 +24,8 @@ import { useSession } from 'next-auth/react';
 import MonthYearPicker from '@/components/dashboard/MonthYearPicker';
 import Loader from '@/components/ui/Loader';
 import ProgressBar from '@/components/ui/ProgressBar';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, getTransactionTypeLabel } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 interface Category {
   id: string;
@@ -65,6 +66,9 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
   const router = useRouter();
   const { data: session } = useSession();
   const userCurrency = (session?.user as any)?.currency || 'USD';
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.categories;
+  const common = messages.pages.common;
 
   useEffect(() => {
     setCategories(initialCategories);
@@ -110,11 +114,11 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
   const handleDelete = (cat: Category) => {
     const depCount = cat._count.transactions + cat._count.budgets;
     if (depCount > 0) {
-      if (!confirm(`WARNING: This category is used by ${depCount} transactions/budgets.\n\nDeleting it will PERMANENTLY DELETE all associated transactions and budgets!\n\nAre you absolutely sure?`)) {
+      if (!confirm(`${copy.deleteWarning}\n\n${depCount}`)) {
         return;
       }
     } else {
-      if (!confirm(`Delete category "${cat.name}"?`)) return;
+      if (!confirm(`${copy.deleteConfirm} "${cat.name}"`)) return;
     }
 
     startTransition(async () => {
@@ -134,7 +138,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
     <div className="space-y-4">
       <h3 className="text-lg font-semibold text-slate-700 dark:text-slate-300 px-1">{title}</h3>
       {list.length === 0 ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 italic px-1">No categories found.</p>
+        <p className="text-sm text-slate-400 dark:text-slate-500 italic px-1">{copy.noCategories}</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {list.map(c => {
@@ -149,7 +153,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                     </div>
                     {c.type === 'EXPENSE' && (
                       <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-full ${c.budgetAmount ? (c.spent > c.budgetAmount ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500') : 'bg-slate-500/10 text-slate-500'}`}>
-                        {c.budgetAmount ? `${Math.round((c.spent / c.budgetAmount) * 100)}%` : 'No Budget'}
+                        {c.budgetAmount ? `${Math.round((c.spent / c.budgetAmount) * 100)}%` : copy.noBudget}
                       </span>
                     )}
                   </div>
@@ -170,8 +174,8 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                 {c.type === 'EXPENSE' ? (
                   <div className="w-full space-y-1.5">
                     <div className="flex justify-between text-[10px] text-slate-500 dark:text-slate-400">
-                      <span>{formatCurrency(c.spent, userCurrency)}</span>
-                      {c.budgetAmount && <span>/ {formatCurrency(c.budgetAmount, userCurrency)}</span>}
+                      <span>{formatCurrency(c.spent, userCurrency, locale)}</span>
+                      {c.budgetAmount && <span>/ {formatCurrency(c.budgetAmount, userCurrency, locale)}</span>}
                     </div>
                     <ProgressBar 
                       value={c.spent} 
@@ -183,7 +187,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                   </div>
                 ) : (
                   <p className="text-xs text-emerald-500 dark:text-emerald-400 font-medium">
-                    +{formatCurrency(c.spent, userCurrency)} this month
+                    +{formatCurrency(c.spent, userCurrency, locale)} {copy.thisMonth}
                   </p>
                 )}
               </div>
@@ -196,40 +200,40 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
 
   return (
     <div className="space-y-8">
-      <Loader show={isPending} message="Updating categories..." />
+      <Loader show={isPending} message={copy.updating} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Categories</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
             <MonthYearPicker month={currentMonth} year={currentYear} route="/categories" />
           </div>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Manage custom categories and track monthly usage</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <Button onClick={openAddModal}>
-          <Plus className="h-4 w-4" /> Add Category
+          <Plus className="h-4 w-4" /> {copy.addCategory}
         </Button>
       </div>
 
-      {renderCategoryList(expenses, 'Expense Categories')}
-      {renderCategoryList(incomes, 'Income Categories')}
+      {renderCategoryList(expenses, copy.expenseCategories)}
+      {renderCategoryList(incomes, copy.incomeCategories)}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? 'Edit Category' : 'Create Category'}>
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingId ? copy.editCategory : copy.createCategory}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
           <div className="flex gap-2">
             <label className={`flex-1 flex items-center justify-center py-3 rounded-xl border cursor-pointer transition-colors ${selectedType === 'INCOME' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
               <input type="radio" value="INCOME" {...register('type')} className="hidden" />
-              Income
+              {getTransactionTypeLabel('INCOME', locale)}
             </label>
             <label className={`flex-1 flex items-center justify-center py-3 rounded-xl border cursor-pointer transition-colors ${selectedType === 'EXPENSE' ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'border-slate-300 dark:border-slate-700 text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800'}`}>
               <input type="radio" value="EXPENSE" {...register('type')} className="hidden" />
-              Expense
+              {getTransactionTypeLabel('EXPENSE', locale)}
             </label>
           </div>
 
-          <Input id="name" label="Category Name" placeholder="e.g. Groceries" error={errors.name?.message} {...register('name')} />
+          <Input id="name" label={copy.categoryName} placeholder={copy.categoryPlaceholder} error={errors.name?.message} {...register('name')} />
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Color</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{common.color}</label>
             <div className="flex items-center gap-3">
               <input type="color" {...register('color')} className="h-10 w-10 rounded cursor-pointer border-0 p-0 bg-transparent" />
               <Input id="color-hex" className="flex-1" error={errors.color?.message} {...register('color')} />
@@ -237,7 +241,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Icon (Visual representation)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{copy.icon}</label>
             <div className="grid grid-cols-6 sm:grid-cols-8 gap-2 max-h-56 overflow-y-auto p-2 bg-slate-50 dark:bg-slate-900/50 rounded-xl border border-slate-300 dark:border-slate-700 custom-scrollbar">
               {ICONS.map(icon => {
                 const IconCmp = ICON_MAP[icon] || Tags;
@@ -259,12 +263,12 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
           {editingId && (
             <div className="flex items-start gap-3 p-3 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm">
               <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <p>Warning: Updating this category will change its appearance on all existing transactions and budgets.</p>
+              <p>{copy.warningUpdate}</p>
             </div>
           )}
 
           <Button type="submit" className="w-full" isLoading={isPending}>
-            {editingId ? 'Update Category' : 'Create Category'}
+            {editingId ? copy.updateCategory : copy.createCategory}
           </Button>
         </form>
       </Modal>

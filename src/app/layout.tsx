@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
 import './globals.css';
 import Providers from '@/components/providers/Providers';
-import { APP_NAME } from '@/components/brand/AppLogo';
+import { DEFAULT_LOCALE } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
+import { getRequestLocale } from '@/i18n/server';
 
-const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
+const defaultMessages = getMessages(DEFAULT_LOCALE);
 
 export const viewport: Viewport = {
   width: 'device-width',
@@ -14,15 +15,17 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: `${APP_NAME} - Personal Finance Manager`,
-  description: `Track your income, expenses, budgets, and savings goals with ${APP_NAME}. A modern personal finance management app.`,
-  keywords: ['finance', 'budget', 'expense tracker', 'savings', 'money management'],
+  title: defaultMessages.metadata.title,
+  description: defaultMessages.metadata.description,
+  keywords: [...defaultMessages.metadata.keywords],
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getRequestLocale();
+
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} font-sans antialiased overflow-x-hidden`}>
+    <html lang={locale} suppressHydrationWarning>
+      <body className="font-sans antialiased overflow-x-hidden">
         <Providers>{children}</Providers>
       </body>
     </html>

@@ -7,6 +7,7 @@ import { createTypeConfigAction, updateTypeConfigAction, deleteTypeConfigAction 
 import { Plus, Trash2, Edit3, Settings2, ArrowLeft, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
 import TypeConfigForm from './TypeConfigForm';
+import { useI18n } from '@/i18n/client';
 import {
   TrendingUp, Landmark, Banknote, PiggyBank, BarChart3, FileText, Coins, 
   Building2, Shield, ScrollText, Briefcase, Diamond, Globe, Bitcoin, CreditCard, DollarSign
@@ -33,6 +34,8 @@ type TypeConfig = {
 
 export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { typeConfigs: TypeConfig[] }) {
   const router = useRouter();
+  const { messages } = useI18n();
+  const copy = messages.pages.investments;
   const [configs, setConfigs] = useState(initialConfigs);
   
   useEffect(() => {
@@ -97,15 +100,15 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
             {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <ArrowLeft className="h-5 w-5" />}
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Investment Types</h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage instruments and their fields</p>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.investmentTypes}</h1>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{copy.investmentTypesHelp}</p>
           </div>
         </div>
         <button
           onClick={() => { setEditingConfig(null); setShowForm(true); }}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-xl hover:shadow-indigo-500/30 transition-all"
         >
-          <Plus className="h-4 w-4" /> Custom Type
+          <Plus className="h-4 w-4" /> {copy.customType}
         </button>
       </div>
 
@@ -127,8 +130,8 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
                   <div>
                     <h3 className="font-semibold text-slate-900 dark:text-white text-sm flex items-center gap-2">
                       {config.name}
-                      {config.isSystem && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">System</span>}
-                      {!config.isActive && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">Hidden</span>}
+                      {config.isSystem && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">{copy.system}</span>}
+                      {!config.isActive && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">{copy.hidden}</span>}
                     </h3>
                     <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{config.description}</p>
                   </div>
@@ -137,15 +140,15 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
 
               <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100 dark:border-slate-700/50">
                 <div className="text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {activeInvestments} {activeInvestments === 1 ? 'investment' : 'investments'}
+                  {activeInvestments} {activeInvestments === 1 ? copy.investmentSingular : copy.investmentPlural}
                 </div>
                 
                 <div className="flex items-center gap-1">
-                  <button onClick={() => { setEditingConfig(config); setShowForm(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title="Edit Configuration">
+                  <button onClick={() => { setEditingConfig(config); setShowForm(true); }} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400" title={copy.editConfiguration}>
                     <Settings2 className="h-4 w-4" />
                   </button>
                   {!config.isSystem && activeInvestments === 0 && (
-                    <button onClick={() => setDeleteId(config.id)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400" title="Delete">
+                    <button onClick={() => setDeleteId(config.id)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400" title={copy.delete}>
                       <Trash2 className="h-4 w-4" />
                     </button>
                   )}
@@ -168,13 +171,13 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-700/50 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Type?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">This custom investment type will be permanently removed.</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{copy.deleteType}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{copy.deleteTypeHelp}</p>
             <div className="flex gap-3 mt-6">
-              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">{copy.cancel}</button>
               <button onClick={() => handleDelete(deleteId)} disabled={loading}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition-colors">
-                {loading ? 'Deleting...' : 'Delete'}
+                {loading ? copy.deleting : copy.delete}
               </button>
             </div>
           </div>

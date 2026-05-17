@@ -18,6 +18,7 @@ import Loader from '@/components/ui/Loader';
 import { Plus, Trash2, PieChart, Edit2, RotateCcw } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
 import type { BudgetWithSpent } from '@/types';
+import { useI18n } from '@/i18n/client';
 
 interface Category { id: string; name: string; type: string; color: string; }
 
@@ -29,6 +30,9 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
   
   const { data: session } = useSession();
   const userCurrency = (session?.user as any)?.currency || 'USD';
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.budgets;
+  const common = messages.pages.common;
 
   const expenseCategories = categories.filter(c => c.type === 'EXPENSE');
 
@@ -66,7 +70,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this budget?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     startTransition(async () => {
       await deleteBudgetAction(id);
       router.refresh();
@@ -82,18 +86,18 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message={editingBudget ? "Updating budget..." : "Creating budget..."} />
+      <Loader show={isPending} message={editingBudget ? copy.updating : copy.creating} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-4 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Budgets</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
             <MonthYearPicker month={currentMonth} year={currentYear} route="/budgets" />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Monthly Usage — {formatCurrency(totalSpent, userCurrency)} / {formatCurrency(totalBudget, userCurrency)}
+            {copy.monthlyUsage} — {formatCurrency(totalSpent, userCurrency, locale)} / {formatCurrency(totalBudget, userCurrency, locale)}
           </p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Set Budget</Button>
+        <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.setBudget}</Button>
       </div>
 
       {/* Overall progress */}
@@ -102,19 +106,19 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
           <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
               <div>
-                <span className="text-sm text-slate-900 dark:text-white font-medium">Overall Budget Usage</span>
+                <span className="text-sm text-slate-900 dark:text-white font-medium">{copy.overallUsage}</span>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
-                  <span>Base {formatCurrency(totalBaseBudget, userCurrency)}</span>
+                  <span>{copy.base} {formatCurrency(totalBaseBudget, userCurrency, locale)}</span>
                   {totalRollover > 0 && (
                     <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
                       <RotateCcw className="h-3 w-3" />
-                      Rolled in {formatCurrency(totalRollover, userCurrency)}
+                      {copy.rolledIn} {formatCurrency(totalRollover, userCurrency, locale)}
                     </span>
                   )}
                   {totalProjectedRollover > 0 && (
                     <span className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
                       <RotateCcw className="h-3 w-3" />
-                      Projected rollover {formatCurrency(totalProjectedRollover, userCurrency)}
+                      {copy.projectedRollover} {formatCurrency(totalProjectedRollover, userCurrency, locale)}
                     </span>
                   )}
                 </div>
@@ -127,24 +131,24 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
           <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50/70 dark:bg-indigo-500/10 p-6">
             <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
               <RotateCcw className="h-5 w-5" />
-              <span className="text-sm font-semibold">Budget Rollover</span>
+              <span className="text-sm font-semibold">{copy.budgetRollover}</span>
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center">
               <div>
                 <p className="text-lg font-bold text-slate-900 dark:text-white">{rolloverEnabledCount}</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Enabled</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.enabled}</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalRollover, userCurrency)}</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Rolled in</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalRollover, userCurrency, locale)}</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.rolledIn}</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalProjectedRollover, userCurrency)}</p>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">Next</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalProjectedRollover, userCurrency, locale)}</p>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.next}</p>
               </div>
             </div>
             <p className="mt-4 text-xs text-slate-600 dark:text-slate-300">
-              Turn rollover on in a budget to carry unused money into the next month.
+              {copy.rolloverHelp}
             </p>
           </div>
         </div>
@@ -155,17 +159,17 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
           <div className="rounded-2xl border border-indigo-200 dark:border-indigo-500/20 bg-indigo-50/70 dark:bg-indigo-500/10 p-6">
             <div className="flex items-center gap-2 text-indigo-700 dark:text-indigo-300">
               <RotateCcw className="h-5 w-5" />
-              <span className="text-sm font-semibold">Budget Rollover</span>
+              <span className="text-sm font-semibold">{copy.budgetRollover}</span>
             </div>
             <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">
-              Create a budget and enable rollover to carry unused money into the next month.
+              {copy.emptyRolloverHelp}
             </p>
           </div>
           <EmptyState
-            title="No budgets set"
-            description="Set monthly budgets per category to track your spending"
+            title={copy.noBudgets}
+            description={copy.noBudgetsHelp}
             icon={<PieChart className="h-12 w-12 text-slate-500" />}
-            action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Set Budget</Button>}
+            action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.setBudget}</Button>}
           />
         </div>
       ) : (
@@ -180,7 +184,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
                     <RotateCcw className="h-3 w-3" />
-                    {budget.rolloverEnabled ? 'On' : 'Off'}
+                    {budget.rolloverEnabled ? copy.on : copy.off}
                   </span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-all">
                     <button
@@ -200,40 +204,40 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
               </div>
               <div className="mb-3 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 p-3 text-center">
                 <div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Base</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.amount, userCurrency)}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.base}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.amount, userCurrency, locale)}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Rolled in</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.rolloverAmount, userCurrency)}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.rolledIn}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.rolloverAmount, userCurrency, locale)}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Effective</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.effectiveAmount, userCurrency)}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.effective}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.effectiveAmount, userCurrency, locale)}</p>
                 </div>
               </div>
               <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-                <span>{formatCurrency(budget.spent, userCurrency)} spent</span>
-                <span>{formatCurrency(budget.effectiveAmount, userCurrency)} limit</span>
+                <span>{formatCurrency(budget.spent, userCurrency, locale)} {copy.spent}</span>
+                <span>{formatCurrency(budget.effectiveAmount, userCurrency, locale)} {copy.limit}</span>
               </div>
               {budget.rolloverAmount > 0 && (
                 <div className="mb-2 flex items-center gap-1.5 text-xs text-indigo-600 dark:text-indigo-400">
                   <RotateCcw className="h-3 w-3" />
-                  <span>{formatCurrency(budget.rolloverAmount, userCurrency)} rolled over from prior budgets</span>
+                  <span>{formatCurrency(budget.rolloverAmount, userCurrency, locale)} {copy.rolledFromPrior}</span>
                 </div>
               )}
               <ProgressBar value={budget.spent} max={budget.effectiveAmount} color={budget.categoryColor} size="md" showLabel={false} />
               <p className={`text-xs mt-2 ${budget.percentage > 100 ? 'text-red-500 dark:text-red-400' : budget.percentage > 80 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400'}`}>
-                {budget.percentage > 100 ? `Over budget by ${formatCurrency(Math.abs(budget.remaining), userCurrency)}!` :
-                  budget.percentage > 80 ? 'Approaching limit' :
-                    `${formatCurrency(budget.remaining, userCurrency)} remaining`}
+                {budget.percentage > 100 ? `${copy.overBudgetBy} ${formatCurrency(Math.abs(budget.remaining), userCurrency, locale)}!` :
+                  budget.percentage > 80 ? copy.approachingLimit :
+                    `${formatCurrency(budget.remaining, userCurrency, locale)} ${copy.remaining}`}
               </p>
               {budget.rolloverEnabled && (
                 <p className="mt-1.5 inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
                   <RotateCcw className="h-3 w-3" />
                   {budget.projectedRolloverAmount > 0
-                    ? `${formatCurrency(budget.projectedRolloverAmount, userCurrency)} projected to roll into next month`
-                    : 'Unused amount rolls into next month'}
+                    ? `${formatCurrency(budget.projectedRolloverAmount, userCurrency, locale)} ${copy.projectedNextMonth}`
+                    : copy.unusedRolls}
                 </p>
               )}
             </div>
@@ -241,18 +245,18 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingBudget ? "Edit Budget" : "Set Budget"}>
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingBudget ? copy.editBudget : copy.setBudget}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <Select
             id="categoryId"
-            label="Category"
+            label={common.category}
             options={expenseCategories.map(c => ({ value: c.id, label: c.name }))}
             error={errors.categoryId?.message}
             {...register('categoryId')}
             disabled={!!editingBudget}
           />
           {editingBudget && <input type="hidden" {...register('categoryId')} />}
-          <Input id="amount" label="Budget Amount" type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
+          <Input id="amount" label={copy.budgetAmount} type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-900/40 p-4 cursor-pointer">
             <input
               type="checkbox"
@@ -260,16 +264,16 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
               {...register('rolloverEnabled')}
             />
             <span>
-              <span className="block text-sm font-medium text-slate-900 dark:text-white">Roll unused amount into next month</span>
+              <span className="block text-sm font-medium text-slate-900 dark:text-white">{copy.rolloverToggle}</span>
               <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Any remaining budget after this month&apos;s spending will increase the next month&apos;s effective limit.
+                {copy.rolloverToggleHelp}
               </span>
             </span>
           </label>
           <input type="hidden" {...register('month')} />
           <input type="hidden" {...register('year')} />
           <Button type="submit" className="w-full" isLoading={isPending}>
-            {editingBudget ? "Update Budget" : "Save Budget"}
+            {editingBudget ? copy.updateBudget : copy.saveBudget}
           </Button>
         </form>
       </Modal>

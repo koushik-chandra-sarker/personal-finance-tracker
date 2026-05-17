@@ -30,7 +30,7 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: Inter, "Noto Sans Bengali", "Nirmala UI", "SolaimanLipi", "Vrinda", system-ui, -apple-system, sans-serif;
 }
 
 /* Animated gradient background */

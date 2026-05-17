@@ -19,6 +19,16 @@ interface MultiSelectFilterProps {
   mode: FilterMode;
   onModeChange: (mode: FilterMode) => void;
   placeholder?: string;
+  copy?: {
+    include: string;
+    exclude: string;
+    not: string;
+    selectAll: string;
+    deselectAll: string;
+    selected: string;
+    noOptions: string;
+    search: string;
+  };
 }
 
 export default function MultiSelectFilter({
@@ -29,6 +39,7 @@ export default function MultiSelectFilter({
   mode,
   onModeChange,
   placeholder,
+  copy,
 }: MultiSelectFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -107,6 +118,16 @@ export default function MultiSelectFilter({
     .filter(Boolean);
 
   const allFilteredSelected = filteredOptions.length > 0 && filteredOptions.every(o => selected.includes(o.value));
+  const labels = copy || {
+    include: 'Include',
+    exclude: 'Exclude',
+    not: 'NOT',
+    selectAll: 'Select All',
+    deselectAll: 'Deselect All',
+    selected: 'selected',
+    noOptions: 'No options found',
+    search: 'Search',
+  };
 
   return (
     <div ref={containerRef} className="relative w-full min-w-0">
@@ -129,11 +150,11 @@ export default function MultiSelectFilter({
           ) : (
             <span className="text-sm text-slate-900 dark:text-white">
               <span className={`text-xs font-semibold uppercase tracking-wider mr-1 ${mode === 'exclude' ? 'text-rose-500 dark:text-rose-400' : 'text-indigo-500 dark:text-indigo-400'}`}>
-                {mode === 'exclude' ? 'NOT' : ''}
+                {mode === 'exclude' ? labels.not : ''}
               </span>
               {selectedLabels.length <= 2
                 ? selectedLabels.join(', ')
-                : `${selectedLabels.length} selected`}
+                : `${selectedLabels.length} ${labels.selected}`}
             </span>
           )}
         </div>
@@ -165,7 +186,7 @@ export default function MultiSelectFilter({
                 }
               `}
             >
-              Include
+              {labels.include}
             </button>
             <button
               type="button"
@@ -177,7 +198,7 @@ export default function MultiSelectFilter({
                 }
               `}
             >
-              Exclude
+              {labels.exclude}
             </button>
           </div>
 
@@ -191,7 +212,7 @@ export default function MultiSelectFilter({
                   type="text"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder={`Search ${label.toLowerCase()}...`}
+                  placeholder={`${labels.search} ${label.toLowerCase()}...`}
                   className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
@@ -205,11 +226,11 @@ export default function MultiSelectFilter({
               onClick={allFilteredSelected ? deselectAll : selectAll}
               className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
             >
-              {allFilteredSelected ? 'Deselect All' : 'Select All'}
+              {allFilteredSelected ? labels.deselectAll : labels.selectAll}
             </button>
             {selected.length > 0 && (
               <span className="text-xs text-slate-400 dark:text-slate-500">
-                {selected.length} selected
+                {selected.length} {labels.selected}
               </span>
             )}
           </div>
@@ -218,7 +239,7 @@ export default function MultiSelectFilter({
           <div className="max-h-52 overflow-y-auto py-1 scrollbar-thin">
             {filteredOptions.length === 0 ? (
               <div className="px-3 py-4 text-center text-sm text-slate-400 dark:text-slate-500">
-                No options found
+                {labels.noOptions}
               </div>
             ) : (
               filteredOptions.map((option) => {

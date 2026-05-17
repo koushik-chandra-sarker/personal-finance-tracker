@@ -3,30 +3,40 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import type { CategoryBreakdown } from '@/types';
 import { formatCurrency } from '@/lib/utils';
+import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
 
 interface CategoryPieChartProps {
   data: CategoryBreakdown[];
   currency?: string;
+  locale?: AppLocale;
 }
 
-const CustomTooltip = ({ active, payload }: { active?: boolean; payload?: Array<{ payload: CategoryBreakdown }> }) => {
+const CustomTooltip = ({ active, payload, currency, locale }: {
+  active?: boolean;
+  payload?: Array<{ payload: CategoryBreakdown }>;
+  currency: string;
+  locale: AppLocale;
+}) => {
   if (!active || !payload || !payload[0]) return null;
   const d = payload[0].payload;
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3 shadow-2xl">
       <p className="text-sm font-medium text-slate-900 dark:text-white">{d.categoryName}</p>
-      <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(d.total)} ({d.percentage}%)</p>
+      <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(d.total, currency, locale)} ({d.percentage}%)</p>
     </div>
   );
 };
 
-export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPieChartProps) {
+export default function CategoryPieChart({ data, currency = 'USD', locale = DEFAULT_LOCALE }: CategoryPieChartProps) {
+  const copy = getMessages(locale).dashboard;
+
   if (data.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Expense Breakdown</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{copy.expenseBreakdown}</h3>
         <div className="flex items-center justify-center h-[250px] text-slate-500 text-sm">
-          No expense data for this month
+          {copy.noExpenseData}
         </div>
       </div>
     );
@@ -34,7 +44,7 @@ export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPie
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">Expense Breakdown</h3>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{copy.expenseBreakdown}</h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -52,7 +62,7 @@ export default function CategoryPieChart({ data, currency = 'USD' }: CategoryPie
                 <Cell key={index} fill={entry.categoryColor} stroke="transparent" />
               ))}
             </Pie>
-            <Tooltip content={<CustomTooltip />} />
+            <Tooltip content={<CustomTooltip currency={currency} locale={locale} />} />
           </PieChart>
         </ResponsiveContainer>
       </div>

@@ -29,11 +29,11 @@ export async function createRecurringAction(formData: FormData): Promise<ActionR
     nextRunDate: formData.get('nextRunDate') as string,
   };
   const parsed = recurringSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await recurringService.createRecurringTransaction(userId, executorId, parsed.data);
   revalidatePath('/recurring');
-  return { success: true, message: 'Recurring transaction created' };
+  return { success: true, message: 'পুনরাবৃত্ত লেনদেন তৈরি হয়েছে' };
 }
 
 export async function toggleRecurringAction(id: string): Promise<ActionResponse> {
@@ -44,7 +44,7 @@ export async function toggleRecurringAction(id: string): Promise<ActionResponse>
   await validateAccess('TRANSACTIONS', 'EDIT');
   await recurringService.toggleRecurring(userId, executorId, id);
   revalidatePath('/recurring');
-  return { success: true, message: 'Status toggled' };
+  return { success: true, message: 'স্ট্যাটাস পরিবর্তন হয়েছে' };
 }
 
 export async function deleteRecurringAction(id: string): Promise<ActionResponse> {
@@ -52,7 +52,7 @@ export async function deleteRecurringAction(id: string): Promise<ActionResponse>
   await validateAccess('TRANSACTIONS', 'EDIT');
   await recurringService.deleteRecurringTransaction(userId, id);
   revalidatePath('/recurring');
-  return { success: true, message: 'Recurring transaction deleted' };
+  return { success: true, message: 'পুনরাবৃত্ত লেনদেন ডিলিট হয়েছে' };
 }
 
 export async function processDueRecurringAction(): Promise<{ success: boolean; processed: number }> {

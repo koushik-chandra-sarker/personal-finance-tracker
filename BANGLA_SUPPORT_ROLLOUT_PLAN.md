@@ -10,6 +10,16 @@
 
 This should be implemented as a staged product migration, not a one-shot text replacement. The app has many finance, admin, support, subscription, and notification flows, so the safest approach is to add a real localization layer first, then translate page groups phase by phase.
 
+## Current Progress
+
+- Phase 1 completed: Bangla-default locale foundation, dictionaries, user locale persistence, metadata, font stack, and language switcher.
+- Phase 2 completed: locale-aware formatting for currency, dates, relative dates, month names, and common enum display labels.
+- Phase 3 completed: app shell, auth, subscription, payment, loading, and error surfaces translated.
+- Phase 4 completed: dashboard, accounts, transactions, transaction filters, recurring transactions, budgets, categories, goals, reports, notes, and Subscription Tracker now use Bangla-first page copy.
+- Phase 5 completed: Salary Planner, Tax Config, Investments, Sanchayapatra calculator, portfolio/detail/type pages, maturity timeline, and Bangladesh-specific finance formatting now use Bangla-first labels and locale-aware amounts/dates.
+- Phase 6 completed: Support tickets, support admin queue/detail, support-view banner, notification bell/toast action copy, tutorial academy UI, tutorial management UI, Bangla demo tutorial seed/content, admin messages, and user-facing admin message controls now use Bangla-first system copy while preserving custom user/admin-authored content.
+- Phase 7 completed: Admin analytics, user management, invite/temporary-password workflows, subscription/package management, manual payment review, payment account forms, investment configuration, and admin action feedback now use Bangla-first system copy with compact table/modal layouts preserved.
+
 ## Recommended Strategy
 
 Do not move the whole app to `/bn-BD/...` routes in the first pass.
@@ -152,4 +162,3 @@ Admin tables should stay compact. Bangla labels are often longer, so responsive 
 6. Support, notifications, and tutorials.
 7. Admin.
 8. QA polish.
-

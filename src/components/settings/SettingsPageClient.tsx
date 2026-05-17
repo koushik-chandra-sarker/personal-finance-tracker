@@ -26,7 +26,8 @@ import { createAppPinAction } from '@/actions/app-pin.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
-import { formatCurrency } from '@/lib/utils';
+import { formatCurrency, formatDate } from '@/lib/utils';
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
 
 type AppPinStatus = { hasPin: boolean; pinSetAt: string | null };
 
@@ -40,6 +41,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
   const [isPending, startTransition] = useTransition();
   const [isPinPending, startPinTransition] = useTransition();
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
+  const [isLocaleUpdating, setIsLocaleUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [pinMessage, setPinMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [appPinStatus, setAppPinStatus] = useState<AppPinStatus>(initialAppPinStatus);
@@ -48,13 +50,14 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
   const [renderedAt] = useState(() => Date.now());
   
   const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
+  const userLocale = session?.user?.preferredLocale;
   const subscriptionPlan = session?.user?.subscriptionPlan || null;
   const subscriptionInterval = session?.user?.subscriptionInterval || null;
   const subscriptionPackageId = session?.user?.subscriptionPackageId || null;
   const subscriptionSource = session?.user?.subscriptionSource || null;
   const subscriptionStatus = session?.user?.subscriptionStatus || 'ACTIVE';
   const subscriptionPeriodEnd = session?.user?.subscriptionCurrentPeriodEnd
-    ? new Date(session.user.subscriptionCurrentPeriodEnd).toLocaleDateString()
+    ? formatDate(session.user.subscriptionCurrentPeriodEnd, undefined, userLocale)
     : null;
   const subscriptionEndDate = session?.user?.subscriptionCurrentPeriodEnd
     ? new Date(session.user.subscriptionCurrentPeriodEnd)
@@ -192,6 +195,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
   return (
     <div className="w-full space-y-8 pb-10">
       <Loader show={isCurrencyUpdating} message="Updating currency..." />
+      <Loader show={isLocaleUpdating} message="ভাষা আপডেট হচ্ছে..." />
       {/* Header */}
       <div className="flex items-center gap-5">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-500/20">
@@ -286,6 +290,11 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                       <h2 className="text-xl font-bold text-slate-900 dark:text-white">Regional Preferences</h2>
                     </div>
                     <div className="space-y-4">
+                      <LanguageSwitcher
+                        label="Language / ভাষা"
+                        description="Choose the app language. Default is Bangla."
+                        onChanging={setIsLocaleUpdating}
+                      />
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
                         <div>
                           <p className="text-base font-semibold text-slate-900 dark:text-white">Base Currency</p>
@@ -300,8 +309,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                               { value: 'USD', label: 'USD ($)' },
                               { value: 'EUR', label: 'EUR (€)' },
                               { value: 'GBP', label: 'GBP (£)' },
-                              { value: 'BDT', label: 'BDT (English)' },
-                              { value: 'BDT_BN', label: 'BDT (Bengali)' },
+                              { value: 'BDT', label: 'BDT (৳)' },
                               { value: 'INR', label: 'INR (₹)' },
                               { value: 'JPY', label: 'JPY (¥)' },
                               { value: 'CAD', label: 'CAD (C$)' },
@@ -422,7 +430,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                               </div>
                               {currentPlan && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
                             </div>
-                            <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(pkg.price, pkg.currency)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
+                            <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(pkg.price, pkg.currency, userLocale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
                             <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <CalendarClock className="h-4 w-4" />
                               {pkg.interval === 'YEARLY' ? 'Yearly access' : 'Monthly access'}

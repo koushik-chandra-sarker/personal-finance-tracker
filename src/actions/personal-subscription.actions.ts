@@ -45,14 +45,14 @@ export async function createPersonalSubscriptionAction(formData: FormData): Prom
 
     const parsed = parseFormData(formData);
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
     }
 
     await subscriptionService.createPersonalSubscription(userId, session.user.id, parsed.data);
     revalidatePath('/service-tracker');
-    return { success: true, message: 'Subscription added.' };
+    return { success: true, message: 'সাবস্ক্রিপশন যোগ হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to add subscription.') };
+    return { success: false, message: getErrorMessage(error, 'সাবস্ক্রিপশন যোগ করা যায়নি।') };
   }
 }
 
@@ -65,14 +65,14 @@ export async function updatePersonalSubscriptionAction(id: string, formData: For
 
     const parsed = parseFormData(formData);
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
     }
 
     await subscriptionService.updatePersonalSubscription(userId, session.user.id, id, parsed.data);
     revalidatePath('/service-tracker');
-    return { success: true, message: 'Subscription updated.' };
+    return { success: true, message: 'সাবস্ক্রিপশন আপডেট হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update subscription.') };
+    return { success: false, message: getErrorMessage(error, 'সাবস্ক্রিপশন আপডেট করা যায়নি।') };
   }
 }
 
@@ -85,9 +85,9 @@ export async function togglePersonalSubscriptionAction(id: string): Promise<Acti
 
     await subscriptionService.togglePersonalSubscriptionStatus(userId, session.user.id, id);
     revalidatePath('/service-tracker');
-    return { success: true, message: 'Subscription status updated.' };
+    return { success: true, message: 'সাবস্ক্রিপশন স্ট্যাটাস আপডেট হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update status.') };
+    return { success: false, message: getErrorMessage(error, 'স্ট্যাটাস আপডেট করা যায়নি।') };
   }
 }
 
@@ -97,9 +97,9 @@ export async function deletePersonalSubscriptionAction(id: string): Promise<Acti
     await validateAccess('SUBSCRIPTIONS', 'EDIT');
     await subscriptionService.deletePersonalSubscription(userId, id);
     revalidatePath('/service-tracker');
-    return { success: true, message: 'Subscription deleted.' };
+    return { success: true, message: 'সাবস্ক্রিপশন ডিলিট হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to delete subscription.') };
+    return { success: false, message: getErrorMessage(error, 'সাবস্ক্রিপশন ডিলিট করা যায়নি।') };
   }
 }
 

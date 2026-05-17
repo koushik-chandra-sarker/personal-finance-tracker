@@ -35,6 +35,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { cn, formatCurrency } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   initialPaymentMethods: AdminManualPaymentMethodRow[];
@@ -60,36 +61,75 @@ function StatusIcon({ status }: { status: string }) {
   return <Clock3 className="h-4 w-4" />;
 }
 
-function formatDateTime(value: string | null) {
+function formatDateTime(value: string | null, locale = undefined as string | undefined) {
   if (!value) return '-';
-  return new Date(value).toLocaleString();
+  return new Date(value).toLocaleString(locale);
 }
 
-function timeAgo(value: string) {
+function timeAgo(value: string, localeCopy?: { minute: string; hour: string; day: string; ago: string }) {
   const diffMs = Date.now() - new Date(value).getTime();
   const minutes = Math.max(1, Math.floor(diffMs / 60000));
-  if (minutes < 60) return `${minutes}m ago`;
+  if (!localeCopy) {
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+  if (minutes < 60) return `${minutes}${localeCopy.minute} ${localeCopy.ago}`;
   const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return `${hours}${localeCopy.hour} ${localeCopy.ago}`;
   const days = Math.floor(hours / 24);
-  return `${days}d ago`;
+  return `${days}${localeCopy.day} ${localeCopy.ago}`;
 }
 
-function buildVerificationSummary(request: AdminManualPaymentRequestRow) {
+function buildVerificationSummary(
+  request: AdminManualPaymentRequestRow,
+  labels: {
+    user: string;
+    package: string;
+    amount: string;
+    provider: string;
+    senderWallet: string;
+    transactionId: string;
+    reference: string;
+    submitted: string;
+    receiverAccount: string;
+  },
+  locale: string
+) {
   return [
-    `User: ${request.user.name} <${request.user.email}>`,
-    `Package: ${request.package.name}`,
-    `Amount: ${formatCurrency(request.amount, request.currency)}`,
-    `Provider: ${providerLabel(request.provider)}`,
-    `Sender wallet: ${request.senderAccount}`,
-    `Transaction ID: ${request.transactionId}`,
-    `Reference: ${request.reference}`,
-    `Submitted: ${formatDateTime(request.createdAt)}`,
-    request.method ? `Receiver: ${request.method.accountName} (${request.method.accountNumber})` : null,
+    `${labels.user}: ${request.user.name} <${request.user.email}>`,
+    `${labels.package}: ${request.package.name}`,
+    `${labels.amount}: ${formatCurrency(request.amount, request.currency)}`,
+    `${labels.provider}: ${providerLabel(request.provider)}`,
+    `${labels.senderWallet}: ${request.senderAccount}`,
+    `${labels.transactionId}: ${request.transactionId}`,
+    `${labels.reference}: ${request.reference}`,
+    `${labels.submitted}: ${formatDateTime(request.createdAt, locale)}`,
+    request.method ? `${labels.receiverAccount}: ${request.method.accountName} (${request.method.accountNumber})` : null,
   ].filter(Boolean).join('\n');
 }
 
 export default function AdminManualPaymentsClient({ initialPaymentMethods, initialPaymentRequests }: Props) {
+  const { locale, messages } = useI18n();
+  const adminCopy = messages.pages.admin;
+  const copy = adminCopy.payments;
+  const common = adminCopy.common;
+  const agoCopy = locale === 'bn-BD'
+    ? { minute: 'মি', hour: 'ঘ', day: 'দিন', ago: 'আগে' }
+    : { minute: 'm', hour: 'h', day: 'd', ago: 'ago' };
+  const summaryLabels = {
+    user: common.user,
+    package: common.package,
+    amount: common.amount,
+    provider: copy.provider,
+    senderWallet: copy.senderWallet,
+    transactionId: common.transactionId,
+    reference: common.reference,
+    submitted: copy.submitted,
+    receiverAccount: copy.receiverAccount,
+  };
   const [paymentMethods, setPaymentMethods] = useState(initialPaymentMethods);
   const [paymentRequests, setPaymentRequests] = useState(initialPaymentRequests);
   const [selectedRequestId, setSelectedRequestId] = useState(initialPaymentRequests[0]?.id || '');
@@ -159,14 +199,14 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
     setMessage(null);
     startTransition(async () => {
       await Promise.all([refreshPaymentRequests(), refreshPaymentMethods()]);
-      setMessage({ type: 'success', text: 'Payment review data refreshed.' });
+      setMessage({ type: 'success', text: copy.dataRefreshed });
     });
   };
 
-  const copyValue = async (value: string, label = 'Value') => {
+  const copyValue = async (value: string, label: string = copy.copiedLabel) => {
     await navigator.clipboard.writeText(value);
     setCopiedValue(value);
-    setMessage({ type: 'success', text: `${label} copied to clipboard.` });
+    setMessage({ type: 'success', text: `${label} ${common.copied}` });
     window.setTimeout(() => setCopiedValue(null), 1400);
   };
 
@@ -231,10 +271,10 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
   };
 
   const statusFilters: Array<{ value: PaymentStatusFilter; label: string; count: number }> = [
-    { value: 'PENDING', label: 'Pending', count: stats.pending },
-    { value: 'APPROVED', label: 'Approved', count: stats.approved },
-    { value: 'REJECTED', label: 'Rejected', count: stats.rejected },
-    { value: 'ALL', label: 'All', count: stats.total },
+    { value: 'PENDING', label: common.pending, count: stats.pending },
+    { value: 'APPROVED', label: common.approved, count: stats.approved },
+    { value: 'REJECTED', label: common.rejected, count: stats.rejected },
+    { value: 'ALL', label: common.all, count: stats.total },
   ];
 
   return (
@@ -246,47 +286,47 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
               <WalletCards className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Manual Payment Review</h1>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
               <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                Verify bKash and Nagad submissions against wallet history, then approve or reject from one focused workspace.
+                {copy.subtitle}
               </p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" onClick={refreshAll} disabled={isPending}>
-              <RefreshCw className={cn('h-4 w-4', isPending && 'animate-spin')} /> Refresh
+              <RefreshCw className={cn('h-4 w-4', isPending && 'animate-spin')} /> {common.refresh}
             </Button>
             <Button onClick={openCreatePaymentMethod} disabled={isPending}>
-              <Smartphone className="h-4 w-4" /> Payment Account
+              <Smartphone className="h-4 w-4" /> {copy.paymentAccount}
             </Button>
           </div>
         </div>
         <div className="grid border-t border-slate-200 dark:border-slate-800 sm:grid-cols-3">
           <div className="p-5">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Needs review</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.needsReview}</p>
             <p className="mt-1 text-3xl font-black text-amber-600 dark:text-amber-300">{stats.pending}</p>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-              {oldestPending ? `Oldest ${timeAgo(oldestPending.createdAt)}` : 'Queue is clear'}
+              {oldestPending ? `${copy.oldest} ${timeAgo(oldestPending.createdAt, agoCopy)}` : copy.queueClear}
             </p>
           </div>
           <div className="border-t border-slate-200 p-5 dark:border-slate-800 sm:border-l sm:border-t-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Pending value</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.pendingValue}</p>
             <p className="mt-1 text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(pendingValue, pendingRequests[0]?.currency || 'BDT')}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Only pending requests</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.onlyPending}</p>
           </div>
           <div className="border-t border-slate-200 p-5 dark:border-slate-800 sm:border-l sm:border-t-0">
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Payment accounts</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{adminCopy.subscriptions.paymentAccounts}</p>
             <p className="mt-1 text-3xl font-black text-slate-900 dark:text-white">{activePaymentMethods}/{paymentMethods.length}</p>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Active / total accounts</p>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.activeTotalAccounts}</p>
           </div>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <Card className="p-5"><Clock3 className="mb-3 h-5 w-5 text-amber-500" /><p className="text-sm text-slate-500 dark:text-slate-400">Pending</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.pending}</p></Card>
-        <Card className="p-5"><CheckCircle2 className="mb-3 h-5 w-5 text-emerald-500" /><p className="text-sm text-slate-500 dark:text-slate-400">Approved</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.approved}</p></Card>
-        <Card className="p-5"><XCircle className="mb-3 h-5 w-5 text-rose-500" /><p className="text-sm text-slate-500 dark:text-slate-400">Rejected</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.rejected}</p></Card>
-        <Card className="p-5"><WalletCards className="mb-3 h-5 w-5 text-indigo-500" /><p className="text-sm text-slate-500 dark:text-slate-400">Payment Accounts</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{paymentMethods.length}</p></Card>
+        <Card className="p-5"><Clock3 className="mb-3 h-5 w-5 text-amber-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{common.pending}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.pending}</p></Card>
+        <Card className="p-5"><CheckCircle2 className="mb-3 h-5 w-5 text-emerald-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{common.approved}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.approved}</p></Card>
+        <Card className="p-5"><XCircle className="mb-3 h-5 w-5 text-rose-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{common.rejected}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.rejected}</p></Card>
+        <Card className="p-5"><WalletCards className="mb-3 h-5 w-5 text-indigo-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{adminCopy.subscriptions.paymentAccounts}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{paymentMethods.length}</p></Card>
       </div>
 
       {message && (
@@ -300,8 +340,8 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
           <div className="border-b border-slate-200 p-4 dark:border-slate-700/50">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
-                <h2 className="font-semibold text-slate-900 dark:text-white">Review Queue</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Select a request to inspect details and take action.</p>
+                <h2 className="font-semibold text-slate-900 dark:text-white">{copy.reviewQueue}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{copy.reviewQueueHelp}</p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <div className="relative">
@@ -310,7 +350,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                     type="search"
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search user, TrxID, reference"
+                    placeholder={copy.searchPlaceholder}
                     className="h-10 w-full rounded-xl border border-slate-300 bg-white pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white sm:w-72"
                   />
                 </div>
@@ -342,8 +382,8 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
           {filteredRequests.length === 0 ? (
             <div className="p-10 text-center">
               <ClipboardCheck className="mx-auto mb-3 h-10 w-10 text-slate-300 dark:text-slate-700" />
-              <p className="font-semibold text-slate-900 dark:text-white">No payment requests found</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Try another status or search term.</p>
+              <p className="font-semibold text-slate-900 dark:text-white">{copy.noRequests}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.noRequestsHelp}</p>
             </div>
           ) : (
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
@@ -363,7 +403,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                       <div className="flex flex-wrap items-center gap-2">
                         <span className={cn('inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-bold', statusStyle(request.status))}>
                           <StatusIcon status={request.status} />
-                          {request.status.toLowerCase()}
+                          {request.status === 'APPROVED' ? common.approved : request.status === 'REJECTED' ? common.rejected : common.pending}
                         </span>
                         <p className="truncate font-semibold text-slate-900 dark:text-white">{request.user.name}</p>
                       </div>
@@ -371,18 +411,18 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{providerLabel(request.provider)}</span>
                         <span className="truncate text-xs text-slate-400">{request.package.name}</span>
-                        <span className="text-xs text-slate-400">{timeAgo(request.createdAt)}</span>
+                        <span className="text-xs text-slate-400">{timeAgo(request.createdAt, agoCopy)}</span>
                       </div>
                     </div>
                     <div>
-                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Amount</p>
+                      <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.amount}</p>
                       <p className="text-sm font-bold text-slate-900 dark:text-white">{formatCurrency(request.amount, request.currency)}</p>
-                      <p className="text-xs text-slate-400">{request.package.interval.toLowerCase()}</p>
+                      <p className="text-xs text-slate-400">{request.package.interval === 'MONTHLY' ? common.monthly : common.yearly}</p>
                     </div>
                     <div>
                       <p className="text-xs font-medium uppercase tracking-wide text-slate-400">TrxID</p>
                       <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{request.transactionId}</p>
-                      <p className="truncate text-xs text-slate-400">Ref {request.reference}</p>
+                      <p className="truncate text-xs text-slate-400">{common.reference} {request.reference}</p>
                     </div>
                     <div className="hidden items-center justify-end text-slate-300 dark:text-slate-600 lg:flex">
                       <ArrowUpRight className="h-4 w-4" />
@@ -398,20 +438,20 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
           <Card className="overflow-hidden p-0">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="p-5 pb-0">
-                <h2 className="font-semibold text-slate-900 dark:text-white">Request Details</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Verify before activating access.</p>
+                <h2 className="font-semibold text-slate-900 dark:text-white">{copy.requestDetails}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{copy.requestDetailsHelp}</p>
               </div>
               {selectedRequest && (
                 <span className={cn('mr-5 mt-5 inline-flex items-center gap-1 rounded-full border px-2 py-1 text-xs font-bold', statusStyle(selectedRequest.status))}>
                   <StatusIcon status={selectedRequest.status} />
-                  {selectedRequest.status.toLowerCase()}
+                  {selectedRequest.status === 'APPROVED' ? common.approved : selectedRequest.status === 'REJECTED' ? common.rejected : common.pending}
                 </span>
               )}
             </div>
 
             {!selectedRequest ? (
               <div className="m-5 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                Select a payment request.
+                {copy.selectRequest}
               </div>
             ) : (
               <div>
@@ -419,12 +459,12 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   <div className="bg-slate-50 p-4 dark:bg-slate-950/40">
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Customer</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.customer}</p>
                         <p className="mt-1 truncate text-lg font-black text-slate-900 dark:text-white">{selectedRequest.user.name}</p>
                         <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedRequest.user.email}</p>
                       </div>
                       <div className="sm:text-right">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Amount to verify</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.amountToVerify}</p>
                         <p className="mt-1 text-2xl font-black text-emerald-600 dark:text-emerald-300">{formatCurrency(selectedRequest.amount, selectedRequest.currency)}</p>
                         <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{selectedRequest.package.name}</p>
                       </div>
@@ -432,31 +472,31 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   </div>
                   <div className="grid divide-y divide-slate-200 dark:divide-slate-800 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
                     <div className="p-3">
-                      <p className="text-xs font-bold uppercase text-slate-400">Provider</p>
+                      <p className="text-xs font-bold uppercase text-slate-400">{copy.provider}</p>
                       <p className="mt-1 font-semibold text-slate-900 dark:text-white">{providerLabel(selectedRequest.provider)}</p>
                     </div>
                     <div className="p-3">
-                      <p className="text-xs font-bold uppercase text-slate-400">Submitted</p>
-                      <p className="mt-1 font-semibold text-slate-900 dark:text-white">{timeAgo(selectedRequest.createdAt)}</p>
+                      <p className="text-xs font-bold uppercase text-slate-400">{copy.submitted}</p>
+                      <p className="mt-1 font-semibold text-slate-900 dark:text-white">{timeAgo(selectedRequest.createdAt, agoCopy)}</p>
                     </div>
                     <div className="p-3">
-                      <p className="text-xs font-bold uppercase text-slate-400">Interval</p>
-                      <p className="mt-1 font-semibold capitalize text-slate-900 dark:text-white">{selectedRequest.package.interval.toLowerCase()}</p>
+                      <p className="text-xs font-bold uppercase text-slate-400">{copy.interval}</p>
+                      <p className="mt-1 font-semibold capitalize text-slate-900 dark:text-white">{selectedRequest.package.interval === 'MONTHLY' ? common.monthly : common.yearly}</p>
                     </div>
                   </div>
                 </div>
 
                 <div className="mx-5 mt-4 rounded-2xl border border-slate-200 dark:border-slate-800">
                   <div className="border-b border-slate-200 px-4 py-3 dark:border-slate-800">
-                    <p className="font-bold text-slate-900 dark:text-white">Payment evidence</p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">Use these values to match the wallet transaction.</p>
+                    <p className="font-bold text-slate-900 dark:text-white">{copy.evidence}</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{copy.evidenceHelp}</p>
                   </div>
                   <div className="divide-y divide-slate-200 dark:divide-slate-800">
                     {[
-                      { label: 'Transaction ID', value: selectedRequest.transactionId, copy: 'Transaction ID', strong: true },
-                      { label: 'Sender wallet', value: selectedRequest.senderAccount, copy: 'Sender wallet', strong: true },
-                      { label: 'Reference', value: selectedRequest.reference, copy: 'Reference', strong: false },
-                      { label: 'Submitted at', value: formatDateTime(selectedRequest.createdAt), copy: null, strong: false },
+                      { label: common.transactionId, value: selectedRequest.transactionId, copy: common.transactionId, strong: true },
+                      { label: copy.senderWallet, value: selectedRequest.senderAccount, copy: copy.senderWallet, strong: true },
+                      { label: common.reference, value: selectedRequest.reference, copy: common.reference, strong: false },
+                      { label: copy.submittedAt, value: formatDateTime(selectedRequest.createdAt, locale), copy: null, strong: false },
                     ].map((item) => (
                       <div key={item.label} className="flex items-center justify-between gap-3 px-4 py-3">
                         <div className="min-w-0">
@@ -468,7 +508,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                             type="button"
                             onClick={() => copyValue(item.value, item.copy)}
                             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:hover:bg-slate-800"
-                            aria-label={`Copy ${item.label}`}
+                            aria-label={`${common.copied}: ${item.label}`}
                           >
                             <Copy className="h-4 w-4" />
                           </button>
@@ -482,15 +522,15 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   <div className="mx-5 mt-4 rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Receiver account</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.receiverAccount}</p>
                         <p className="mt-1 truncate font-bold text-slate-900 dark:text-white">{selectedRequest.method.accountName}</p>
                         <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedRequest.method.label} - {selectedRequest.method.accountNumber}</p>
                       </div>
                       <button
                         type="button"
-                        onClick={() => copyValue(selectedRequest.method?.accountNumber || '', 'Receiver account')}
+                        onClick={() => copyValue(selectedRequest.method?.accountNumber || '', copy.receiverAccount)}
                         className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 text-slate-400 transition-colors hover:bg-slate-50 hover:text-indigo-600 dark:border-slate-700 dark:hover:bg-slate-800"
-                        aria-label="Copy receiver account"
+                        aria-label={copy.copyReceiverAccount}
                       >
                         <Copy className="h-4 w-4" />
                       </button>
@@ -502,11 +542,11 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   <div className="flex items-start gap-3">
                     <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
                     <div>
-                      <p className="font-bold text-slate-900 dark:text-white">Verification checklist</p>
+                      <p className="font-bold text-slate-900 dark:text-white">{copy.checklist}</p>
                       <div className="mt-3 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                        <p>1. Match amount, provider, and sender wallet in wallet history.</p>
-                        <p>2. Confirm Transaction ID has not already been approved.</p>
-                        <p>3. Approve only after the payment is visible in the receiver account.</p>
+                        <p>1. {copy.checklist1}</p>
+                        <p>2. {copy.checklist2}</p>
+                        <p>3. {copy.checklist3}</p>
                       </div>
                     </div>
                   </div>
@@ -514,14 +554,14 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
 
                 {selectedRequest.note && (
                   <div className="mx-5 mb-4 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-xs font-bold uppercase text-slate-400">User note</p>
+                    <p className="text-xs font-bold uppercase text-slate-400">{copy.userNote}</p>
                     <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{selectedRequest.note}</p>
                   </div>
                 )}
 
                 {selectedRequest.adminNote && (
                   <div className="mx-5 mb-4 rounded-xl border border-slate-200 p-3 dark:border-slate-800">
-                    <p className="text-xs font-bold uppercase text-slate-400">Admin note</p>
+                    <p className="text-xs font-bold uppercase text-slate-400">{adminCopy.subscriptions.adminNote}</p>
                     <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">{selectedRequest.adminNote}</p>
                   </div>
                 )}
@@ -533,7 +573,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                     rel="noreferrer"
                     className="mx-5 mb-4 inline-flex w-[calc(100%-2.5rem)] items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                   >
-                    Open Screenshot <ExternalLink className="h-4 w-4" />
+                    Screenshot <ExternalLink className="h-4 w-4" />
                   </a>
                 )}
 
@@ -541,34 +581,34 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   <div className="space-y-3 border-t border-slate-200 p-5 dark:border-slate-800">
                     <button
                       type="button"
-                      onClick={() => copyValue(buildVerificationSummary(selectedRequest), 'Verification summary')}
+                      onClick={() => copyValue(buildVerificationSummary(selectedRequest, summaryLabels, locale), copy.checklist)}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
                       <ClipboardCheck className="h-4 w-4" />
-                      Copy verification summary
+                      {common.copied} {copy.checklist}
                     </button>
                     <div className="grid gap-2 sm:grid-cols-2">
                       <Button onClick={() => openReview(selectedRequest, 'approve')} disabled={isPending}>
-                        <CheckCircle2 className="h-4 w-4" /> Approve
+                        <CheckCircle2 className="h-4 w-4" /> {common.approved}
                       </Button>
                       <Button variant="outline" onClick={() => openReview(selectedRequest, 'reject')} disabled={isPending}>
-                        <XCircle className="h-4 w-4" /> Reject
+                        <XCircle className="h-4 w-4" /> {common.rejected}
                       </Button>
                     </div>
                   </div>
                 ) : (
                   <div className="m-5 space-y-3 rounded-xl bg-slate-100 p-3 text-sm text-slate-600 dark:bg-slate-800/60 dark:text-slate-300">
                     <p>
-                      Reviewed {formatDateTime(selectedRequest.reviewedAt)}
-                      {selectedRequest.reviewedBy ? ` by ${selectedRequest.reviewedBy.name}` : ''}
+                      {common.status} {formatDateTime(selectedRequest.reviewedAt, locale)}
+                      {selectedRequest.reviewedBy ? ` - ${selectedRequest.reviewedBy.name}` : ''}
                     </p>
                     <button
                       type="button"
-                      onClick={() => copyValue(buildVerificationSummary(selectedRequest), 'Verification summary')}
+                      onClick={() => copyValue(buildVerificationSummary(selectedRequest, summaryLabels, locale), copy.checklist)}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
                     >
                       <ClipboardCheck className="h-4 w-4" />
-                      Copy verification summary
+                      {common.copied} {copy.checklist}
                     </button>
                   </div>
                 )}
@@ -579,16 +619,16 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
           <Card className="overflow-hidden p-0">
             <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-800">
               <div>
-                <h2 className="font-semibold text-slate-900 dark:text-white">Payment Accounts</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Shown on the subscription payment screen.</p>
+                <h2 className="font-semibold text-slate-900 dark:text-white">{adminCopy.subscriptions.paymentAccounts}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{adminCopy.subscriptions.paymentAccountsHelp}</p>
               </div>
               <Button size="sm" onClick={openCreatePaymentMethod} disabled={isPending}>
-                Add
+                {common.add}
               </Button>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-800">
               {paymentMethods.length === 0 ? (
-                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">No payment account configured.</div>
+                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">{adminCopy.subscriptions.addPaymentAccountFirst}</div>
               ) : paymentMethods.map((method) => (
                 <div key={method.id} className="p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -596,17 +636,17 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                       <div className="flex flex-wrap items-center gap-2">
                         <p className="font-semibold text-slate-900 dark:text-white">{providerLabel(method.provider)} · {method.label}</p>
                         <span className={cn('rounded-full px-2 py-0.5 text-xs font-bold', method.isActive ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400')}>
-                          {method.isActive ? 'Active' : 'Inactive'}
+                          {method.isActive ? common.active : common.inactive}
                         </span>
                       </div>
                       <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{method.accountName} · {method.accountNumber}</p>
-                      <p className="mt-1 text-xs text-slate-400">{method.requestCount} request{method.requestCount === 1 ? '' : 's'}</p>
+                      <p className="mt-1 text-xs text-slate-400">{method.requestCount} {adminCopy.subscriptions.requests}</p>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm" onClick={() => openEditPaymentMethod(method)} disabled={isPending} className="h-8 w-8 p-0" title="Edit account">
+                      <Button variant="ghost" size="sm" onClick={() => openEditPaymentMethod(method)} disabled={isPending} className="h-8 w-8 p-0" title={adminCopy.subscriptions.editPaymentAccount}>
                         <Edit2 className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" onClick={() => setPaymentMethodActive(method.id, !method.isActive)} disabled={isPending} className="h-8 w-8 p-0" title={method.isActive ? 'Disable account' : 'Enable account'}>
+                      <Button variant="ghost" size="sm" onClick={() => setPaymentMethodActive(method.id, !method.isActive)} disabled={isPending} className="h-8 w-8 p-0" title={method.isActive ? common.disable : common.enable}>
                         <Power className="h-4 w-4" />
                       </Button>
                     </div>
@@ -621,13 +661,13 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
       <Modal
         isOpen={isPaymentMethodModalOpen}
         onClose={() => setIsPaymentMethodModalOpen(false)}
-        title={paymentMethodForm ? 'Edit Payment Account' : 'Add Payment Account'}
+        title={paymentMethodForm ? adminCopy.subscriptions.editPaymentAccount : adminCopy.subscriptions.addPaymentAccount}
         className="max-w-xl"
       >
         <form onSubmit={submitPaymentMethod} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor="manualProvider" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Provider</label>
+              <label htmlFor="manualProvider" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{adminCopy.subscriptions.provider}</label>
               <select
                 id="manualProvider"
                 name="provider"
@@ -638,30 +678,30 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                 <option value="NAGAD">Nagad</option>
               </select>
             </div>
-            <Input id="manualLabel" name="label" label="Display Label" defaultValue={paymentMethodForm?.label || ''} placeholder="Main wallet" required />
+            <Input id="manualLabel" name="label" label={adminCopy.subscriptions.displayLabel} defaultValue={paymentMethodForm?.label || ''} placeholder={adminCopy.subscriptions.mainWallet} required />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input id="manualAccountNumber" name="accountNumber" label="Account Number" defaultValue={paymentMethodForm?.accountNumber || ''} placeholder="01XXXXXXXXX" required />
-            <Input id="manualAccountName" name="accountName" label="Account Name" defaultValue={paymentMethodForm?.accountName || ''} placeholder="Business or owner name" required />
+            <Input id="manualAccountNumber" name="accountNumber" label={adminCopy.subscriptions.accountNumber} defaultValue={paymentMethodForm?.accountNumber || ''} placeholder="01XXXXXXXXX" required />
+            <Input id="manualAccountName" name="accountName" label={adminCopy.subscriptions.accountName} defaultValue={paymentMethodForm?.accountName || ''} placeholder={adminCopy.subscriptions.businessOwnerName} required />
           </div>
-          <Input id="manualSortOrder" name="sortOrder" label="Sort Order" type="number" step="1" defaultValue={paymentMethodForm?.sortOrder ?? 0} />
+          <Input id="manualSortOrder" name="sortOrder" label={adminCopy.subscriptions.sortOrder} type="number" step="1" defaultValue={paymentMethodForm?.sortOrder ?? 0} />
           <div>
-            <label htmlFor="manualInstructions" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Instructions</label>
+            <label htmlFor="manualInstructions" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{adminCopy.subscriptions.paymentInstructions}</label>
             <textarea
               id="manualInstructions"
               name="instructions"
               rows={4}
               defaultValue={paymentMethodForm?.instructions || ''}
-              placeholder="Example: Send Money only. Use your takapilot reference in the payment reference field."
+              placeholder={adminCopy.subscriptions.paymentInstructionPlaceholder}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
             />
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
             <input type="checkbox" name="isActive" defaultChecked={paymentMethodForm?.isActive ?? true} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-            Active on subscription page
+            {adminCopy.subscriptions.activeOnSubscriptionPage}
           </label>
           <Button type="submit" className="w-full" isLoading={isPending}>
-            {paymentMethodForm ? 'Update Account' : 'Create Account'}
+            {paymentMethodForm ? adminCopy.subscriptions.updateAccount : adminCopy.subscriptions.createAccount}
           </Button>
         </form>
       </Modal>
@@ -669,7 +709,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
       <Modal
         isOpen={isReviewModalOpen}
         onClose={() => setIsReviewModalOpen(false)}
-        title={reviewMode === 'approve' ? 'Approve Payment' : 'Reject Payment'}
+        title={reviewMode === 'approve' ? adminCopy.subscriptions.approvePayment : adminCopy.subscriptions.rejectPayment}
         className="max-w-xl"
       >
         {reviewRequest && (
@@ -681,52 +721,52 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                   : <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-rose-600 dark:text-rose-300" />}
                 <div>
                   <p className="font-bold text-slate-900 dark:text-white">
-                    {reviewMode === 'approve' ? 'Activate subscription access?' : 'Reject this payment request?'}
+                    {reviewMode === 'approve' ? adminCopy.subscriptions.approveAndActivate : adminCopy.subscriptions.rejectPayment}
                   </p>
                   <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                     {reviewMode === 'approve'
-                      ? `This will approve ${formatCurrency(reviewRequest.amount, reviewRequest.currency)} and activate ${reviewRequest.package.name} for ${reviewRequest.user.email}.`
-                      : `This will mark the request as rejected for ${reviewRequest.user.email}. Add a clear reason if the user needs to resubmit.`}
+                      ? `${formatCurrency(reviewRequest.amount, reviewRequest.currency)} ${common.approved} - ${reviewRequest.package.name} (${reviewRequest.user.email})`
+                      : `${reviewRequest.user.email} - ${common.rejected}. ${adminCopy.subscriptions.reasonShownToUser}`}
                   </p>
                 </div>
               </div>
             </div>
             <div className="grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40 sm:grid-cols-2">
               <div>
-                <p className="text-xs font-bold uppercase text-slate-400">Transaction ID</p>
+                <p className="text-xs font-bold uppercase text-slate-400">{common.transactionId}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.transactionId}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase text-slate-400">Sender wallet</p>
+                <p className="text-xs font-bold uppercase text-slate-400">{copy.senderWallet}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.senderAccount}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase text-slate-400">Reference</p>
+                <p className="text-xs font-bold uppercase text-slate-400">{common.reference}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.reference}</p>
               </div>
               <div>
-                <p className="text-xs font-bold uppercase text-slate-400">Provider</p>
+                <p className="text-xs font-bold uppercase text-slate-400">{copy.provider}</p>
                 <p className="font-semibold text-slate-900 dark:text-white">{providerLabel(reviewRequest.provider)}</p>
               </div>
             </div>
             <div>
-              <label htmlFor="adminNote" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Admin Note</label>
+              <label htmlFor="adminNote" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{adminCopy.subscriptions.adminNote}</label>
               <textarea
                 id="adminNote"
                 name="adminNote"
                 rows={3}
-                placeholder={reviewMode === 'approve' ? 'Optional confirmation note' : 'Reason shown to the user'}
+                placeholder={reviewMode === 'approve' ? adminCopy.subscriptions.optionalConfirmationNote : adminCopy.subscriptions.reasonShownToUser}
                 className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
               />
             </div>
             <Button type="submit" variant={reviewMode === 'approve' ? 'primary' : 'danger'} className="w-full" isLoading={isPending}>
-              {reviewMode === 'approve' ? 'Approve and Activate Access' : 'Reject Payment'}
+              {reviewMode === 'approve' ? adminCopy.subscriptions.approveAndActivate : adminCopy.subscriptions.rejectPayment}
             </Button>
           </form>
         )}
       </Modal>
 
-      {copiedValue && <span className="sr-only">{copiedValue} copied</span>}
+      {copiedValue && <span className="sr-only">{copiedValue} {common.copied}</span>}
     </div>
   );
 }

@@ -26,12 +26,12 @@ export async function createBudgetAction(formData: FormData): Promise<ActionResp
     year: formData.get('year') as string,
   };
   const parsed = budgetSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await budgetService.createOrUpdateBudget(userId, executorId, parsed.data);
   revalidatePath('/budgets');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Budget saved' };
+  return { success: true, message: 'বাজেট সেভ হয়েছে' };
 }
 
 export async function deleteBudgetAction(id: string): Promise<ActionResponse> {
@@ -40,5 +40,5 @@ export async function deleteBudgetAction(id: string): Promise<ActionResponse> {
   await budgetService.deleteBudget(userId, id);
   revalidatePath('/budgets');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Budget deleted' };
+  return { success: true, message: 'বাজেট ডিলিট হয়েছে' };
 }

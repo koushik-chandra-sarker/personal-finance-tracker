@@ -10,9 +10,12 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { ShieldAlert, Mail, Lock, CheckCircle2, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { useI18n } from '@/i18n/client';
 
 export default function RecoveryBackdoorClient() {
   const router = useRouter();
+  const { messages } = useI18n();
+  const copy = messages.auth;
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -35,10 +38,10 @@ export default function RecoveryBackdoorClient() {
       if (result.success) {
         setSuccess(true);
       } else {
-        setError(result.message || 'Failed to reset password');
+        setError(result.message || copy.failedReset);
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      setError(copy.genericError);
     } finally {
       setLoading(false);
     }
@@ -52,12 +55,12 @@ export default function RecoveryBackdoorClient() {
             <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="h-10 w-10 text-emerald-500" />
             </div>
-            <h2 className="text-2xl font-bold text-white mb-2">Password Reset!</h2>
+            <h2 className="text-2xl font-bold text-white mb-2">{copy.passwordReset}</h2>
             <p className="text-slate-400 mb-8">
-              Your password has been updated successfully. You can now sign in with your new credentials.
+              {copy.passwordResetSubtitle}
             </p>
             <Button onClick={() => router.push('/login')} className="w-full">
-              Go to Login
+              {copy.goToLogin}
             </Button>
           </div>
         </div>
@@ -72,9 +75,9 @@ export default function RecoveryBackdoorClient() {
           <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center mb-4 border border-amber-500/20">
             <ShieldAlert className="h-8 w-8 text-amber-500" />
           </div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Recovery Mode</h1>
+          <h1 className="text-3xl font-bold text-white tracking-tight">{copy.recoveryMode}</h1>
           <p className="text-slate-400 mt-2 text-center">
-            Development-only recovery is enabled for this session.
+            {copy.recoverySubtitle}
           </p>
         </div>
 
@@ -89,9 +92,9 @@ export default function RecoveryBackdoorClient() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
             <Input
               id="email"
-              label="User Email"
+              label={copy.userEmail}
               type="email"
-              placeholder="Target account email"
+              placeholder={copy.targetEmail}
               icon={<Mail className="h-4 w-4" />}
               error={errors.email?.message}
               {...register('email')}
@@ -100,18 +103,18 @@ export default function RecoveryBackdoorClient() {
             <div className="space-y-4 pt-2">
               <Input
                 id="newPassword"
-                label="New Password"
+                label={copy.newPassword}
                 type="password"
-                placeholder="New password"
+                placeholder={copy.newPassword}
                 icon={<Lock className="h-4 w-4" />}
                 error={errors.newPassword?.message}
                 {...register('newPassword')}
               />
               <Input
                 id="confirmPassword"
-                label="Confirm New Password"
+                label={copy.confirmNewPassword}
                 type="password"
-                placeholder="Confirm new password"
+                placeholder={copy.confirmNewPassword}
                 icon={<Lock className="h-4 w-4" />}
                 error={errors.confirmPassword?.message}
                 {...register('confirmPassword')}
@@ -119,7 +122,7 @@ export default function RecoveryBackdoorClient() {
             </div>
 
             <Button type="submit" className="w-full mt-4" size="lg" isLoading={loading}>
-              Reset Password
+              {copy.resetPassword}
             </Button>
           </form>
 
@@ -128,7 +131,7 @@ export default function RecoveryBackdoorClient() {
             className="flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-slate-300 mt-8 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
-            Back to Login
+            {copy.backToLogin}
           </Link>
         </div>
       </div>

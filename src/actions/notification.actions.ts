@@ -59,14 +59,14 @@ export async function markNotificationReadAction(id: string): Promise<ActionResp
   const userId = await getSessionUserId();
   await notificationService.markAsRead(userId, id);
   revalidatePath('/dashboard');
-  return { success: true, message: 'Notification marked as read' };
+  return { success: true, message: 'নোটিফিকেশন পড়া হয়েছে' };
 }
 
 export async function markAllNotificationsReadAction(): Promise<ActionResponse> {
   const userId = await getSessionUserId();
   await notificationService.markAllAsRead(userId);
   revalidatePath('/dashboard');
-  return { success: true, message: 'Notifications marked as read' };
+  return { success: true, message: 'নোটিফিকেশনগুলো পড়া হয়েছে' };
 }
 
 export async function getNotificationPreferencesAction() {
@@ -94,10 +94,10 @@ export async function updateNotificationPreferencesAction(formData: FormData): P
 
   const parsed = notificationPreferenceSchema.safeParse(raw);
   if (!parsed.success) {
-    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+    return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
   }
 
   await notificationService.updateNotificationPreferences(userId, parsed.data);
   revalidatePath('/settings');
-  return { success: true, message: 'Notification preferences updated' };
+  return { success: true, message: 'নোটিফিকেশন পছন্দ আপডেট হয়েছে' };
 }

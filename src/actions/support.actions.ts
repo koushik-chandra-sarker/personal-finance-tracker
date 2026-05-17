@@ -227,7 +227,7 @@ export async function createSupportTicketAction(formData: FormData): Promise<Act
     });
 
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি।', errors: parsed.error.flatten().fieldErrors };
     }
 
     const ticket = await supportService.createTicket(user.id, parsed.data);
@@ -237,9 +237,9 @@ export async function createSupportTicketAction(formData: FormData): Promise<Act
       senderId: user.id,
     });
     revalidateSupport(ticket.id);
-    return { success: true, message: 'Support ticket created.', data: { id: ticket.id } };
+    return { success: true, message: 'সাপোর্ট টিকিট তৈরি হয়েছে।', data: { id: ticket.id } };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to create support ticket.') };
+    return { success: false, message: getErrorMessage(error, 'সাপোর্ট টিকিট তৈরি করা যায়নি।') };
   }
 }
 
@@ -248,7 +248,7 @@ export async function replyToSupportTicketAction(ticketId: string, formData: For
     const user = await getSessionUser();
     const parsed = supportReplySchema.safeParse({ message: firstString(formData.get('message')) });
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি।', errors: parsed.error.flatten().fieldErrors };
     }
 
     if (user.role !== 'ADMIN') {
@@ -267,7 +267,7 @@ export async function replyToSupportTicketAction(ticketId: string, formData: For
     publishSupportTicketEvent(ticketId, 'message');
     return {
       success: true,
-      message: 'Reply sent.',
+      message: 'রিপ্লাই পাঠানো হয়েছে।',
       data: {
         status: result.status,
         message: {
@@ -280,7 +280,7 @@ export async function replyToSupportTicketAction(ticketId: string, formData: For
       },
     };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to send reply.') };
+    return { success: false, message: getErrorMessage(error, 'রিপ্লাই পাঠানো যায়নি।') };
   }
 }
 
@@ -291,15 +291,15 @@ export async function updateSupportTicketStatusAction(ticketId: string, formData
       status: parseEnum(firstString(formData.get('status')), supportTicketStatusValues, 'OPEN'),
     });
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি।', errors: parsed.error.flatten().fieldErrors };
     }
 
     await supportService.updateTicketStatus(ticketId, parsed.data.status);
     revalidateSupport(ticketId);
     publishSupportTicketEvent(ticketId, 'status');
-    return { success: true, message: 'Ticket status updated.' };
+    return { success: true, message: 'টিকিট স্ট্যাটাস আপডেট হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update ticket status.') };
+    return { success: false, message: getErrorMessage(error, 'টিকিট স্ট্যাটাস আপডেট করা যায়নি।') };
   }
 }
 
@@ -311,7 +311,7 @@ export async function generateSupportPinAction(ticketId?: string | null): Promis
     if (ticketId) publishSupportTicketEvent(ticketId, 'pin');
     return {
       success: true,
-      message: 'Support PIN generated.',
+      message: 'সাপোর্ট PIN তৈরি হয়েছে।',
       data: {
         pin: result.pin,
         expiresAt: result.session.pinExpiresAt.toISOString(),
@@ -319,7 +319,7 @@ export async function generateSupportPinAction(ticketId?: string | null): Promis
       },
     };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to generate support PIN.') };
+    return { success: false, message: getErrorMessage(error, 'সাপোর্ট PIN তৈরি করা যায়নি।') };
   }
 }
 
@@ -328,9 +328,9 @@ export async function revokeSupportPinAction(sessionId: string): Promise<ActionR
     const user = await getSessionUser();
     await supportService.revokeSupportPin(user.id, sessionId);
     revalidateSupport();
-    return { success: true, message: 'Support PIN revoked.' };
+    return { success: true, message: 'সাপোর্ট PIN বাতিল হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to revoke support PIN.') };
+    return { success: false, message: getErrorMessage(error, 'সাপোর্ট PIN বাতিল করা যায়নি।') };
   }
 }
 
@@ -340,7 +340,7 @@ export async function verifySupportPinAction(formData: FormData): Promise<Action
     await requireRole('ADMIN');
     const parsed = supportPinSchema.safeParse({ pin: firstString(formData.get('pin')) });
     if (!parsed.success) {
-      return { success: false, message: 'Validation failed.', errors: parsed.error.flatten().fieldErrors };
+      return { success: false, message: 'তথ্য যাচাই করা যায়নি।', errors: parsed.error.flatten().fieldErrors };
     }
 
     const supportSession = await supportService.verifySupportPin(user.id, parsed.data.pin);
@@ -349,7 +349,7 @@ export async function verifySupportPinAction(formData: FormData): Promise<Action
 
     return {
       success: true,
-      message: `Support view started for ${supportSession.user.name}.`,
+      message: `${supportSession.user.name} এর জন্য সাপোর্ট ভিউ শুরু হয়েছে।`,
       data: {
         sessionId: supportSession.id,
         targetUserId: supportSession.userId,
@@ -358,7 +358,7 @@ export async function verifySupportPinAction(formData: FormData): Promise<Action
       },
     };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to verify support PIN.') };
+    return { success: false, message: getErrorMessage(error, 'সাপোর্ট PIN যাচাই করা যায়নি।') };
   }
 }
 
@@ -371,9 +371,9 @@ export async function exitSupportViewAction(): Promise<ActionResponse> {
     }
     await clearSupportViewCookie();
     revalidatePath('/', 'layout');
-    return { success: true, message: 'Support view exited.' };
+    return { success: true, message: 'সাপোর্ট ভিউ বন্ধ হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to exit support view.') };
+    return { success: false, message: getErrorMessage(error, 'সাপোর্ট ভিউ বন্ধ করা যায়নি।') };
   }
 }
 
@@ -397,15 +397,15 @@ export async function resetUserAppPinFromSupportAction(ticketId: string): Promis
           ticketId,
           senderId: user.id,
           isFromAdmin: true,
-          message: 'Your app PIN has been reset by support. You can create a new PIN from the in-app suggestion after you continue.',
+          message: 'সাপোর্ট আপনার অ্যাপ PIN রিসেট করেছে। চালিয়ে যাওয়ার পর ইন-অ্যাপ সাজেশন থেকে নতুন PIN তৈরি করতে পারবেন।',
         },
       }),
     ]);
 
     revalidateSupport(ticketId);
     publishSupportTicketEvent(ticketId, 'message');
-    return { success: true, message: 'User app PIN reset.' };
+    return { success: true, message: 'ব্যবহারকারীর অ্যাপ PIN রিসেট হয়েছে।' };
   } catch (error) {
-    return { success: false, message: getErrorMessage(error, 'Failed to reset user app PIN.') };
+    return { success: false, message: getErrorMessage(error, 'ব্যবহারকারীর অ্যাপ PIN রিসেট করা যায়নি।') };
   }
 }

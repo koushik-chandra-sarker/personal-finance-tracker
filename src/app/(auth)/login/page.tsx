@@ -11,9 +11,12 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Mail, Lock } from 'lucide-react';
 import AppLogo from '@/components/brand/AppLogo';
+import { useI18n } from '@/i18n/client';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { messages } = useI18n();
+  const copy = messages.auth;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -31,14 +34,14 @@ export default function LoginPage() {
         redirect: false,
       });
       if (result?.error) {
-        setError('Invalid email or password');
+        setError(copy.invalidLogin);
       } else {
         const session = await getSession();
         router.replace(session?.user?.mustChangePassword ? '/change-password' : '/dashboard');
         router.refresh();
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      setError(copy.genericError);
     } finally {
       setLoading(false);
     }
@@ -49,14 +52,14 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="flex items-center justify-center gap-3 mb-8">
-          <AppLogo size="lg" textClassName="text-white" taglineClassName="text-slate-400" />
+          <AppLogo size="lg" tagline={messages.brand.tagline} textClassName="text-white" taglineClassName="text-slate-400" />
         </div>
 
         {/* Card */}
         <div className="glass-card rounded-2xl p-8 animate-scale-in">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-white">Welcome back</h2>
-            <p className="text-sm text-slate-400 mt-1">Sign in to your account</p>
+            <h2 className="text-xl font-semibold text-white">{copy.welcomeBack}</h2>
+            <p className="text-sm text-slate-400 mt-1">{copy.signInSubtitle}</p>
           </div>
 
           {error && (
@@ -68,7 +71,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
               id="email"
-              label="Email"
+              label={copy.email}
               type="email"
               placeholder="you@example.com"
               icon={<Mail className="h-4 w-4" />}
@@ -77,7 +80,7 @@ export default function LoginPage() {
             />
             <Input
               id="password"
-              label="Password"
+              label={copy.password}
               type="password"
               placeholder="••••••••"
               icon={<Lock className="h-4 w-4" />}
@@ -85,14 +88,14 @@ export default function LoginPage() {
               {...register('password')}
             />
             <Button type="submit" className="w-full" size="lg" isLoading={loading}>
-              Sign In
+              {copy.signIn}
             </Button>
           </form>
 
           <p className="text-center text-sm text-slate-400 mt-6">
-            Don&apos;t have an account?{' '}
+            {copy.noAccount}{' '}
             <Link href="/register" className="text-indigo-400 hover:text-indigo-300 font-medium">
-              Create one
+              {copy.createOne}
             </Link>
           </p>
         </div>

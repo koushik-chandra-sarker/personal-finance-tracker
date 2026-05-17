@@ -29,7 +29,7 @@ export async function createTutorialAction(formData: FormData): Promise<ActionRe
     const sortOrder = parseInt(formData.get('sortOrder') as string) || 0;
 
     if (!title || !youtubeUrl) {
-      return { success: false, message: 'Title and YouTube URL are required' };
+      return { success: false, message: 'শিরোনাম এবং YouTube URL প্রয়োজন' };
     }
 
     await tutorialService.createTutorial({
@@ -44,9 +44,9 @@ export async function createTutorialAction(formData: FormData): Promise<ActionRe
 
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
-    return { success: true, message: 'Tutorial created successfully' };
+    return { success: true, message: 'টিউটোরিয়াল তৈরি হয়েছে' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to create tutorial') };
+    return { success: false, message: getErrorMessage(error, 'টিউটোরিয়াল তৈরি করা যায়নি') };
   }
 }
 
@@ -74,9 +74,9 @@ export async function updateTutorialAction(id: string, formData: FormData): Prom
 
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
-    return { success: true, message: 'Tutorial updated successfully' };
+    return { success: true, message: 'টিউটোরিয়াল আপডেট হয়েছে' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update tutorial') };
+    return { success: false, message: getErrorMessage(error, 'টিউটোরিয়াল আপডেট করা যায়নি') };
   }
 }
 
@@ -87,8 +87,8 @@ export async function deleteTutorialAction(id: string): Promise<ActionResponse> 
     await tutorialService.deleteTutorial(id);
     revalidatePath('/admin/tutorials');
     revalidatePath('/tutorials');
-    return { success: true, message: 'Tutorial deleted successfully' };
+    return { success: true, message: 'টিউটোরিয়াল ডিলিট হয়েছে' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to delete tutorial') };
+    return { success: false, message: getErrorMessage(error, 'টিউটোরিয়াল ডিলিট করা যায়নি') };
   }
 }

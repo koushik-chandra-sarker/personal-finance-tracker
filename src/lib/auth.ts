@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { z } from 'zod';
 import { authConfig } from './auth.config';
+import { normalizeLocale } from '@/i18n/config';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -40,6 +41,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           email: user.email,
           name: user.name,
           currency: user.currency,
+          preferredLocale: normalizeLocale(user.preferredLocale),
           role: user.role,
           status: user.status,
           lastLoginAt: lastLoginAt.toISOString(),

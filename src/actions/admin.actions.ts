@@ -584,18 +584,18 @@ function parsePackageFormData(formData: FormData): ActionResponse<{
     .filter(Boolean);
   const sortOrder = Number(formData.get('sortOrder') || 0);
 
-  if (!name) return { success: false, message: 'Package name is required' };
-  if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return { success: false, message: 'Package slug is invalid' };
-  if (!description) return { success: false, message: 'Package description is required' };
-  if (!currency || currency.length > 12) return { success: false, message: 'Currency is invalid' };
-  if (!Number.isFinite(price) || price <= 0) return { success: false, message: 'Price must be greater than zero' };
-  if (interval !== 'MONTHLY' && interval !== 'YEARLY') return { success: false, message: 'Interval is invalid' };
-  if (!Number.isInteger(trialDays) || trialDays < 0) return { success: false, message: 'Trial days must be zero or greater' };
-  if (!Number.isInteger(sortOrder)) return { success: false, message: 'Sort order must be a whole number' };
+  if (!name) return { success: false, message: 'প্যাকেজের নাম প্রয়োজন' };
+  if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return { success: false, message: 'প্যাকেজ স্লাগ সঠিক নয়' };
+  if (!description) return { success: false, message: 'প্যাকেজ বিবরণ প্রয়োজন' };
+  if (!currency || currency.length > 12) return { success: false, message: 'কারেন্সি সঠিক নয়' };
+  if (!Number.isFinite(price) || price <= 0) return { success: false, message: 'মূল্য শূন্যের বেশি হতে হবে' };
+  if (interval !== 'MONTHLY' && interval !== 'YEARLY') return { success: false, message: 'ইন্টারভ্যাল সঠিক নয়' };
+  if (!Number.isInteger(trialDays) || trialDays < 0) return { success: false, message: 'ট্রায়াল দিন শূন্য বা তার বেশি হতে হবে' };
+  if (!Number.isInteger(sortOrder)) return { success: false, message: 'সোর্ট অর্ডার পূর্ণ সংখ্যা হতে হবে' };
 
   return {
     success: true,
-    message: 'Package data is valid',
+    message: 'প্যাকেজ তথ্য সঠিক',
     data: {
       slug,
       name,
@@ -629,16 +629,16 @@ function parseManualPaymentMethodFormData(formData: FormData): ActionResponse<{
   const instructions = String(formData.get('instructions') || '').trim() || null;
   const sortOrder = Number(formData.get('sortOrder') || 0);
 
-  if (provider !== 'BKASH' && provider !== 'NAGAD') return { success: false, message: 'Payment provider is invalid' };
-  if (!label || label.length > 80) return { success: false, message: 'Account label is required' };
-  if (!accountNumber || accountNumber.length < 8 || accountNumber.length > 24) return { success: false, message: 'Account number is invalid' };
-  if (!accountName || accountName.length > 80) return { success: false, message: 'Account name is required' };
-  if (instructions && instructions.length > 500) return { success: false, message: 'Instructions must be 500 characters or less' };
-  if (!Number.isInteger(sortOrder)) return { success: false, message: 'Sort order must be a whole number' };
+  if (provider !== 'BKASH' && provider !== 'NAGAD') return { success: false, message: 'পেমেন্ট প্রোভাইডার সঠিক নয়' };
+  if (!label || label.length > 80) return { success: false, message: 'অ্যাকাউন্ট লেবেল প্রয়োজন' };
+  if (!accountNumber || accountNumber.length < 8 || accountNumber.length > 24) return { success: false, message: 'অ্যাকাউন্ট নম্বর সঠিক নয়' };
+  if (!accountName || accountName.length > 80) return { success: false, message: 'অ্যাকাউন্টের নাম প্রয়োজন' };
+  if (instructions && instructions.length > 500) return { success: false, message: 'নির্দেশনা ৫০০ অক্ষরের মধ্যে হতে হবে' };
+  if (!Number.isInteger(sortOrder)) return { success: false, message: 'সোর্ট অর্ডার পূর্ণ সংখ্যা হতে হবে' };
 
   return {
     success: true,
-    message: 'Payment account data is valid',
+    message: 'পেমেন্ট অ্যাকাউন্ট তথ্য সঠিক',
     data: {
       provider,
       label,
@@ -1289,9 +1289,9 @@ export async function createSubscriptionPackageAction(formData: FormData): Promi
     revalidatePath('/admin/subscriptions');
     revalidatePath('/subscription');
     revalidatePath('/settings');
-    return { success: true, message: `${parsed.data.name} created` };
+    return { success: true, message: `${parsed.data.name} তৈরি হয়েছে` };
   } catch {
-    return { success: false, message: 'Failed to create package. Check that the slug is unique.' };
+    return { success: false, message: 'প্যাকেজ তৈরি করা যায়নি। স্লাগ unique কিনা দেখুন।' };
   }
 }
 
@@ -1309,9 +1309,9 @@ export async function updateSubscriptionPackageAction(packageId: string, formDat
     revalidatePath('/admin/subscriptions');
     revalidatePath('/subscription');
     revalidatePath('/settings');
-    return { success: true, message: `${parsed.data.name} updated` };
+    return { success: true, message: `${parsed.data.name} আপডেট হয়েছে` };
   } catch {
-    return { success: false, message: 'Failed to update package. Check that the slug is unique.' };
+    return { success: false, message: 'প্যাকেজ আপডেট করা যায়নি। স্লাগ unique কিনা দেখুন।' };
   }
 }
 
@@ -1326,7 +1326,7 @@ export async function setSubscriptionPackageActiveAction(packageId: string, isAc
   revalidatePath('/admin/subscriptions');
   revalidatePath('/subscription');
   revalidatePath('/settings');
-  return { success: true, message: `${pkg.name} ${isActive ? 'activated' : 'deactivated'}` };
+  return { success: true, message: `${pkg.name} ${isActive ? 'সক্রিয় হয়েছে' : 'নিষ্ক্রিয় হয়েছে'}` };
 }
 
 export async function createManualPaymentMethodAction(formData: FormData): Promise<ActionResponse> {
@@ -1339,9 +1339,9 @@ export async function createManualPaymentMethodAction(formData: FormData): Promi
     await prisma.manualPaymentMethod.create({ data: parsed.data });
     revalidatePath('/admin/subscriptions');
     revalidatePath('/subscription');
-    return { success: true, message: `${parsed.data.label} payment account created` };
+    return { success: true, message: `${parsed.data.label} পেমেন্ট অ্যাকাউন্ট তৈরি হয়েছে` };
   } catch {
-    return { success: false, message: 'Failed to create payment account' };
+    return { success: false, message: 'পেমেন্ট অ্যাকাউন্ট তৈরি করা যায়নি' };
   }
 }
 
@@ -1358,9 +1358,9 @@ export async function updateManualPaymentMethodAction(methodId: string, formData
     });
     revalidatePath('/admin/subscriptions');
     revalidatePath('/subscription');
-    return { success: true, message: `${parsed.data.label} payment account updated` };
+    return { success: true, message: `${parsed.data.label} পেমেন্ট অ্যাকাউন্ট আপডেট হয়েছে` };
   } catch {
-    return { success: false, message: 'Failed to update payment account' };
+    return { success: false, message: 'পেমেন্ট অ্যাকাউন্ট আপডেট করা যায়নি' };
   }
 }
 
@@ -1374,16 +1374,16 @@ export async function setManualPaymentMethodActiveAction(methodId: string, isAct
 
   revalidatePath('/admin/subscriptions');
   revalidatePath('/subscription');
-  return { success: true, message: `${method.label} ${isActive ? 'activated' : 'deactivated'}` };
+  return { success: true, message: `${method.label} ${isActive ? 'সক্রিয় হয়েছে' : 'নিষ্ক্রিয় হয়েছে'}` };
 }
 
 export async function approveManualPaymentRequestAction(requestId: string, formData?: FormData): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   const adminNote = String(formData?.get('adminNote') || '').trim() || null;
-  if (adminNote && adminNote.length > 500) return { success: false, message: 'Admin note must be 500 characters or less' };
+  if (adminNote && adminNote.length > 500) return { success: false, message: 'অ্যাডমিন নোট ৫০০ অক্ষরের মধ্যে হতে হবে' };
 
   const request = await prisma.manualPaymentRequest.findUnique({
     where: { id: requestId },
@@ -1393,8 +1393,8 @@ export async function approveManualPaymentRequestAction(requestId: string, formD
     },
   });
 
-  if (!request) return { success: false, message: 'Payment request not found' };
-  if (request.status !== 'PENDING') return { success: false, message: 'Only pending payments can be approved' };
+  if (!request) return { success: false, message: 'পেমেন্ট রিকোয়েস্ট পাওয়া যায়নি' };
+  if (request.status !== 'PENDING') return { success: false, message: 'শুধু পেন্ডিং পেমেন্ট অনুমোদন করা যায়' };
 
   const now = new Date();
   await prisma.$transaction(async (tx) => {
@@ -1454,23 +1454,23 @@ export async function approveManualPaymentRequestAction(requestId: string, formD
   revalidatePath('/subscription/payment');
   revalidatePath('/settings');
   revalidatePath('/dashboard');
-  return { success: true, message: `Payment approved and access activated for ${request.user.email}` };
+  return { success: true, message: `${request.user.email}-এর পেমেন্ট অনুমোদিত এবং অ্যাক্সেস সক্রিয় হয়েছে` };
 }
 
 export async function rejectManualPaymentRequestAction(requestId: string, formData?: FormData): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   const adminNote = String(formData?.get('adminNote') || '').trim() || null;
-  if (adminNote && adminNote.length > 500) return { success: false, message: 'Admin note must be 500 characters or less' };
+  if (adminNote && adminNote.length > 500) return { success: false, message: 'অ্যাডমিন নোট ৫০০ অক্ষরের মধ্যে হতে হবে' };
 
   const request = await prisma.manualPaymentRequest.findUnique({
     where: { id: requestId },
     select: { id: true, status: true, user: { select: { email: true } } },
   });
-  if (!request) return { success: false, message: 'Payment request not found' };
-  if (request.status !== 'PENDING') return { success: false, message: 'Only pending payments can be rejected' };
+  if (!request) return { success: false, message: 'পেমেন্ট রিকোয়েস্ট পাওয়া যায়নি' };
+  if (request.status !== 'PENDING') return { success: false, message: 'শুধু পেন্ডিং পেমেন্ট রিজেক্ট করা যায়' };
 
   await prisma.manualPaymentRequest.update({
     where: { id: request.id },
@@ -1484,12 +1484,12 @@ export async function rejectManualPaymentRequestAction(requestId: string, formDa
 
   revalidatePath('/admin/subscriptions');
   revalidatePath('/subscription');
-  return { success: true, message: `Payment rejected for ${request.user.email}` };
+  return { success: true, message: `${request.user.email}-এর পেমেন্ট রিজেক্ট হয়েছে` };
 }
 
 export async function createUserInviteAction(formData: FormData): Promise<ActionResponse<AdminInviteResult>> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   const email = String(formData.get('email') || '').trim().toLowerCase();
@@ -1498,23 +1498,23 @@ export async function createUserInviteAction(formData: FormData): Promise<Action
   const expiresInDays = Number(formData.get('expiresInDays') || 7);
 
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, message: 'A valid email is required' };
+    return { success: false, message: 'সঠিক ইমেইল প্রয়োজন' };
   }
   if (role !== 'ADMIN' && role !== 'USER') {
-    return { success: false, message: 'Invalid invite role' };
+    return { success: false, message: 'ইনভাইট রোল সঠিক নয়' };
   }
   if (!Number.isInteger(expiresInDays) || expiresInDays < 1 || expiresInDays > 30) {
-    return { success: false, message: 'Invite expiry must be between 1 and 30 days' };
+    return { success: false, message: 'ইনভাইট মেয়াদ ১ থেকে ৩০ দিনের মধ্যে হতে হবে' };
   }
 
   const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
   if (existingUser) {
-    return { success: false, message: 'A user with this email already exists' };
+    return { success: false, message: 'এই ইমেইলে ব্যবহারকারী আগে থেকেই আছে' };
   }
 
   if (packageId) {
     const pkg = await prisma.subscriptionPackage.findFirst({ where: { id: packageId, isActive: true }, select: { id: true } });
-    if (!pkg) return { success: false, message: 'Selected package is not available' };
+    if (!pkg) return { success: false, message: 'নির্বাচিত প্যাকেজ পাওয়া যাচ্ছে না' };
   }
 
   const token = randomBytes(32).toString('base64url');
@@ -1535,7 +1535,7 @@ export async function createUserInviteAction(formData: FormData): Promise<Action
   revalidatePath('/admin/users');
   return {
     success: true,
-    message: `Invite created for ${email}`,
+    message: `${email}-এর জন্য ইনভাইট তৈরি হয়েছে`,
     data: {
       email,
       inviteUrl: `/register?invite=${encodeURIComponent(token)}`,
@@ -1546,7 +1546,7 @@ export async function createUserInviteAction(formData: FormData): Promise<Action
 
 export async function createUserWithTemporaryPasswordAction(formData: FormData): Promise<ActionResponse<AdminCreateUserResult>> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   const name = String(formData.get('name') || '').trim();
@@ -1555,21 +1555,21 @@ export async function createUserWithTemporaryPasswordAction(formData: FormData):
   const temporaryPassword = String(formData.get('temporaryPassword') || '');
   const packageId = String(formData.get('packageId') || '').trim() || null;
 
-  if (name.length < 2) return { success: false, message: 'Name must be at least 2 characters' };
+  if (name.length < 2) return { success: false, message: 'নাম কমপক্ষে ২ অক্ষরের হতে হবে' };
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return { success: false, message: 'A valid email is required' };
+    return { success: false, message: 'সঠিক ইমেইল প্রয়োজন' };
   }
-  if (role !== 'ADMIN' && role !== 'USER') return { success: false, message: 'Invalid user role' };
-  if (temporaryPassword.length < 6) return { success: false, message: 'Temporary password must be at least 6 characters' };
+  if (role !== 'ADMIN' && role !== 'USER') return { success: false, message: 'ব্যবহারকারীর রোল সঠিক নয়' };
+  if (temporaryPassword.length < 6) return { success: false, message: 'টেম্পোরারি পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে' };
 
   const existingUser = await prisma.user.findUnique({ where: { email }, select: { id: true } });
-  if (existingUser) return { success: false, message: 'A user with this email already exists' };
+  if (existingUser) return { success: false, message: 'এই ইমেইলে ব্যবহারকারী আগে থেকেই আছে' };
 
   const subscriptionPackage = packageId && role !== 'ADMIN'
     ? await prisma.subscriptionPackage.findFirst({ where: { id: packageId, isActive: true } })
     : null;
   if (packageId && role !== 'ADMIN' && !subscriptionPackage) {
-    return { success: false, message: 'Selected package is not available' };
+    return { success: false, message: 'নির্বাচিত প্যাকেজ পাওয়া যাচ্ছে না' };
   }
 
   const now = new Date();
@@ -1581,6 +1581,7 @@ export async function createUserWithTemporaryPasswordAction(formData: FormData):
         name,
         email,
         password: hashedPassword,
+        preferredLocale: 'bn-BD',
         role,
         status: 'ACTIVE',
         emailVerifiedAt: now,
@@ -1650,7 +1651,7 @@ export async function createUserWithTemporaryPasswordAction(formData: FormData):
   revalidatePath('/admin/subscriptions');
   return {
     success: true,
-    message: `${email} created. Share the temporary password securely.`,
+    message: `${email} তৈরি হয়েছে। টেম্পোরারি পাসওয়ার্ড নিরাপদে শেয়ার করুন।`,
     data: {
       name,
       email,
@@ -1664,52 +1665,52 @@ export async function createUserWithTemporaryPasswordAction(formData: FormData):
 
 export async function updateUserRoleAction(userId: string, role: UserRole): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   if (role !== 'ADMIN' && role !== 'USER') {
-    return { success: false, message: 'Invalid role' };
+    return { success: false, message: 'রোল সঠিক নয়' };
   }
 
   if (userId === session.user.id && role !== 'ADMIN') {
-    return { success: false, message: 'You cannot remove your own admin role.' };
+    return { success: false, message: 'নিজের অ্যাডমিন রোল সরাতে পারবেন না।' };
   }
 
   const adminCount = await prisma.user.count({ where: { role: 'ADMIN' } });
   const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-  if (!targetUser) return { success: false, message: 'User not found' };
+  if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
   if (targetUser.role === 'ADMIN' && role !== 'ADMIN' && adminCount <= 1) {
-    return { success: false, message: 'At least one admin is required.' };
+    return { success: false, message: 'কমপক্ষে একজন অ্যাডমিন প্রয়োজন।' };
   }
 
   await prisma.user.update({ where: { id: userId }, data: { role, sessionVersion: { increment: 1 } } });
   revalidatePath('/admin/users');
-  return { success: true, message: 'User role updated' };
+  return { success: true, message: 'ব্যবহারকারীর রোল আপডেট হয়েছে' };
 }
 
 export async function updateUserStatusAction(userId: string, status: UserStatus): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   if (status !== 'ACTIVE' && status !== 'SUSPENDED') {
-    return { success: false, message: 'Only active and suspended statuses can be managed here.' };
+    return { success: false, message: 'এখানে শুধু active এবং suspended status ম্যানেজ করা যায়।' };
   }
 
   if (userId === session.user.id && status !== 'ACTIVE') {
-    return { success: false, message: 'You cannot suspend your own account.' };
+    return { success: false, message: 'নিজের অ্যাকাউন্ট সাসপেন্ড করতে পারবেন না।' };
   }
 
   const targetUser = await prisma.user.findUnique({
     where: { id: userId },
     select: { email: true, role: true, status: true },
   });
-  if (!targetUser) return { success: false, message: 'User not found' };
+  if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
 
   if (targetUser.role === 'ADMIN' && targetUser.status === 'ACTIVE' && status !== 'ACTIVE') {
     const activeAdminCount = await prisma.user.count({ where: { role: 'ADMIN', status: 'ACTIVE' } });
     if (activeAdminCount <= 1) {
-      return { success: false, message: 'At least one active admin is required.' };
+      return { success: false, message: 'কমপক্ষে একজন সক্রিয় অ্যাডমিন প্রয়োজন।' };
     }
   }
 
@@ -1724,24 +1725,24 @@ export async function updateUserStatusAction(userId: string, status: UserStatus)
 
   revalidatePath('/admin/users');
   revalidatePath('/admin/subscriptions');
-  return { success: true, message: `${targetUser.email} ${status === 'ACTIVE' ? 'reactivated' : 'suspended'}` };
+  return { success: true, message: `${targetUser.email} ${status === 'ACTIVE' ? 'পুনরায় সক্রিয় হয়েছে' : 'সাসপেন্ড হয়েছে'}` };
 }
 
 export async function grantUserAccessAction(formData: FormData): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const duration = String(formData.get('duration') || '');
   const packageId = String(formData.get('packageId') || '').trim() || null;
-  if (!email) return { success: false, message: 'User email is required' };
+  if (!email) return { success: false, message: 'ব্যবহারকারীর ইমেইল প্রয়োজন' };
   if (!['MONTHLY', 'YEARLY', 'UNLIMITED'].includes(duration)) {
-    return { success: false, message: 'Invalid grant duration' };
+    return { success: false, message: 'গ্র্যান্ট সময়কাল সঠিক নয়' };
   }
 
   const targetUser = await prisma.user.findUnique({ where: { email } });
-  if (!targetUser) return { success: false, message: 'User not found' };
+  if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
 
   const now = new Date();
   let currentPeriodEnd: Date | null = null;
@@ -1753,7 +1754,7 @@ export async function grantUserAccessAction(formData: FormData): Promise<ActionR
     : null;
 
   if (packageId && duration !== 'UNLIMITED' && !subscriptionPackage) {
-    return { success: false, message: 'Subscription package is not available' };
+    return { success: false, message: 'সাবস্ক্রিপশন প্যাকেজ পাওয়া যাচ্ছে না' };
   }
 
   if (subscriptionPackage) {
@@ -1806,8 +1807,8 @@ export async function grantUserAccessAction(formData: FormData): Promise<ActionR
   return {
     success: true,
     message: currentPeriodEnd
-      ? `Full access granted to ${targetUser.email} until ${currentPeriodEnd.toLocaleDateString()}`
-      : `Unlimited full access granted to ${targetUser.email}`,
+      ? `${targetUser.email}-কে ${currentPeriodEnd.toLocaleDateString('bn-BD')} পর্যন্ত full access দেওয়া হয়েছে`
+      : `${targetUser.email}-কে unlimited full access দেওয়া হয়েছে`,
   };
 }
 
@@ -1815,10 +1816,10 @@ export async function revokeUserAccessAction(userId: string): Promise<ActionResp
   await requireRole('ADMIN');
 
   const targetUser = await prisma.user.findUnique({ where: { id: userId }, select: { email: true, role: true } });
-  if (!targetUser) return { success: false, message: 'User not found' };
-  if (targetUser.role === 'ADMIN') return { success: false, message: 'Admin access cannot be revoked here.' };
+  if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
+  if (targetUser.role === 'ADMIN') return { success: false, message: 'এখান থেকে অ্যাডমিন অ্যাক্সেস revoke করা যাবে না।' };
 
   await prisma.userSubscription.deleteMany({ where: { userId } });
   revalidatePath('/admin/subscriptions');
-  return { success: true, message: `Access revoked for ${targetUser.email}` };
+  return { success: true, message: `${targetUser.email}-এর অ্যাক্সেস revoke হয়েছে` };
 }

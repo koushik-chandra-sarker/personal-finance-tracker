@@ -1,6 +1,8 @@
 'use client';
 
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
 import { Clock, TrendingUp, ExternalLink } from 'lucide-react';
 import Link from 'next/link';
 
@@ -19,9 +21,11 @@ type PortfolioWidgetProps = {
   };
   upcomingMaturities: Maturity[];
   currency: string;
+  locale?: AppLocale;
 };
 
-export default function PortfolioWidget({ summary, upcomingMaturities, currency }: PortfolioWidgetProps) {
+export default function PortfolioWidget({ summary, upcomingMaturities, currency, locale = DEFAULT_LOCALE }: PortfolioWidgetProps) {
+  const copy = getMessages(locale).dashboard;
   const gainPct = summary.totalInvested > 0 
     ? ((summary.unrealisedGainLoss / summary.totalInvested) * 100).toFixed(1) 
     : '0.0';
@@ -31,13 +35,13 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
         <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-indigo-500" />
-          Investment Portfolio
+          {copy.investmentPortfolio}
         </h3>
         <Link
           href="/investments/portfolio"
           className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1"
         >
-          View All <ExternalLink className="h-3 w-3" />
+          {copy.viewAll} <ExternalLink className="h-3 w-3" />
         </Link>
       </div>
 
@@ -45,11 +49,11 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
         {/* Quick Summary */}
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Value</p>
-            <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{formatCurrency(summary.totalCurrentValue, currency)}</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{copy.value}</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{formatCurrency(summary.totalCurrentValue, currency, locale)}</p>
           </div>
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
-            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">Gain/Loss</p>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{copy.gainLoss}</p>
             <p className={cn(
               "text-sm font-bold mt-0.5",
               summary.unrealisedGainLoss >= 0 ? "text-emerald-600 dark:text-emerald-400" : "text-rose-500"
@@ -61,10 +65,10 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
 
         {/* Upcoming Maturities */}
         <div className="space-y-3">
-          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-1">Upcoming Maturities</p>
+          <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold px-1">{copy.upcomingMaturities}</p>
           {upcomingMaturities.length === 0 ? (
             <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/50 text-center">
-              <p className="text-[10px] text-slate-500 italic">No upcoming maturities</p>
+              <p className="text-[10px] text-slate-500 italic">{copy.noUpcomingMaturities}</p>
             </div>
           ) : (
             <div className="space-y-2">
@@ -78,14 +82,14 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{formatDate(m.maturityDate)}</p>
-                    <p className="text-[9px] text-indigo-500 font-medium">Maturing</p>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">{formatDate(m.maturityDate, undefined, locale)}</p>
+                    <p className="text-[9px] text-indigo-500 font-medium">{copy.maturing}</p>
                   </div>
                 </div>
               ))}
               {upcomingMaturities.length > 2 && (
                 <p className="text-[9px] text-slate-400 text-center italic mt-1">
-                  + {upcomingMaturities.length - 2} more upcoming
+                  + {upcomingMaturities.length - 2} {copy.moreUpcoming}
                 </p>
               )}
             </div>
@@ -97,9 +101,9 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Clock className="h-3.5 w-3.5 text-indigo-500" />
-            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">Monthly Installments</span>
+            <span className="text-[10px] font-medium text-slate-600 dark:text-slate-400">{copy.monthlyInstallments}</span>
           </div>
-          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">View Reminders</span>
+          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400">{copy.viewReminders}</span>
         </div>
       </div>
     </div>

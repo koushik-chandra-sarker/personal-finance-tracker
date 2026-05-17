@@ -29,12 +29,12 @@ export async function createTransactionAction(formData: FormData): Promise<Actio
     notes: formData.get('notes') as string || undefined,
   };
   const parsed = transactionSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await transactionService.createTransaction(userId, executorId, parsed.data);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');
-  return { success: true, message: 'Transaction created' };
+  return { success: true, message: 'লেনদেন তৈরি হয়েছে' };
 }
 
 export async function updateTransactionAction(id: string, formData: FormData): Promise<ActionResponse> {
@@ -54,12 +54,12 @@ export async function updateTransactionAction(id: string, formData: FormData): P
     notes: formData.get('notes') as string || undefined,
   };
   const parsed = transactionSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await transactionService.updateTransaction(userId, executorId, id, parsed.data);
   revalidatePath('/dashboard');
   revalidatePath('/transactions');
-  return { success: true, message: 'Transaction updated' };
+  return { success: true, message: 'লেনদেন আপডেট হয়েছে' };
 }
 
 export async function deleteTransactionAction(id: string): Promise<ActionResponse> {
@@ -70,5 +70,5 @@ export async function deleteTransactionAction(id: string): Promise<ActionRespons
   revalidatePath('/transactions');
   revalidatePath('/accounts');
   revalidatePath('/goals');
-  return { success: true, message: 'Transaction deleted' };
+  return { success: true, message: 'লেনদেন ডিলিট হয়েছে' };
 }

@@ -6,6 +6,8 @@ import { getTotalBalance } from '@/services/account.service';
 import { getSpendingInsights } from '@/services/insight.service';
 import { getPortfolioSummary, getUpcomingMaturities } from '@/services/investment.service';
 import { getCurrentMonthYear, getMonthName } from '@/lib/utils';
+import { DEFAULT_LOCALE } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
 import SummaryCards from '@/components/dashboard/SummaryCards';
 import IncomeExpenseChart from '@/components/dashboard/IncomeExpenseChart';
 import CategoryPieChart from '@/components/dashboard/CategoryPieChart';
@@ -33,7 +35,9 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const parsedYear = yearParam ? parseInt(yearParam, 10) : current.year;
   const month = Number.isInteger(parsedMonth) && parsedMonth >= 1 && parsedMonth <= 12 ? parsedMonth : current.month;
   const year = Number.isInteger(parsedYear) ? parsedYear : current.year;
-  const periodLabel = `${getMonthName(month)} ${year}`;
+  const userLocale = session.user.preferredLocale || DEFAULT_LOCALE;
+  const messages = getMessages(userLocale);
+  const periodLabel = `${getMonthName(month, userLocale)} ${year}`;
 
   const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights, summary_portfolio, maturities, upcomingBills, budgetUsageSummary] = await Promise.all([
     getMonthlySummary(userId, month, year),
@@ -54,7 +58,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="space-y-6">
       {/* Header with Month/Year Picker */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{messages.dashboard.title}</h1>
         <MonthYearPicker month={month} year={year} />
       </div>
 
@@ -64,6 +68,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
         totalBalance={totalBalance}
         periodLabel={periodLabel}
         currency={userCurrency}
+        locale={userLocale}
         upcomingBills={upcomingBills}
         budgetUsage={budgetUsageSummary}
       />
@@ -71,24 +76,25 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <IncomeExpenseChart data={trend} />
+          <IncomeExpenseChart data={trend} currency={userCurrency} locale={userLocale} />
         </div>
-        <CategoryPieChart data={categoryBreakdown} currency={userCurrency} />
+        <CategoryPieChart data={categoryBreakdown} currency={userCurrency} locale={userLocale} />
       </div>
 
       {/* Bottom Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="space-y-6 lg:col-span-2">
-          <RecentTransactions transactions={recentTx} currency={userCurrency} />
-          <InsightsWidget insights={insights} />
+          <RecentTransactions transactions={recentTx} currency={userCurrency} locale={userLocale} />
+          <InsightsWidget insights={insights} locale={userLocale} />
         </div>
         <div className="space-y-6">
           <PortfolioWidget 
             summary={JSON.parse(JSON.stringify(summary_portfolio))} 
             upcomingMaturities={JSON.parse(JSON.stringify(maturities))} 
             currency={userCurrency} 
+            locale={userLocale}
           />
-          <BudgetOverview budgets={budgets} currency={userCurrency} />
+          <BudgetOverview budgets={budgets} currency={userCurrency} locale={userLocale} />
         </div>
       </div>
     </div>

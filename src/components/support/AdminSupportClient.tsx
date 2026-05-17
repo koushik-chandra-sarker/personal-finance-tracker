@@ -11,7 +11,8 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
-import { formatRelativeDate } from '@/lib/utils';
+import { formatRelativeDate, getSupportCategoryLabel, getSupportPriorityLabel, getSupportStatusLabel } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   tickets: SupportTicketRow[];
@@ -22,35 +23,6 @@ type Props = {
     search: string;
   };
 };
-
-const statusOptions = [
-  { value: 'all', label: 'All statuses' },
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
-  { value: 'CLOSED', label: 'Closed' },
-];
-
-const priorityOptions = [
-  { value: 'all', label: 'All priorities' },
-  { value: 'LOW', label: 'Low' },
-  { value: 'NORMAL', label: 'Normal' },
-  { value: 'HIGH', label: 'High' },
-  { value: 'URGENT', label: 'Urgent' },
-];
-
-const categoryOptions = [
-  { value: 'all', label: 'All categories' },
-  { value: 'GENERAL', label: 'General' },
-  { value: 'BILLING', label: 'Billing' },
-  { value: 'BUG_REPORT', label: 'Bug report' },
-  { value: 'FEATURE_REQUEST', label: 'Feature request' },
-  { value: 'ACCOUNT_ISSUE', label: 'Account issue' },
-];
-
-function labelize(value: string) {
-  return value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
-}
 
 function statusBadge(status: SupportTicketRow['status']) {
   if (status === 'OPEN') return 'success';
@@ -67,6 +39,30 @@ function priorityBadge(priority: SupportTicketRow['priority']) {
 }
 
 export default function AdminSupportClient({ tickets, filters }: Props) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.support;
+  const statusOptions = [
+    { value: 'all', label: copy.allStatuses },
+    { value: 'OPEN', label: getSupportStatusLabel('OPEN', locale) },
+    { value: 'IN_PROGRESS', label: getSupportStatusLabel('IN_PROGRESS', locale) },
+    { value: 'RESOLVED', label: getSupportStatusLabel('RESOLVED', locale) },
+    { value: 'CLOSED', label: getSupportStatusLabel('CLOSED', locale) },
+  ];
+  const priorityOptions = [
+    { value: 'all', label: copy.allPriorities },
+    { value: 'LOW', label: getSupportPriorityLabel('LOW', locale) },
+    { value: 'NORMAL', label: getSupportPriorityLabel('NORMAL', locale) },
+    { value: 'HIGH', label: getSupportPriorityLabel('HIGH', locale) },
+    { value: 'URGENT', label: getSupportPriorityLabel('URGENT', locale) },
+  ];
+  const categoryOptions = [
+    { value: 'all', label: copy.allCategories },
+    { value: 'GENERAL', label: getSupportCategoryLabel('GENERAL', locale) },
+    { value: 'BILLING', label: getSupportCategoryLabel('BILLING', locale) },
+    { value: 'BUG_REPORT', label: getSupportCategoryLabel('BUG_REPORT', locale) },
+    { value: 'FEATURE_REQUEST', label: getSupportCategoryLabel('FEATURE_REQUEST', locale) },
+    { value: 'ACCOUNT_ISSUE', label: getSupportCategoryLabel('ACCOUNT_ISSUE', locale) },
+  ];
   const [isPinOpen, setIsPinOpen] = useState(false);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -91,12 +87,12 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Support Queue</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Review user tickets, reply, update status, and start read-only support access with a PIN.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.adminQueueTitle}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.adminQueueSubtitle}</p>
         </div>
         <Button type="button" onClick={() => setIsPinOpen(true)}>
           <KeyRound className="h-4 w-4" />
-          Enter support PIN
+          {copy.enterSupportPin}
         </Button>
       </div>
 
@@ -109,29 +105,29 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-5">
           <LifeBuoy className="mb-3 h-5 w-5 text-indigo-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Tickets</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.tickets}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{tickets.length}</p>
         </Card>
         <Card className="p-5">
           <Filter className="mb-3 h-5 w-5 text-emerald-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Open Work</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.openWork}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{openCount}</p>
         </Card>
         <Card className="p-5">
           <KeyRound className="mb-3 h-5 w-5 text-amber-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">High Priority</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.highPriority}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{urgentCount}</p>
         </Card>
       </div>
 
       <Card className="p-4">
         <form action="/admin/support" className="grid gap-4 lg:grid-cols-[minmax(220px,1fr)_180px_180px_180px_auto]">
-          <Input name="search" label="Search" defaultValue={filters.search} placeholder="User, email, subject" icon={<Search className="h-4 w-4" />} />
-          <Select name="status" label="Status" defaultValue={filters.status} options={statusOptions} />
-          <Select name="priority" label="Priority" defaultValue={filters.priority} options={priorityOptions} />
-          <Select name="category" label="Category" defaultValue={filters.category} options={categoryOptions} />
+          <Input name="search" label={copy.search} defaultValue={filters.search} placeholder={copy.searchPlaceholder} icon={<Search className="h-4 w-4" />} />
+          <Select name="status" label={copy.status} defaultValue={filters.status} options={statusOptions} />
+          <Select name="priority" label={copy.priority} defaultValue={filters.priority} options={priorityOptions} />
+          <Select name="category" label={copy.category} defaultValue={filters.category} options={categoryOptions} />
           <div className="flex items-end">
-            <Button type="submit" className="w-full">Apply</Button>
+            <Button type="submit" className="w-full">{copy.apply}</Button>
           </div>
         </form>
       </Card>
@@ -140,21 +136,21 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
         {tickets.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <LifeBuoy className="mx-auto mb-4 h-10 w-10 text-slate-300 dark:text-slate-700" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">No tickets match</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Try a different filter or wait for users to create support tickets.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.noMatch}</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{copy.noAdminMatchHelp}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1040px] text-left">
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
                 <tr>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">User</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Ticket</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Category</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Status</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Priority</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Updated</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">Action</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.user}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.ticket}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.category}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.status}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.priority}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.updated}</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">{copy.open}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -168,17 +164,17 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
                       <Link href={`/admin/support/${ticket.id}`} className="font-bold text-slate-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-300">{ticket.subject}</Link>
                       <p className="mt-1 flex items-center gap-1.5 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
                         <MessageSquare className="h-3.5 w-3.5 shrink-0" />
-                        {ticket.messageCount} messages
+                        {ticket.messageCount} {copy.messages}
                       </p>
                     </td>
-                    <td className="px-5 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">{labelize(ticket.category)}</td>
-                    <td className="px-5 py-4"><Badge variant={statusBadge(ticket.status)}>{labelize(ticket.status)}</Badge></td>
-                    <td className="px-5 py-4"><Badge variant={priorityBadge(ticket.priority)}>{labelize(ticket.priority)}</Badge></td>
-                    <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">{formatRelativeDate(ticket.updatedAt)}</td>
+                    <td className="px-5 py-4 text-sm font-medium text-slate-600 dark:text-slate-300">{getSupportCategoryLabel(ticket.category, locale)}</td>
+                    <td className="px-5 py-4"><Badge variant={statusBadge(ticket.status)}>{getSupportStatusLabel(ticket.status, locale)}</Badge></td>
+                    <td className="px-5 py-4"><Badge variant={priorityBadge(ticket.priority)}>{getSupportPriorityLabel(ticket.priority, locale)}</Badge></td>
+                    <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">{formatRelativeDate(ticket.updatedAt, locale)}</td>
                     <td className="px-5 py-4 text-right">
                       <Link href={`/admin/support/${ticket.id}`} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-indigo-600 hover:bg-indigo-50 dark:text-indigo-300 dark:hover:bg-indigo-500/10">
                         <Eye className="h-4 w-4" />
-                        Open
+                        {copy.open}
                       </Link>
                     </td>
                   </tr>
@@ -189,17 +185,17 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
         )}
       </Card>
 
-      <Modal isOpen={isPinOpen} onClose={() => setIsPinOpen(false)} title="Enter Support PIN" size="md">
+      <Modal isOpen={isPinOpen} onClose={() => setIsPinOpen(false)} title={copy.enterSupportPin} size="md">
         <form onSubmit={handleVerifyPin} className="space-y-4">
           <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300">
-            Enter the 6-digit PIN shared by a user. A successful match starts a temporary read-only support view.
+            {copy.enterPinHelp}
           </div>
-          <Input name="pin" label="Support PIN" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder="123456" />
+          <Input name="pin" label={copy.supportPin} inputMode="numeric" pattern="[0-9]{6}" maxLength={6} required placeholder="123456" />
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={() => setIsPinOpen(false)}>Cancel</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsPinOpen(false)}>{copy.cancel}</Button>
             <Button type="submit" isLoading={isPending}>
               <KeyRound className="h-4 w-4" />
-              Start support view
+              {copy.startSupportView}
             </Button>
           </div>
         </form>

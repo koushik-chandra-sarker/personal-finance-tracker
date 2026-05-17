@@ -17,7 +17,8 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Select from '@/components/ui/Select';
 import Modal from '@/components/ui/Modal';
-import { formatDate, formatRelativeDate } from '@/lib/utils';
+import { formatDate, formatRelativeDate, getSupportCategoryLabel, getSupportPriorityLabel, getSupportStatusLabel } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   ticket: SupportTicketDetail;
@@ -37,13 +38,6 @@ type QueuedReply = {
   message: string;
 };
 
-const statusOptions = [
-  { value: 'OPEN', label: 'Open' },
-  { value: 'IN_PROGRESS', label: 'In progress' },
-  { value: 'RESOLVED', label: 'Resolved' },
-  { value: 'CLOSED', label: 'Closed' },
-];
-
 function labelize(value: string) {
   return value.toLowerCase().replaceAll('_', ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
@@ -56,6 +50,14 @@ function statusBadge(status: SupportTicketDetail['status']) {
 }
 
 export default function SupportTicketDetailClient({ ticket, isAdmin = false }: Props) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.support;
+  const statusOptions = [
+    { value: 'OPEN', label: getSupportStatusLabel('OPEN', locale) },
+    { value: 'IN_PROGRESS', label: getSupportStatusLabel('IN_PROGRESS', locale) },
+    { value: 'RESOLVED', label: getSupportStatusLabel('RESOLVED', locale) },
+    { value: 'CLOSED', label: getSupportStatusLabel('CLOSED', locale) },
+  ];
   const [currentTicket, setCurrentTicket] = useState<TicketState>(ticket);
   const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [generatedPin, setGeneratedPin] = useState<{ pin: string; expiresAt: string } | null>(null);
@@ -210,7 +212,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
       createdAt,
       deliveryStatus: 'queued',
       sender: isAdmin
-        ? { id: 'support-admin', name: 'Support admin', email: '', role: 'ADMIN' }
+        ? { id: 'support-admin', name: copy.supportAdmin, email: '', role: 'ADMIN' }
         : { id: currentTicket.user.id, name: currentTicket.user.name, email: currentTicket.user.email, role: 'USER' },
     };
 
@@ -253,7 +255,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
   };
 
   const handleResetAppPin = () => {
-    if (!confirm(`Reset the app PIN for ${currentTicket.user.name}?`)) return;
+    if (!confirm(`${copy.resetConfirm} ${currentTicket.user.name}?`)) return;
     setFeedback(null);
     startResetPinTransition(async () => {
       const result = await resetUserAppPinFromSupportAction(ticket.id);
@@ -268,7 +270,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
   const copyPin = async () => {
     if (!generatedPin) return;
     await navigator.clipboard.writeText(generatedPin.pin);
-    setFeedback({ type: 'success', text: 'Support PIN copied.' });
+    setFeedback({ type: 'success', text: copy.copied });
   };
 
   return (
@@ -277,24 +279,24 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
         <div>
           <Link href={isAdmin ? '/admin/support' : '/support'} className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300">
             <ArrowLeft className="h-4 w-4" />
-            {isAdmin ? 'Back to support queue' : 'Back to support'}
+            {isAdmin ? copy.backToQueue : copy.backToSupport}
           </Link>
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{currentTicket.subject}</h1>
-            <Badge variant={statusBadge(currentTicket.status)}>{labelize(currentTicket.status)}</Badge>
+            <Badge variant={statusBadge(currentTicket.status)}>{getSupportStatusLabel(currentTicket.status, locale)}</Badge>
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${isLiveConnected ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
-              {isLiveConnected ? 'Live' : 'Connecting'}
+              {isLiveConnected ? copy.live : copy.connecting}
             </span>
           </div>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            {labelize(currentTicket.category)} · {labelize(currentTicket.priority)} priority · Updated {formatRelativeDate(currentTicket.updatedAt)}
+            {getSupportCategoryLabel(currentTicket.category, locale)} · {getSupportPriorityLabel(currentTicket.priority, locale)} · {copy.updated} {formatRelativeDate(currentTicket.updatedAt, locale)}
           </p>
         </div>
         {!isAdmin && (
           <Button type="button" variant="outline" onClick={handleGeneratePin} isLoading={isPinPending}>
             <ShieldCheck className="h-4 w-4" />
-            Generate PIN
+            {copy.generateNewPin}
           </Button>
         )}
       </div>
@@ -309,8 +311,8 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
         <Card className="overflow-hidden p-0">
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/60">
             <div>
-              <h2 className="font-bold text-slate-900 dark:text-white">Conversation</h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">{currentTicket.messages.length} messages in this ticket</p>
+              <h2 className="font-bold text-slate-900 dark:text-white">{copy.conversation}</h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{currentTicket.messages.length} {copy.messagesInTicket}</p>
             </div>
             <Radio className={`h-5 w-5 ${isLiveConnected ? 'text-emerald-500' : 'text-slate-400'}`} />
           </div>
@@ -327,11 +329,11 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
                   )}
                   <div className={`max-w-[min(720px,100%)] rounded-2xl px-4 py-3 shadow-sm ${fromAdmin ? 'rounded-tl-md bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-100' : 'rounded-tr-md bg-indigo-600 text-white'}`}>
                     <div className="mb-1 flex flex-wrap items-center gap-2 text-xs opacity-80">
-                      <span className="font-semibold">{fromAdmin ? 'Support admin' : message.sender.name}</span>
-                      <span>{formatDate(message.createdAt, 'MMM dd, h:mm a')}</span>
+                      <span className="font-semibold">{fromAdmin ? copy.supportAdmin : message.sender.name}</span>
+                      <span>{formatDate(message.createdAt, 'MMM dd, h:mm a', locale)}</span>
                       {message.deliveryStatus && (
                         <span className="rounded-full bg-black/5 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600 dark:bg-white/10 dark:text-slate-200">
-                          {message.deliveryStatus}
+                          {message.deliveryStatus === 'queued' ? copy.queued : message.deliveryStatus === 'sending' ? copy.sending : message.deliveryStatus}
                         </span>
                       )}
                     </div>
@@ -349,13 +351,13 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
 
           <form onSubmit={handleReply} className="sticky bottom-0 border-t border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-5">
             <div className="mb-2 flex items-center justify-between gap-3">
-              <label htmlFor="support-reply" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">Reply</label>
+              <label htmlFor="support-reply" className="block text-sm font-semibold text-slate-700 dark:text-slate-300">{copy.reply}</label>
               <span className="text-xs text-slate-500 dark:text-slate-400">
                 {queuedReplyCount > 0 || isQueueSending
-                  ? `${queuedReplyCount} queued${isQueueSending ? ' · sending' : ''}`
+                  ? `${queuedReplyCount} ${copy.queued}${isQueueSending ? ` · ${copy.sending}` : ''}`
                   : currentTicket.status === 'CLOSED'
-                    ? 'Closed tickets cannot receive replies'
-                    : 'Enter your message and send'}
+                    ? copy.closedNoReply
+                    : copy.enterMessage}
               </span>
             </div>
             <textarea
@@ -365,12 +367,12 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
               rows={4}
               disabled={currentTicket.status === 'CLOSED'}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white"
-              placeholder={currentTicket.status === 'CLOSED' ? 'Closed tickets cannot receive replies.' : 'Type your reply'}
+              placeholder={currentTicket.status === 'CLOSED' ? copy.closedNoReply : copy.typeReply}
             />
             <div className="mt-3 flex justify-end">
               <Button type="submit" disabled={currentTicket.status === 'CLOSED'}>
                 <Send className="h-4 w-4" />
-                Send reply
+                {copy.sendReply}
               </Button>
             </div>
           </form>
@@ -380,29 +382,29 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
           <Card className="space-y-3">
             <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              Ticket Info
+              {copy.ticketInfo}
             </h2>
             <div className="space-y-2 text-sm text-slate-600 dark:text-slate-300">
-              <p><span className="font-semibold">User:</span> {currentTicket.user.name}</p>
-              <p><span className="font-semibold">Email:</span> {currentTicket.user.email}</p>
-              <p><span className="font-semibold">Phone:</span> {currentTicket.phoneNumber || '-'}</p>
-              <p><span className="font-semibold">Created:</span> {formatDate(currentTicket.createdAt, 'MMM dd, yyyy h:mm a')}</p>
+              <p><span className="font-semibold">{copy.user}:</span> {currentTicket.user.name}</p>
+              <p><span className="font-semibold">{copy.email}:</span> {currentTicket.user.email}</p>
+              <p><span className="font-semibold">{copy.phone}:</span> {currentTicket.phoneNumber || '-'}</p>
+              <p><span className="font-semibold">{copy.created}:</span> {formatDate(currentTicket.createdAt, 'MMM dd, yyyy h:mm a', locale)}</p>
             </div>
           </Card>
 
           {isAdmin && (
             <Card>
-              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">Admin Controls</h2>
+              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{copy.adminControls}</h2>
               <form onSubmit={handleStatus} className="space-y-3">
-                <Select key={currentTicket.status} label="Status" name="status" defaultValue={currentTicket.status} options={statusOptions} />
-                <Button type="submit" isLoading={isStatusPending}>Update status</Button>
+                <Select key={currentTicket.status} label={copy.status} name="status" defaultValue={currentTicket.status} options={statusOptions} />
+                <Button type="submit" isLoading={isStatusPending}>{copy.updateStatus}</Button>
               </form>
               <div className="mt-4 border-t border-slate-200 pt-4 dark:border-slate-800">
-                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">App PIN reset</p>
-                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Use this after verifying the user in this support conversation.</p>
+                <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">{copy.appPinReset}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.appPinResetHelp}</p>
                 <Button type="button" variant="outline" className="mt-3" onClick={handleResetAppPin} isLoading={isResetPinPending}>
                   <KeyRound className="h-4 w-4" />
-                  Reset user PIN
+                  {copy.resetUserPin}
                 </Button>
               </div>
             </Card>
@@ -410,15 +412,15 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
 
           {isAdmin && (
             <Card>
-              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">Support Audit</h2>
+              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{copy.supportAudit}</h2>
               {currentTicket.auditLogs.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-slate-400">No support access events yet.</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noAudit}</p>
               ) : (
                 <div className="space-y-3">
                   {currentTicket.auditLogs.map((audit) => (
                     <div key={audit.id} className="rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950/40">
                       <p className="font-semibold text-slate-800 dark:text-slate-100">{labelize(audit.action)}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(audit.createdAt, 'MMM dd, h:mm a')}{audit.admin ? ` by ${audit.admin.name}` : ''}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{formatDate(audit.createdAt, 'MMM dd, h:mm a', locale)}{audit.admin ? ` by ${audit.admin.name}` : ''}</p>
                     </div>
                   ))}
                 </div>
@@ -428,16 +430,16 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
         </div>
       </div>
 
-      <Modal isOpen={isPinOpen} onClose={() => setIsPinOpen(false)} title="Support PIN" size="md">
+      <Modal isOpen={isPinOpen} onClose={() => setIsPinOpen(false)} title={copy.supportPin} size="md">
         {generatedPin && (
           <div className="space-y-4 text-center">
             <KeyRound className="mx-auto h-8 w-8 text-emerald-500" />
             <div>
-              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">Share this read-only support PIN</p>
+              <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.shareReadOnlyPin}</p>
               <p className="mt-2 font-mono text-4xl font-black text-slate-950 dark:text-white">{generatedPin.pin}</p>
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Expires {formatDate(generatedPin.expiresAt, 'MMM dd, h:mm a')}</p>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{copy.expires} {formatDate(generatedPin.expiresAt, 'MMM dd, h:mm a', locale)}</p>
             </div>
-            <Button type="button" onClick={copyPin}>Copy PIN</Button>
+            <Button type="button" onClick={copyPin}>{copy.copyPin}</Button>
           </div>
         )}
       </Modal>

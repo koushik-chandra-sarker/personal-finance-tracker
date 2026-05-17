@@ -208,8 +208,8 @@ export async function notifySupportReply(input: {
     if (input.isFromAdmin) {
       if (input.ticketOwnerId === input.senderId) return;
       await createNotification(input.ticketOwnerId, {
-        title: 'Support replied',
-        message: `New reply on "${input.ticketSubject}".`,
+        title: 'সাপোর্ট রিপ্লাই দিয়েছে',
+        message: `"${input.ticketSubject}" টিকিটে নতুন রিপ্লাই এসেছে।`,
         type: 'SYSTEM',
         severity: 'INFO',
         sourceType: 'SYSTEM',
@@ -230,8 +230,8 @@ export async function notifySupportReply(input: {
     });
 
     await Promise.all(admins.map((admin) => createNotification(admin.id, {
-      title: 'User replied to support',
-      message: `New user reply on "${input.ticketSubject}".`,
+      title: 'ব্যবহারকারী সাপোর্টে রিপ্লাই দিয়েছে',
+      message: `"${input.ticketSubject}" টিকিটে নতুন ব্যবহারকারী রিপ্লাই এসেছে।`,
       type: 'SYSTEM',
       severity: 'INFO',
       sourceType: 'SYSTEM',
@@ -260,8 +260,8 @@ export async function notifyNewSupportTicket(input: {
     });
 
     await Promise.all(admins.map((admin) => createNotification(admin.id, {
-      title: 'New support ticket',
-      message: `"${input.ticketSubject}" needs review.`,
+      title: 'নতুন সাপোর্ট টিকিট',
+      message: `"${input.ticketSubject}" রিভিউ দরকার।`,
       type: 'SYSTEM',
       severity: 'INFO',
       sourceType: 'SYSTEM',

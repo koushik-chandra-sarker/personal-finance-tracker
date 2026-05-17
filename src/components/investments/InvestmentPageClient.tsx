@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, cn, getInvestmentStatusLabel } from '@/lib/utils';
 import { 
   createInvestmentAction, updateInvestmentAction, deleteInvestmentAction, 
   recordReturnAction, addFundsAction, recordValuationAction, closeInvestmentAction 
@@ -20,6 +20,7 @@ import {
 import InvestmentForm from './InvestmentForm';
 import InvestmentDetail from './InvestmentDetail';
 import MaturityTimeline from './MaturityTimeline';
+import { useI18n } from '@/i18n/client';
 
 type TypeConfig = {
   id: string; slug: string; name: string; description?: string | null;
@@ -85,14 +86,14 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const STATUS_FILTERS = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'MATURED', label: 'Matured' },
-  { value: 'SOLD', label: 'Sold' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+  { value: 'ACTIVE' },
+  { value: 'MATURED' },
+  { value: 'SOLD' },
+  { value: 'CANCELLED' },
 ];
 
-function formatSignedCurrency(value: number, currency: string) {
-  return `${value >= 0 ? '+' : '-'}${formatCurrency(Math.abs(value), currency)}`;
+function formatSignedCurrency(value: number, currency: string, locale: string) {
+  return `${value >= 0 ? '+' : '-'}${formatCurrency(Math.abs(value), currency, locale)}`;
 }
 
 export default function InvestmentPageClient({
@@ -104,6 +105,8 @@ export default function InvestmentPageClient({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.investments;
   const payInstallmentId = searchParams.get('payInstallment');
   const [isPendingRefresh, startRefreshTransition] = useTransition();
   const [investments, setInvestments] = useState(initial);
@@ -134,10 +137,10 @@ export default function InvestmentPageClient({
   const isDashboardView = view === 'dashboard';
   const isPortfolioView = view === 'portfolio';
   const HeaderIcon = isPortfolioView ? Wallet : TrendingUp;
-  const pageTitle = isPortfolioView ? 'Portfolio' : 'Investments Dashboard';
+  const pageTitle = isPortfolioView ? copy.portfolioTitle : copy.dashboardTitle;
   const pageDescription = isPortfolioView
-    ? 'Search, filter, and manage each investment position.'
-    : 'Track performance, allocation, returns, and upcoming maturities.';
+    ? copy.portfolioDescription
+    : copy.dashboardDescription;
   const portfolioRouteTarget: InvestmentRouteTarget = isPortfolioView ? 'dashboard' : 'portfolio';
   const portfolioRouteHref = isPortfolioView ? '/investments' : '/investments/portfolio';
   const isRouteNavigationPending = navigatingTo !== null;
@@ -165,7 +168,7 @@ export default function InvestmentPageClient({
   });
   const hasActiveFilters = Boolean(search || filterType || filterStatus);
   const selectedTypeName = typeConfigs.find((type) => type.id === filterType)?.name;
-  const selectedStatusLabel = STATUS_FILTERS.find((status) => status.value === filterStatus)?.label;
+  const selectedStatusLabel = filterStatus ? getInvestmentStatusLabel(filterStatus, locale) : undefined;
   const clearPortfolioFilters = () => {
     setSearch('');
     setFilterType('');
@@ -284,31 +287,31 @@ export default function InvestmentPageClient({
     bg: string;
   }> = [
     {
-      label: 'Current Value',
-      value: formatCurrency(summary.totalCurrentValue, currency),
-      detail: `${formatCurrency(summary.totalInvested, currency)} invested`,
+      label: copy.currentValue,
+      value: formatCurrency(summary.totalCurrentValue, currency, locale),
+      detail: `${formatCurrency(summary.totalInvested, currency, locale)} ${copy.invested}`,
       icon: TrendingUp,
       color: 'text-emerald-600 dark:text-emerald-400',
       bg: 'bg-emerald-50 dark:bg-emerald-500/10',
     },
     {
-      label: 'Gain/Loss',
-      value: formatSignedCurrency(summary.unrealisedGainLoss, currency),
+      label: copy.gainLoss,
+      value: formatSignedCurrency(summary.unrealisedGainLoss, currency, locale),
       detail: `${gainLossPercent}% unrealized`,
       icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
       color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-rose-50 dark:bg-rose-500/10',
     },
     {
-      label: 'Realized Returns',
-      value: formatCurrency(summary.totalReturns, currency),
+      label: copy.totalReturns,
+      value: formatCurrency(summary.totalReturns, currency, locale),
       detail: `${returnRate}% of invested`,
       icon: Wallet,
       color: 'text-sky-600 dark:text-sky-400',
       bg: 'bg-sky-50 dark:bg-sky-500/10',
     },
     {
-      label: 'Positions',
+      label: copy.portfolioTitle,
       value: String(totalPositions),
       detail: `${activeCount} active`,
       icon: BarChart3,
@@ -325,31 +328,31 @@ export default function InvestmentPageClient({
     bg: string;
   }> = [
     {
-      label: 'Total value',
-      value: formatCurrency(summary.totalCurrentValue, currency),
-      detail: `${formatCurrency(summary.totalInvested, currency)} invested`,
+      label: copy.currentValue,
+      value: formatCurrency(summary.totalCurrentValue, currency, locale),
+      detail: `${formatCurrency(summary.totalInvested, currency, locale)} ${copy.invested}`,
       icon: Wallet,
       color: 'text-slate-900 dark:text-white',
       bg: 'bg-slate-100 dark:bg-slate-700/50',
     },
     {
-      label: 'Gain/loss',
-      value: formatSignedCurrency(summary.unrealisedGainLoss, currency),
+      label: copy.gainLoss,
+      value: formatSignedCurrency(summary.unrealisedGainLoss, currency, locale),
       detail: `${gainLossPercent}% unrealized`,
       icon: summary.unrealisedGainLoss >= 0 ? ArrowUpRight : ArrowDownRight,
       color: summary.unrealisedGainLoss >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400',
       bg: summary.unrealisedGainLoss >= 0 ? 'bg-emerald-50 dark:bg-emerald-500/10' : 'bg-rose-50 dark:bg-rose-500/10',
     },
     {
-      label: 'Returns',
-      value: formatCurrency(summary.totalReturns, currency),
+      label: copy.totalReturns,
+      value: formatCurrency(summary.totalReturns, currency, locale),
       detail: `${returnRate}% of invested`,
       icon: TrendingUp,
       color: 'text-sky-600 dark:text-sky-400',
       bg: 'bg-sky-50 dark:bg-sky-500/10',
     },
     {
-      label: 'Positions',
+      label: copy.portfolioTitle,
       value: `${activeCount}/${totalPositions}`,
       detail: 'active positions',
       icon: BarChart3,
@@ -363,7 +366,7 @@ export default function InvestmentPageClient({
       {showRefreshLoader && (
         <div role="status" aria-live="polite" className="fixed right-4 top-20 z-40 flex items-center gap-2 rounded-xl border border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-lg shadow-slate-900/10 dark:border-indigo-500/30 dark:bg-slate-800 dark:text-slate-100">
           <RefreshCw className="h-4 w-4 animate-spin text-indigo-500" />
-          Updating investments...
+          {copy.refreshing}
         </div>
       )}
 
@@ -378,7 +381,7 @@ export default function InvestmentPageClient({
           <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{pageDescription}</p>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
             <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
-              {activeCount} active
+              {activeCount} {copy.active}
             </span>
             {topAllocation && (
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
@@ -387,7 +390,7 @@ export default function InvestmentPageClient({
             )}
             {nextMaturity?.maturityDate && (
               <span className="rounded-full border border-slate-200 bg-white px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">
-                Next maturity {formatDate(nextMaturity.maturityDate)}
+                {copy.maturityDate} {formatDate(nextMaturity.maturityDate, locale)}
               </span>
             )}
           </div>
@@ -399,7 +402,7 @@ export default function InvestmentPageClient({
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60 sm:w-auto"
           >
             {isPortfolioRouteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : isPortfolioView ? <BarChart3 className="h-4 w-4" /> : <Wallet className="h-4 w-4" />}
-            {isPortfolioView ? 'Dashboard' : 'Portfolio'}
+            {isPortfolioView ? copy.dashboard : copy.portfolioTitle}
           </button>
           <button
             onClick={() => handleRouteNavigation('types', '/investments/types')}
@@ -407,13 +410,13 @@ export default function InvestmentPageClient({
             className="flex w-full items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-70 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700/60 sm:w-auto"
           >
             {isTypesRouteLoading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Settings2 className="h-4 w-4" />}
-            Manage Types
+            {copy.manageTypes}
           </button>
           <button
             onClick={() => { setEditingInvestment(null); setShowForm(true); }}
             className="flex w-full items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-indigo-600/20 transition-colors hover:bg-indigo-700 sm:w-auto"
           >
-            <Plus className="h-4 w-4" /> Add Investment
+            <Plus className="h-4 w-4" /> {copy.addInvestment}
           </button>
         </div>
       </div>
@@ -441,7 +444,7 @@ export default function InvestmentPageClient({
             <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700/70 dark:bg-slate-800/60">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Portfolio Growth</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">{copy.growth}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">Last 12 months</p>
                 </div>
                 <div className="flex items-center gap-1.5 text-[11px] font-bold uppercase text-slate-500 dark:text-slate-400">
@@ -472,7 +475,7 @@ export default function InvestmentPageClient({
                         axisLine={false}
                         tickLine={false}
                         tick={{ fill: isDark ? '#94a3b8' : '#64748b', fontSize: 11 }}
-                        tickFormatter={(v) => formatCurrency(v, currency).split('.')[0]}
+                        tickFormatter={(v) => formatCurrency(v, currency, locale).split('.')[0]}
                       />
                       <Tooltip
                         contentStyle={{
@@ -482,7 +485,7 @@ export default function InvestmentPageClient({
                           fontSize: '12px'
                         }}
                         itemStyle={{ color: isDark ? '#ffffff' : '#0f172a' }}
-                        formatter={(value: unknown) => [formatCurrency(Number(value), currency), 'Total Value']}
+                        formatter={(value: unknown) => [formatCurrency(Number(value), currency, locale), copy.currentValue]}
                       />
                       <Area
                         type="monotone"
@@ -503,7 +506,7 @@ export default function InvestmentPageClient({
               {allocation.length > 0 && (
                 <div className="rounded-lg border border-slate-200 bg-white p-5 dark:border-slate-700/70 dark:bg-slate-800/60">
                   <div className="mb-4 flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Allocation</h3>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">{copy.allocation}</h3>
                     <span className="text-[11px] font-bold text-slate-400 dark:text-slate-500">{allocation.length} types</span>
                   </div>
                   <div className="h-44">
@@ -512,7 +515,7 @@ export default function InvestmentPageClient({
                         <Pie data={allocation} dataKey="total" nameKey="name" cx="50%" cy="50%" innerRadius={42} outerRadius={70} paddingAngle={2}>
                           {allocation.map((a) => <Cell key={a.typeConfigId} fill={a.color} />)}
                         </Pie>
-                        <Tooltip formatter={(value) => formatCurrency(Number(value), currency)} />
+                        <Tooltip formatter={(value) => formatCurrency(Number(value), currency, locale)} />
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
@@ -558,7 +561,7 @@ export default function InvestmentPageClient({
           <div className="rounded-lg border border-slate-200 bg-white p-4 dark:border-slate-700/70 dark:bg-slate-800/60">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="min-w-0">
-                <h2 className="text-base font-bold text-slate-900 dark:text-white">Positions</h2>
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">{copy.portfolioTitle}</h2>
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   {filtered.length} of {investments.length} shown
                 </p>
@@ -571,7 +574,7 @@ export default function InvestmentPageClient({
                   className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
                 >
                   <X className="h-3.5 w-3.5" />
-                  Clear
+                  {copy.clearFilters}
                 </button>
               )}
             </div>
@@ -581,7 +584,7 @@ export default function InvestmentPageClient({
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Search by name or institution"
+                  placeholder={copy.searchPlaceholder}
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
                   className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-4 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
@@ -593,7 +596,7 @@ export default function InvestmentPageClient({
                   onChange={(event) => setFilterType(event.target.value)}
                   className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
                 >
-                  <option value="">All types</option>
+                  <option value="">{copy.allTypes}</option>
                   {typeConfigs.map((type) => <option key={type.id} value={type.id}>{type.name}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -604,8 +607,8 @@ export default function InvestmentPageClient({
                   onChange={(event) => setFilterStatus(event.target.value)}
                   className="w-full appearance-none rounded-lg border border-slate-300 bg-white py-2.5 pl-3 pr-8 text-sm text-slate-900 transition-colors focus:outline-none focus:border-indigo-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-white"
                 >
-                  <option value="">All status</option>
-                  {STATUS_FILTERS.map((status) => <option key={status.value} value={status.value}>{status.label}</option>)}
+                  <option value="">{copy.allStatuses}</option>
+                  {STATUS_FILTERS.map((status) => <option key={status.value} value={status.value}>{getInvestmentStatusLabel(status.value, locale)}</option>)}
                 </select>
                 <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               </div>
@@ -623,9 +626,9 @@ export default function InvestmentPageClient({
           {filtered.length === 0 ? (
             <div className="rounded-lg border border-dashed border-slate-300 bg-white p-12 text-center dark:border-slate-700 dark:bg-slate-800/40">
               <TrendingUp className="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-slate-600" />
-              <p className="font-medium text-slate-600 dark:text-slate-300">No investments found</p>
+              <p className="font-medium text-slate-600 dark:text-slate-300">{copy.noInvestments}</p>
               <p className="mt-1 text-sm text-slate-400 dark:text-slate-500">
-                {hasActiveFilters ? 'Try a different filter set.' : 'Add your first investment to start tracking.'}
+                {hasActiveFilters ? copy.clearFilters : copy.noInvestmentsHelp}
               </p>
               {hasActiveFilters && (
                 <button
@@ -634,19 +637,19 @@ export default function InvestmentPageClient({
                   className="mt-4 inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
                 >
                   <X className="h-4 w-4" />
-                  Clear filters
+                  {copy.clearFilters}
                 </button>
               )}
             </div>
           ) : (
             <div className="overflow-hidden rounded-lg border border-slate-200 bg-white dark:border-slate-700/70 dark:bg-slate-800/60">
               <div className="hidden border-b border-slate-200 bg-slate-50/80 px-4 py-3 text-[11px] font-bold uppercase text-slate-500 dark:border-slate-700/70 dark:bg-slate-900/30 dark:text-slate-400 xl:grid xl:grid-cols-[minmax(260px,1.35fr)_minmax(120px,0.7fr)_minmax(120px,0.7fr)_minmax(130px,0.75fr)_minmax(150px,0.8fr)_104px] xl:items-center xl:gap-4">
-                <span>Investment</span>
-                <span>Invested</span>
-                <span>Current</span>
-                <span>Gain/loss</span>
-                <span>Maturity</span>
-                <span className="text-right">Actions</span>
+                <span>{copy.name}</span>
+                <span>{copy.invested}</span>
+                <span>{copy.current}</span>
+                <span>{copy.gainLoss}</span>
+                <span>{copy.maturityDate}</span>
+                <span className="text-right">{copy.delete}</span>
               </div>
 
               <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -682,7 +685,7 @@ export default function InvestmentPageClient({
                           <div className="flex min-w-0 flex-wrap items-center gap-2">
                             <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white">{inv.name}</h3>
                             <span className={cn('shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold', STATUS_STYLES[inv.status])}>
-                              {inv.status}
+                              {getInvestmentStatusLabel(inv.status, locale)}
                             </span>
                           </div>
                           <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
@@ -718,26 +721,26 @@ export default function InvestmentPageClient({
 
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:contents">
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Invested</p>
-                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(invested, currency)}</p>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">{copy.invested}</p>
+                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(invested, currency, locale)}</p>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Current</p>
-                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(current, currency)}</p>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">{copy.current}</p>
+                        <p className="mt-1 truncate text-sm font-semibold tabular-nums text-slate-900 dark:text-white xl:mt-0">{formatCurrency(current, currency, locale)}</p>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Gain/loss</p>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">{copy.gainLoss}</p>
                         <p className={cn('mt-1 flex items-center gap-1 truncate text-sm font-semibold tabular-nums xl:mt-0', isPositive ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
                           {isPositive ? <ArrowUpRight className="h-4 w-4 shrink-0" /> : <ArrowDownRight className="h-4 w-4 shrink-0" />}
-                          <span className="truncate">{formatSignedCurrency(gain, currency)}</span>
+                          <span className="truncate">{formatSignedCurrency(gain, currency, locale)}</span>
                           <span className="text-xs font-medium">({gainPct}%)</span>
                         </p>
                       </div>
                       <div className="min-w-0">
-                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">Maturity</p>
+                        <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 xl:hidden">{copy.maturityDate}</p>
                         <p className="mt-1 flex items-center gap-1 truncate text-sm font-medium text-slate-600 dark:text-slate-300 xl:mt-0">
                           <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
-                          <span className="truncate">{inv.maturityDate ? formatDate(inv.maturityDate) : 'No maturity'}</span>
+                          <span className="truncate">{inv.maturityDate ? formatDate(inv.maturityDate, locale) : copy.noUpcomingMaturities}</span>
                         </p>
                       </div>
                     </div>
@@ -825,14 +828,14 @@ export default function InvestmentPageClient({
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-700/50 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">Delete Investment?</h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Only investments without linked financial history can be deleted.</p>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{copy.deleteInvestment}</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{copy.deleteInvestmentHelp}</p>
             {deleteMessage && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2 mt-3">{deleteMessage}</p>}
             <div className="flex gap-3 mt-6">
-              <button onClick={() => { setDeleteId(null); setDeleteMessage(''); }} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">Cancel</button>
+              <button onClick={() => { setDeleteId(null); setDeleteMessage(''); }} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">{copy.cancel}</button>
               <button onClick={() => handleDelete(deleteId)} disabled={loading}
                 className="flex-1 px-4 py-2.5 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-50 transition-colors">
-                {loading ? 'Deleting...' : 'Delete'}
+                {loading ? copy.deleting : copy.delete}
               </button>
             </div>
           </div>

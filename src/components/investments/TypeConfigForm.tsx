@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { X, Check } from 'lucide-react';
 import type { ActionResponse } from '@/types';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type TypeConfig = {
   id: string; slug: string; name: string; description?: string | null;
@@ -17,6 +18,15 @@ const ICONS = ['trending-up', 'landmark', 'banknote', 'piggy-bank', 'bar-chart-3
 const COLORS = ['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#f97316', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#64748b'];
 
 const RETURN_TYPES_OPTIONS = ['INTEREST', 'DIVIDEND', 'CAPITAL_GAIN', 'COUPON', 'RENTAL', 'MATURITY_BENEFIT', 'STAKING_REWARD', 'PROFIT_SHARE', 'OTHER'];
+const FIELD_KEYS = [
+  'hasInterestRate',
+  'hasReturnFrequency',
+  'hasMaturityDate',
+  'hasMonthlyInstallment',
+  'hasQuantity',
+  'hasInstitution',
+  'hasAccountNumber',
+] as const;
 
 export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
   config: TypeConfig | null;
@@ -24,6 +34,8 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
   onSubmit: (fd: FormData) => Promise<ActionResponse>;
   onClose: () => void;
 }) {
+  const { messages } = useI18n();
+  const copy = messages.pages.investments;
   const isEdit = !!config;
   const isSystem = config?.isSystem || false;
   
@@ -58,13 +70,8 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
     
     // Checkbox values are only present in FormData if checked, and their value is "on" by default.
     // We need to set them explicitly to 'true' or 'false' for the action
-    const booleanFields = [
-      'hasInterestRate', 'hasReturnFrequency', 'hasMaturityDate', 
-      'hasMonthlyInstallment', 'hasQuantity', 'hasInstitution', 'hasAccountNumber'
-    ];
-    
     if (!isSystem) {
-      booleanFields.forEach(field => {
+      FIELD_KEYS.forEach(field => {
         fd.set(field, fd.get(field) === 'on' ? 'true' : 'false');
       });
     }
@@ -81,7 +88,7 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
       <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-700/50 shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50">
           <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-            {isEdit ? (isSystem ? 'System Investment Type' : 'Edit Investment Type') : 'Create Custom Type'}
+            {isEdit ? (isSystem ? copy.systemInvestmentType : copy.editInvestmentType) : copy.createCustomType}
           </h2>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400">
             <X className="h-5 w-5" />
@@ -93,8 +100,8 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
 
           <div className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700/50">
             <div>
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Active Status</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Hide this type if you don't use it</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.activeStatus}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{copy.activeStatusHelp}</p>
             </div>
             <label className="relative inline-flex items-center cursor-pointer">
               <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="sr-only peer" />
@@ -106,13 +113,13 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
             <>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Name *</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{copy.name} *</label>
                   <input name="name" defaultValue={config?.name || ''} required
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                     placeholder="e.g. Cryptocurrency" />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Slug *</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{copy.slug} *</label>
                   <input name="slug" defaultValue={config?.slug || ''} required readOnly={isEdit}
                     className={cn(
                       "w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm focus:outline-none focus:border-indigo-500",
@@ -123,7 +130,7 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">Description</label>
+                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">{copy.description}</label>
                 <input name="description" defaultValue={config?.description || ''}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                   placeholder="Short description of this investment type" />
@@ -132,7 +139,7 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Icon Selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Icon</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">{copy.icon}</label>
                   <div className="flex flex-wrap gap-2">
                     {ICONS.map((i) => (
                       <button key={i} type="button" onClick={() => setIcon(i)}
@@ -149,7 +156,7 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
 
                 {/* Color Selection */}
                 <div>
-                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">Color</label>
+                  <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">{copy.color}</label>
                   <div className="flex flex-wrap gap-2">
                     {COLORS.map((c) => (
                       <button key={c} type="button" onClick={() => setColor(c)}
@@ -167,35 +174,27 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
               </div>
 
               <div className="border-t border-slate-200 dark:border-slate-700/50 pt-4">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Field Configuration</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Toggle the fields that should appear when adding this type of investment.</p>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{copy.fieldConfiguration}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{copy.fieldConfigurationHelp}</p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {[
-                    { name: 'hasInterestRate', label: 'Interest Rate' },
-                    { name: 'hasReturnFrequency', label: 'Return Frequency' },
-                    { name: 'hasMaturityDate', label: 'Maturity Date' },
-                    { name: 'hasMonthlyInstallment', label: 'Monthly Installment' },
-                    { name: 'hasQuantity', label: 'Quantity & Buy Price' },
-                    { name: 'hasInstitution', label: 'Institution Name' },
-                    { name: 'hasAccountNumber', label: 'Account/Certificate Number' },
-                  ].map((field) => (
-                    <label key={field.name} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/30 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                  {FIELD_KEYS.map((field) => (
+                    <label key={field} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/30 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                       <input 
                         type="checkbox" 
-                        name={field.name} 
-                        defaultChecked={config ? (config as any)[field.name] : field.name === 'hasMaturityDate' || field.name === 'hasInstitution' || field.name === 'hasAccountNumber'} 
+                        name={field} 
+                        defaultChecked={config ? config[field] : field === 'hasMaturityDate' || field === 'hasInstitution' || field === 'hasAccountNumber'} 
                         className="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500" 
                       />
-                      <span className="text-sm text-slate-700 dark:text-slate-300">{field.label}</span>
+                      <span className="text-sm text-slate-700 dark:text-slate-300">{copy.fields[field]}</span>
                     </label>
                   ))}
                 </div>
               </div>
 
               <div className="border-t border-slate-200 dark:border-slate-700/50 pt-4">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">Return Types</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">Select the types of returns applicable to this investment.</p>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{copy.returnTypes}</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{copy.returnTypesHelp}</p>
                 
                 <div className="flex flex-wrap gap-2">
                   {RETURN_TYPES_OPTIONS.map((type) => (
@@ -220,19 +219,19 @@ export default function TypeConfigForm({ config, loading, onSubmit, onClose }: {
 
           {isSystem && (
             <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 text-sm text-amber-800 dark:text-amber-300">
-              <p className="font-semibold mb-1">System Default Type</p>
-              <p>This is a built-in investment type. You can only toggle its active status. Its fields and configuration cannot be modified.</p>
+              <p className="font-semibold mb-1">{copy.systemDefaultType}</p>
+              <p>{copy.systemDefaultTypeHelp}</p>
             </div>
           )}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={onClose}
               className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-              Cancel
+              {copy.cancel}
             </button>
             <button type="submit" disabled={loading}
               className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 text-white text-sm font-semibold shadow-lg shadow-indigo-500/25 hover:shadow-xl disabled:opacity-50 transition-all">
-              {loading ? 'Saving...' : isEdit ? 'Update' : 'Create'}
+              {loading ? copy.saving : isEdit ? copy.update : copy.create}
             </button>
           </div>
         </form>

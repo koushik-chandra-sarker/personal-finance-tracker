@@ -7,6 +7,7 @@ import Badge from '@/components/ui/Badge';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 interface Tutorial {
   id: string;
@@ -24,6 +25,10 @@ interface Props {
 }
 
 export default function TutorialList({ tutorials, isPro }: Props) {
+  const { messages } = useI18n();
+  const copy = messages.pages.tutorials;
+  const categoryLabels = copy.categoryLabels as Record<string, string>;
+  const demoContent = copy.demoContent as Record<string, { title: string; description: string }>;
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [playingVideo, setPlayingVideo] = useState<Tutorial | null>(null);
@@ -34,6 +39,18 @@ export default function TutorialList({ tutorials, isPro }: Props) {
     () => ['All', ...Array.from(new Set(tutorials.map((tutorial) => tutorial.category || 'General')))],
     [tutorials]
   );
+  const displayCategory = (category: string) => {
+    if (category === 'All') return copy.all;
+    return categoryLabels[category] || category;
+  };
+
+  const getLocalizedTutorial = (tutorial: Tutorial) => {
+    const localized = demoContent[tutorial.title];
+    return {
+      title: localized?.title || tutorial.title,
+      description: localized?.description || tutorial.description,
+    };
+  };
 
   const stats = useMemo(() => {
     const premiumCount = tutorials.filter((tutorial) => tutorial.isPremium).length;
@@ -45,8 +62,11 @@ export default function TutorialList({ tutorials, isPro }: Props) {
   }, [tutorials]);
 
   const filteredTutorials = tutorials.filter(t => {
-    const matchesSearch = t.title.toLowerCase().includes(search.toLowerCase()) || 
-                         (t.description?.toLowerCase().includes(search.toLowerCase()) || false);
+    const localized = getLocalizedTutorial(t);
+    const query = search.toLowerCase();
+    const matchesSearch = localized.title.toLowerCase().includes(query) ||
+                         (localized.description?.toLowerCase().includes(query) || false) ||
+                         displayCategory(t.category || 'General').toLowerCase().includes(query);
     const matchesCategory = selectedCategory === 'All' || (t.category || 'General') === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -60,13 +80,13 @@ export default function TutorialList({ tutorials, isPro }: Props) {
     e.stopPropagation();
     if (navigator.share) {
       navigator.share({
-        title: tutorial.title,
-        text: tutorial.description || '',
+        title: getLocalizedTutorial(tutorial).title,
+        text: getLocalizedTutorial(tutorial).description || '',
         url: tutorial.youtubeUrl,
       });
     } else {
       navigator.clipboard.writeText(tutorial.youtubeUrl);
-      alert('YouTube link copied to clipboard!');
+      alert(copy.linkCopied);
     }
   };
 
@@ -78,7 +98,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
     setPlayingVideo(tutorial);
   };
 
-  const categoryLabel = (tutorial: Tutorial) => tutorial.category || 'General';
+  const categoryLabel = (tutorial: Tutorial) => displayCategory(tutorial.category || 'General');
   const quickCategories = categories.filter((category) => category !== 'All').slice(0, 4);
 
   const selectCategory = (category: string, shouldClearSearch = false) => {
@@ -103,18 +123,18 @@ export default function TutorialList({ tutorials, isPro }: Props) {
           <div className="space-y-7 p-6 sm:p-8">
             <div className="flex flex-wrap items-center gap-3">
               <Badge variant="info" className="px-3 py-1 text-xs font-bold">
-                Personal Finance Academy
+                  {copy.academy}
               </Badge>
               <Badge variant={isPro ? 'success' : 'warning'} className="px-3 py-1 text-xs font-bold">
-                {isPro ? 'PRO access active' : 'Free access'}
+                {isPro ? copy.proActive : copy.freeAccess}
               </Badge>
             </div>
             <div className="max-w-3xl space-y-4">
               <h1 className="max-w-2xl text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
-                Learn FinTrack with simple guided lessons
+                {copy.title}
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
-                Start with one workflow, watch a short lesson, then apply it directly in your finance dashboard. No guessing where to begin.
+                {copy.subtitle}
               </p>
             </div>
 
@@ -125,7 +145,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-indigo-700"
               >
                 <Play fill="currentColor" className="ml-0.5 h-4 w-4" />
-                Start Learning
+                {copy.startLearning}
               </button>
               <div className="flex flex-wrap gap-2">
                 {quickCategories.length > 0 ? (
@@ -136,12 +156,12 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                       onClick={() => selectCategory(category, true)}
                       className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-600 transition-colors hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
                     >
-                      {category}
+                      {displayCategory(category)}
                     </button>
                   ))
                 ) : (
                   <span className="inline-flex h-10 items-center rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-950/40 dark:text-slate-400">
-                    New lessons coming soon
+                    {copy.comingSoon}
                   </span>
                 )}
               </div>
@@ -150,22 +170,22 @@ export default function TutorialList({ tutorials, isPro }: Props) {
             <div className="grid gap-3 md:grid-cols-3">
               {[
                 {
-                  title: 'Choose a topic',
-                  description: 'Budgeting, accounts, goals, investments, or daily tracking.',
+                  title: copy.chooseTopic,
+                  description: copy.chooseTopicHelp,
                   icon: BookOpen,
                   color: 'text-indigo-500',
                   background: 'bg-indigo-50 dark:bg-indigo-500/10',
                 },
                 {
-                  title: 'Watch and apply',
-                  description: 'Follow one focused video, then try the same flow in the app.',
+                  title: copy.watchApply,
+                  description: copy.watchApplyHelp,
                   icon: CheckCircle,
                   color: 'text-emerald-500',
                   background: 'bg-emerald-50 dark:bg-emerald-500/10',
                 },
                 {
-                  title: 'Go deeper',
-                  description: isPro ? 'Your PRO access unlocks the full advanced library.' : 'Upgrade when you need advanced PRO lessons.',
+                  title: copy.goDeeper,
+                  description: isPro ? copy.goDeeperPro : copy.goDeeperFree,
                   icon: Crown,
                   color: 'text-amber-500',
                   background: 'bg-amber-50 dark:bg-amber-500/10',
@@ -186,15 +206,15 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 <div className="flex items-start gap-3">
                   <Crown className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
-                    <p className="text-sm font-bold">PRO tutorials are locked on your current plan.</p>
-                    <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">Upgrade when you are ready to watch advanced guides.</p>
+                    <p className="text-sm font-bold">{copy.proLocked}</p>
+                    <p className="text-xs leading-5 text-amber-700 dark:text-amber-300">{copy.proLockedHelp}</p>
                   </div>
                 </div>
                 <a
                   href="/subscription"
                   className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-amber-600 px-4 text-sm font-bold text-white transition-colors hover:bg-amber-700"
                 >
-                  View Plans
+                  {copy.viewPlans}
                   <ArrowUpRight className="h-4 w-4" />
                 </a>
               </div>
@@ -204,8 +224,8 @@ export default function TutorialList({ tutorials, isPro }: Props) {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-xs font-bold uppercase text-slate-400">Learning path</p>
-                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">Start small, build confidence</h2>
+                  <p className="text-xs font-bold uppercase text-slate-400">{copy.learningPath}</p>
+                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">{copy.startSmall}</h2>
                 </div>
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
                   <BookOpen className="h-5 w-5" />
@@ -214,9 +234,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
 
               <div className="mt-5 space-y-3">
                 {[
-                  'Pick the workflow you need today',
-                  'Watch the lesson while your dashboard is open',
-                  'Repeat the flow with your own numbers',
+                  ...copy.pathSteps,
                 ].map((step, index) => (
                   <div key={step} className="flex gap-3">
                     <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -229,9 +247,9 @@ export default function TutorialList({ tutorials, isPro }: Props) {
 
               <div className="mt-6 grid grid-cols-3 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
                 {[
-                  { label: 'Guides', value: stats.total, icon: BookOpen, color: 'text-indigo-500' },
-                  { label: 'Free', value: stats.free, icon: ShieldCheck, color: 'text-emerald-500' },
-                  { label: 'PRO', value: stats.premium, icon: Crown, color: 'text-amber-500' },
+                  { label: copy.guides, value: stats.total, icon: BookOpen, color: 'text-indigo-500' },
+                  { label: copy.free, value: stats.free, icon: ShieldCheck, color: 'text-emerald-500' },
+                  { label: copy.pro, value: stats.premium, icon: Crown, color: 'text-amber-500' },
                 ].map((item) => (
                   <div key={item.label} className="border-r border-slate-200 bg-slate-50 p-3 last:border-r-0 dark:border-slate-800 dark:bg-slate-950/40">
                     <item.icon className={cn('mb-2 h-4 w-4', item.color)} />
@@ -242,7 +260,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               </div>
 
               <p className="mt-4 text-xs leading-5 text-slate-500 dark:text-slate-400">
-                Tip: use search when you know the feature name, or tap a topic chip when you are exploring.
+                {copy.tip}
               </p>
             </div>
           </div>
@@ -254,7 +272,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative w-full xl:max-w-md">
               <Input 
-                placeholder="Search tutorials..." 
+                placeholder={copy.searchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 className="h-12 rounded-xl border-slate-200 bg-slate-50 pl-11 dark:border-slate-700 dark:bg-slate-950/50"
@@ -276,7 +294,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                         : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'
                     )}
                   >
-                    {cat}
+                    {displayCategory(cat)}
                   </button>
                 ))}
               </div>
@@ -291,8 +309,8 @@ export default function TutorialList({ tutorials, isPro }: Props) {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Video size={32} className="text-slate-400" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">No guides found</h3>
-            <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">Try a different category or search term.</p>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-white">{copy.noGuides}</h3>
+            <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">{copy.noGuidesHelp}</p>
           </div>
         ) : (
           filteredTutorials.map((tutorial, index) => (
@@ -314,7 +332,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 {tutorial.thumbnailUrl ? (
                   <Image 
                     src={tutorial.thumbnailUrl} 
-                    alt={tutorial.title} 
+                    alt={getLocalizedTutorial(tutorial).title} 
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1280px) 50vw, 33vw"
                     unoptimized
@@ -342,7 +360,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                   </Badge>
                   {tutorial.isPremium && (
                     <Badge variant="glass" className="border-amber-300/40 bg-amber-500/90 px-3 py-1 text-[10px] font-bold uppercase text-white">
-                      PRO
+                      {copy.pro}
                     </Badge>
                   )}
                 </div>
@@ -350,7 +368,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 <button 
                   type="button"
                   onClick={(e) => handleShare(e, tutorial)}
-                  aria-label={`Share ${tutorial.title}`}
+                  aria-label={`${copy.share}: ${getLocalizedTutorial(tutorial).title}`}
                   className="absolute bottom-4 right-4 flex h-10 w-10 items-center justify-center rounded-lg border border-white/20 bg-slate-950/40 text-white opacity-0 backdrop-blur transition-all hover:bg-slate-950/60 group-hover:opacity-100"
                 >
                   <Share2 size={16} />
@@ -360,21 +378,21 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               <div className="flex flex-1 flex-col p-5">
                 <div className="mb-3 flex items-center gap-2 text-xs font-bold uppercase text-slate-500 dark:text-slate-400">
                   <Clock size={14} className="text-indigo-500" />
-                  Step-by-step guide
+                  {copy.stepByStep}
                 </div>
                 <h3 className="line-clamp-2 text-lg font-bold leading-snug text-slate-950 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
-                  {tutorial.title}
+                  {getLocalizedTutorial(tutorial).title}
                 </h3>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                  {tutorial.description || 'Elevate your financial management with this comprehensive step-by-step guide.'}
+                  {getLocalizedTutorial(tutorial).description || copy.defaultDescription}
                 </p>
                 <div className="mt-auto flex items-center justify-between gap-3 pt-5">
                   <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                     <CheckCircle size={14} />
-                    Verified
+                    {copy.verified}
                   </span>
                   <span className="inline-flex items-center gap-1.5 text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                    {tutorial.isPremium && !isPro ? 'Preview' : 'Watch'}
+                    {tutorial.isPremium && !isPro ? copy.preview : copy.watch}
                     <ArrowUpRight size={15} />
                   </span>
                 </div>
@@ -397,7 +415,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               <div className="aspect-video w-full overflow-hidden rounded-2xl border border-slate-200 bg-black shadow-sm dark:border-slate-700">
                 <iframe
                   src={getEmbedUrl(playingVideo.youtubeUrl) || ''}
-                  title={playingVideo.title}
+                  title={getLocalizedTutorial(playingVideo).title}
                   className="h-full w-full border-0"
                   allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                   allowFullScreen
@@ -409,15 +427,15 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                   <div className="space-y-2">
                     <div className="flex flex-wrap gap-2">
                       <Badge variant="info" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">{categoryLabel(playingVideo)}</Badge>
-                      <Badge variant="success" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">Verified</Badge>
+                      <Badge variant="success" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">{copy.verified}</Badge>
                     </div>
-                    <h2 className="text-2xl font-black leading-tight text-slate-950 dark:text-white">{playingVideo.title}</h2>
+                    <h2 className="text-2xl font-black leading-tight text-slate-950 dark:text-white">{getLocalizedTutorial(playingVideo).title}</h2>
                   </div>
                   <div className="flex w-full gap-2 sm:w-auto">
                     <button 
                       type="button"
                       onClick={(e) => handleShare(e, playingVideo)}
-                      aria-label={`Share ${playingVideo.title}`}
+                      aria-label={`${copy.share}: ${getLocalizedTutorial(playingVideo).title}`}
                       className="flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-900 transition-colors hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 sm:flex-none sm:px-3"
                     >
                       <Share2 size={20} />
@@ -429,15 +447,15 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                       className="flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 text-sm font-bold text-white transition-colors hover:bg-rose-700 sm:flex-none"
                     >
                       <Video size={18} />
-                      YouTube
+                      {copy.openOnYoutube}
                     </a>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950/40">
-                  <h4 className="mb-3 text-xs font-bold uppercase text-slate-400">Description</h4>
+                  <h4 className="mb-3 text-xs font-bold uppercase text-slate-400">{copy.description}</h4>
                   <p className="text-sm font-medium leading-7 text-slate-600 dark:text-slate-300">
-                    {playingVideo.description || 'This tutorial provides an in-depth look at how to master your personal finances using our platform. Follow along with our experts as they guide you through the core features and best practices.'}
+                    {getLocalizedTutorial(playingVideo).description || copy.videoDefaultDescription}
                   </p>
                 </div>
               </div>
@@ -445,8 +463,8 @@ export default function TutorialList({ tutorials, isPro }: Props) {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <h4 className="text-xs font-bold uppercase text-slate-400">More Guides</h4>
-                <Badge variant="outline" className="text-[10px] font-bold">{Math.max(tutorials.length - 1, 0)} Total</Badge>
+                <h4 className="text-xs font-bold uppercase text-slate-400">{copy.moreGuides}</h4>
+                <Badge variant="outline" className="text-[10px] font-bold">{Math.max(tutorials.length - 1, 0)} {copy.total}</Badge>
               </div>
               <div className="flex gap-3 overflow-x-auto pb-2 lg:flex-col lg:overflow-x-visible lg:pb-0">
                 {tutorials
@@ -463,7 +481,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                         {tutorial.thumbnailUrl ? (
                           <Image
                             src={tutorial.thumbnailUrl}
-                            alt={tutorial.title}
+                            alt={getLocalizedTutorial(tutorial).title}
                             fill
                             sizes="6rem"
                             unoptimized
@@ -482,7 +500,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                       </div>
                       <div className="flex min-w-0 flex-col justify-center">
                         <h5 className="line-clamp-2 text-sm font-bold leading-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
-                          {tutorial.title}
+                          {getLocalizedTutorial(tutorial).title}
                         </h5>
                         <p className="mt-1 text-[10px] font-medium text-slate-500">{categoryLabel(tutorial)}</p>
                       </div>
@@ -497,7 +515,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
       <Modal
         isOpen={!!lockedVideo}
         onClose={() => setLockedVideo(null)}
-        title="PRO tutorial"
+        title={copy.proTutorial}
         size="sm"
       >
         {lockedVideo && (
@@ -507,7 +525,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 {lockedVideo.thumbnailUrl ? (
                   <Image
                     src={lockedVideo.thumbnailUrl}
-                    alt={lockedVideo.title}
+                    alt={getLocalizedTutorial(lockedVideo).title}
                     fill
                     sizes="(max-width: 640px) 100vw, 28rem"
                     unoptimized
@@ -526,10 +544,10 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               </div>
             </div>
             <div>
-              <Badge variant="warning" className="mb-3 px-3 py-1 text-xs font-bold">PRO access required</Badge>
-              <h3 className="text-xl font-black text-slate-950 dark:text-white">{lockedVideo.title}</h3>
+              <Badge variant="warning" className="mb-3 px-3 py-1 text-xs font-bold">{copy.proRequired}</Badge>
+              <h3 className="text-xl font-black text-slate-950 dark:text-white">{getLocalizedTutorial(lockedVideo).title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
-                This guide is part of the PRO academy. Upgrade your subscription to watch it and unlock the full tutorial library.
+                {copy.proRequiredHelp}
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -538,13 +556,13 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 onClick={() => setLockedVideo(null)}
                 className="inline-flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 px-4 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800"
               >
-                Keep Browsing
+                {copy.keepBrowsing}
               </button>
               <a
                 href="/subscription"
                 className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-bold text-white transition-colors hover:bg-indigo-700"
               >
-                View Plans
+                {copy.viewPlans}
                 <ArrowUpRight className="h-4 w-4" />
               </a>
             </div>

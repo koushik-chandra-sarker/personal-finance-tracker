@@ -122,12 +122,12 @@ function parseAdminMessageForm(formData: FormData): { success: true; input: Upda
   const startsAt = parseOptionalDate(firstString(formData.get('startsAt')));
   const endsAt = parseOptionalDate(firstString(formData.get('endsAt')));
 
-  if (!title || !message) return { success: false, response: { success: false, message: 'Title and message are required.' } };
+  if (!title || !message) return { success: false, response: { success: false, message: 'শিরোনাম এবং মেসেজ প্রয়োজন।' } };
   if (audience === 'SELECTED' && recipientIds.length === 0) {
-    return { success: false, response: { success: false, message: 'Select at least one user or choose all users.' } };
+    return { success: false, response: { success: false, message: 'অন্তত একজন ব্যবহারকারী নির্বাচন করুন অথবা সব ব্যবহারকারী বেছে নিন।' } };
   }
   if (endsAt && startsAt && endsAt <= startsAt) {
-    return { success: false, response: { success: false, message: 'End date must be after start date.' } };
+    return { success: false, response: { success: false, message: 'শেষ তারিখ শুরুর তারিখের পরে হতে হবে।' } };
   }
 
   return {
@@ -182,9 +182,9 @@ export async function createAdminMessageAction(formData: FormData): Promise<Acti
     });
 
     revalidatePath('/admin/messages');
-    return { success: true, message: 'Message created successfully.' };
+    return { success: true, message: 'মেসেজ তৈরি হয়েছে।' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to create message.') };
+    return { success: false, message: getErrorMessage(error, 'মেসেজ তৈরি করা যায়নি।') };
   }
 }
 
@@ -198,9 +198,9 @@ export async function updateAdminMessageAction(id: string, formData: FormData): 
     await adminMessageService.updateAdminMessage(id, parsed.input);
 
     revalidatePath('/admin/messages');
-    return { success: true, message: 'Message updated successfully.' };
+    return { success: true, message: 'মেসেজ আপডেট হয়েছে।' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update message.') };
+    return { success: false, message: getErrorMessage(error, 'মেসেজ আপডেট করা যায়নি।') };
   }
 }
 
@@ -210,9 +210,9 @@ export async function updateAdminMessageStatusAction(id: string, isActive: boole
   try {
     await adminMessageService.updateAdminMessageStatus(id, isActive);
     revalidatePath('/admin/messages');
-    return { success: true, message: isActive ? 'Message activated.' : 'Message paused.' };
+    return { success: true, message: isActive ? 'মেসেজ সক্রিয় হয়েছে।' : 'মেসেজ বিরত হয়েছে।' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update message.') };
+    return { success: false, message: getErrorMessage(error, 'মেসেজ আপডেট করা যায়নি।') };
   }
 }
 
@@ -222,9 +222,9 @@ export async function deleteAdminMessageAction(id: string): Promise<ActionRespon
   try {
     await adminMessageService.deleteAdminMessage(id);
     revalidatePath('/admin/messages');
-    return { success: true, message: 'Message deleted.' };
+    return { success: true, message: 'মেসেজ ডিলিট হয়েছে।' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to delete message.') };
+    return { success: false, message: getErrorMessage(error, 'মেসেজ ডিলিট করা যায়নি।') };
   }
 }
 
@@ -238,12 +238,12 @@ export async function getUserAdminMessagesAction(): Promise<UserAdminMessage[]> 
 
 export async function markAdminMessageSeenAction(id: string, dismissed = false): Promise<ActionResponse> {
   const session = await auth();
-  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+  if (!session?.user?.id) return { success: false, message: 'অননুমোদিত' };
 
   try {
     await adminMessageService.markAdminMessageSeen(session.user.id, id, dismissed);
-    return { success: true, message: 'Message updated.' };
+    return { success: true, message: 'মেসেজ আপডেট হয়েছে।' };
   } catch (error: unknown) {
-    return { success: false, message: getErrorMessage(error, 'Failed to update message.') };
+    return { success: false, message: getErrorMessage(error, 'মেসেজ আপডেট করা যায়নি।') };
   }
 }

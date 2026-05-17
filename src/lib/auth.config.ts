@@ -5,6 +5,7 @@ import { getSubscriptionBlockReason, hasActiveSubscriptionAccess, isSubscription
 type SessionUpdate = {
   id?: string;
   currency?: string;
+  preferredLocale?: 'bn-BD' | 'en-US';
   role?: UserRole;
   status?: UserStatus;
   lastLoginAt?: string | null;
@@ -74,6 +75,7 @@ export const authConfig = {
       if (user) {
         appToken.id = user.id;
         appToken.currency = user.currency;
+        appToken.preferredLocale = user.preferredLocale;
         appToken.role = user.role;
         appToken.status = user.status;
         appToken.lastLoginAt = user.lastLoginAt;
@@ -90,6 +92,7 @@ export const authConfig = {
       if (trigger === "update" && session) {
         const updatedSession = session as SessionUpdate;
         if (updatedSession.currency) appToken.currency = updatedSession.currency;
+        if (updatedSession.preferredLocale) appToken.preferredLocale = updatedSession.preferredLocale;
         if (updatedSession.status) appToken.status = updatedSession.status;
         if (updatedSession.lastLoginAt !== undefined) appToken.lastLoginAt = updatedSession.lastLoginAt;
         if (updatedSession.mustChangePassword !== undefined) appToken.mustChangePassword = updatedSession.mustChangePassword;
@@ -111,6 +114,7 @@ export const authConfig = {
       if (session.user && appToken.id) {
         session.user.id = appToken.id;
         session.user.currency = appToken.currency;
+        session.user.preferredLocale = appToken.preferredLocale;
         session.user.role = appToken.role;
         session.user.status = appToken.status;
         session.user.lastLoginAt = appToken.lastLoginAt;

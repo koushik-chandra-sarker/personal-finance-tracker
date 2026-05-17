@@ -1,8 +1,8 @@
 import { z } from 'zod';
 
 export const budgetSchema = z.object({
-  categoryId: z.string().min(1, 'Category is required'),
-  amount: z.coerce.number().positive('Amount must be positive'),
+  categoryId: z.string().min(1, 'ক্যাটাগরি নির্বাচন করুন'),
+  amount: z.coerce.number().positive('পরিমাণ ০-এর বেশি হতে হবে'),
   rolloverEnabled: z.preprocess(
     (value) => value === true || value === 'true' || value === 'on' || value === '1',
     z.boolean()

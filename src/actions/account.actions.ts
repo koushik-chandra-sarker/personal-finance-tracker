@@ -26,12 +26,12 @@ export async function createAccountAction(formData: FormData): Promise<ActionRes
     icon: formData.get('icon') as string || 'wallet',
   };
   const parsed = accountSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await accountService.createAccount(userId, executorId, parsed.data);
   revalidatePath('/accounts');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Account created' };
+  return { success: true, message: 'অ্যাকাউন্ট তৈরি হয়েছে' };
 }
 
 export async function deleteAccountAction(id: string): Promise<ActionResponse> {
@@ -40,7 +40,7 @@ export async function deleteAccountAction(id: string): Promise<ActionResponse> {
   await accountService.deleteAccount(userId, id);
   revalidatePath('/accounts');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Account deactivated' };
+  return { success: true, message: 'অ্যাকাউন্ট নিষ্ক্রিয় হয়েছে' };
 }
 
 export async function updateAccountAction(id: string, formData: FormData): Promise<ActionResponse> {
@@ -57,7 +57,7 @@ export async function updateAccountAction(id: string, formData: FormData): Promi
     balance: 0, // Not used in update but required by schema
   };
   const parsed = accountSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await accountService.updateAccount(userId, executorId, id, {
     name: parsed.data.name,
@@ -67,5 +67,5 @@ export async function updateAccountAction(id: string, formData: FormData): Promi
   });
   revalidatePath('/accounts');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Account updated' };
+  return { success: true, message: 'অ্যাকাউন্ট আপডেট হয়েছে' };
 }

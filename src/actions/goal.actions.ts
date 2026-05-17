@@ -26,12 +26,12 @@ export async function createGoalAction(formData: FormData): Promise<ActionRespon
     icon: formData.get('icon') as string || 'target',
   };
   const parsed = goalSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
   await goalService.createGoal(userId, executorId, parsed.data);
   revalidatePath('/goals');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Goal created' };
+  return { success: true, message: 'লক্ষ্য তৈরি হয়েছে' };
 }
 
 export async function contributeToGoalAction(id: string, formData: FormData): Promise<ActionResponse> {
@@ -46,7 +46,7 @@ export async function contributeToGoalAction(id: string, formData: FormData): Pr
     description: formData.get('description') as string,
   };
   const parsed = contributeSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed' };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি' };
 
   await validateAccess('ACCOUNTS', 'EDIT');
   await validateAccess('TRANSACTIONS', 'EDIT');
@@ -55,7 +55,7 @@ export async function contributeToGoalAction(id: string, formData: FormData): Pr
   revalidatePath('/accounts');
   revalidatePath('/transactions');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Contribution added' };
+  return { success: true, message: 'অবদান যোগ হয়েছে' };
 }
 
 export async function deductFromGoalAction(id: string, formData: FormData): Promise<ActionResponse> {
@@ -70,7 +70,7 @@ export async function deductFromGoalAction(id: string, formData: FormData): Prom
     description: formData.get('description') as string,
   };
   const parsed = contributeSchema.safeParse(raw);
-  if (!parsed.success) return { success: false, message: 'Validation failed' };
+  if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি' };
 
   await validateAccess('ACCOUNTS', 'EDIT');
   await validateAccess('TRANSACTIONS', 'EDIT');
@@ -79,7 +79,7 @@ export async function deductFromGoalAction(id: string, formData: FormData): Prom
   revalidatePath('/accounts');
   revalidatePath('/transactions');
   revalidatePath('/dashboard');
-  return { success: true, message: 'Deduction added' };
+  return { success: true, message: 'উত্তোলন যোগ হয়েছে' };
 }
 
 export async function deleteGoalAction(id: string): Promise<ActionResponse> {
@@ -87,5 +87,5 @@ export async function deleteGoalAction(id: string): Promise<ActionResponse> {
   await validateAccess('GOALS', 'EDIT');
   await goalService.deleteGoal(userId, id);
   revalidatePath('/goals');
-  return { success: true, message: 'Goal deleted' };
+  return { success: true, message: 'লক্ষ্য ডিলিট হয়েছে' };
 }

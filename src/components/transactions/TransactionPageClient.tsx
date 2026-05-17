@@ -15,8 +15,9 @@ import Modal from '@/components/ui/Modal';
 import Badge from '@/components/ui/Badge';
 import EmptyState from '@/components/ui/EmptyState';
 import Loader from '@/components/ui/Loader';
-import { formatCurrency, formatDate } from '@/lib/utils';
+import { formatCurrency, formatDate, getTransactionTypeLabel } from '@/lib/utils';
 import TransactionFilters from '@/components/transactions/TransactionFilters';
+import { useI18n } from '@/i18n/client';
 import { Edit2, Plus, Trash2, ArrowLeftRight, TrendingUp, TrendingDown, Clock, Loader2 } from 'lucide-react';
 
 interface Category { id: string; name: string; type: string; color: string; }
@@ -49,7 +50,7 @@ interface TransactionPageClientProps {
 
 type TransactionFormValues = z.input<typeof transactionSchema>;
 
-function TransactionListLoading({ message }: { message: string }) {
+function TransactionListLoading({ message, subMessage }: { message: string; subMessage: string }) {
   return (
     <div className="space-y-3">
       <div className="sticky top-4 z-10 overflow-hidden rounded-xl border border-indigo-200 bg-white shadow-lg shadow-indigo-500/10 dark:border-indigo-500/30 dark:bg-slate-900">
@@ -60,7 +61,7 @@ function TransactionListLoading({ message }: { message: string }) {
             </div>
             <div className="min-w-0">
               <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{message}</p>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Preparing the latest transaction view</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">{subMessage}</p>
             </div>
           </div>
           <div className="hidden h-2 w-28 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800 sm:block">
@@ -103,6 +104,10 @@ export default function TransactionPageClient({
   const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
     ? session.user.currency
     : 'USD';
+  const { locale: userLocale, messages } = useI18n();
+  const copy = messages.pages.transactions;
+  const common = messages.pages.common;
+  const numberFormatter = new Intl.NumberFormat(userLocale);
 
   const { register, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm<TransactionFormValues, unknown, TransactionInput>({
     resolver: zodResolver(transactionSchema),
@@ -158,7 +163,7 @@ export default function TransactionPageClient({
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this transaction?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     startTransition(async () => {
       await deleteTransactionAction(id);
       router.refresh();
@@ -172,7 +177,7 @@ export default function TransactionPageClient({
   };
 
   const navigateToPage = (page: number) => {
-    setNavigationLoaderMessage('Loading transactions...');
+    setNavigationLoaderMessage(copy.loading);
     router.push(transactionPageHref(page));
   };
 
@@ -184,22 +189,24 @@ export default function TransactionPageClient({
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message={editingTransaction ? "Updating transaction..." : "Processing..."} />
+      <Loader show={isPending} message={editingTransaction ? copy.updating : common.processing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Transactions</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <span>
-              {total > 0 ? `Showing ${(currentPage - 1) * 20 + 1}-${(currentPage - 1) * 20 + initialTransactions.length} of ${total} transactions` : '0 transactions'}
+              {total > 0
+                ? `${copy.showing} ${numberFormatter.format((currentPage - 1) * 20 + 1)}-${numberFormatter.format((currentPage - 1) * 20 + initialTransactions.length)} ${copy.of} ${numberFormatter.format(total)} ${copy.title.toLowerCase()}`
+                : copy.zero}
             </span>
             <span>•</span>
             <span className="font-medium text-slate-900 dark:text-slate-200">
-              Net: {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency)}
+              {copy.net}: {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency, userLocale)}
             </span>
           </div>
         </div>
         <Button onClick={() => { setEditingTransaction(null); reset(); setIsModalOpen(true); }}>
-          <Plus className="h-4 w-4" /> Add Transaction
+          <Plus className="h-4 w-4" /> {copy.addTransaction}
         </Button>
       </div>
 
@@ -210,56 +217,56 @@ export default function TransactionPageClient({
         accounts={accounts} 
         defaultDateFrom={dateFrom} 
         defaultDateTo={dateTo} 
-        onNavigateStart={(loaderMessage = 'Loading transactions...') => setNavigationLoaderMessage(loaderMessage)}
+        onNavigateStart={(loaderMessage = copy.loading) => setNavigationLoaderMessage(loaderMessage)}
       />
 
       {/* Totals Summary */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="relative overflow-hidden p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Income</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.totalIncome}</p>
             <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">+{formatCurrency(totalIncome, userCurrency)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">+{formatCurrency(totalIncome, userCurrency, userLocale)}</p>
         </div>
         
         <div className="relative overflow-hidden p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 shadow-sm">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Total Expense</p>
+            <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.totalExpense}</p>
             <div className="p-2 rounded-lg bg-rose-100 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400">
               <TrendingDown className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">-{formatCurrency(totalExpense, userCurrency)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">-{formatCurrency(totalExpense, userCurrency, userLocale)}</p>
         </div>
 
         <div className="relative overflow-hidden p-5 rounded-2xl bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-500/20">
           <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium text-indigo-100">Net Balance</p>
+            <p className="text-sm font-medium text-indigo-100">{copy.netBalance}</p>
             <div className="p-2 rounded-lg bg-white/20 text-white">
               <ArrowLeftRight className="h-4 w-4" />
             </div>
           </div>
           <p className="text-2xl font-bold text-white">
-            {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency)}
+            {totalIncome - totalExpense >= 0 ? '+' : '-'} {formatCurrency(Math.abs(totalIncome - totalExpense), userCurrency, userLocale)}
           </p>
         </div>
       </div>
 
       <div className="relative" aria-busy={isNavigatingTransactions}>
         {isNavigatingTransactions ? (
-          <TransactionListLoading message={navigationLoaderMessage || 'Loading transactions...'} />
+          <TransactionListLoading message={navigationLoaderMessage || copy.loading} subMessage={copy.preparing} />
         ) : (
         <div className="transition-opacity">
           {/* Transaction List */}
           {initialTransactions.length === 0 ? (
             <EmptyState
-              title="No transactions found"
-              description="Add your first transaction to start tracking your finances"
+              title={copy.noFound}
+              description={copy.noFoundHelp}
               icon={<ArrowLeftRight className="h-12 w-12 text-slate-500" />}
-              action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Transaction</Button>}
+              action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.addTransaction}</Button>}
             />
           ) : (
             <div className="space-y-2">
@@ -280,12 +287,12 @@ export default function TransactionPageClient({
                     <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
                     {/* Mobile Amount */}
                     <p className={`sm:hidden text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                      {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
+                      {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency, userLocale)}
                     </p>
                   </div>
                   
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    {tx.category.name} · {tx.account.name} · {formatDate(tx.date)}
+                    {tx.category.name} · {tx.account.name} · {formatDate(tx.date, undefined, userLocale)}
                   </p>
                   
                   {tx.tags.filter(tag => !isInternalTag(tag)).length > 0 && (
@@ -302,7 +309,7 @@ export default function TransactionPageClient({
                       </div>
                     )}
                     {tx.createdByName && tx.createdByName !== tx.updatedByName && (
-                       <span className="text-[10px] text-slate-400 opacity-60">Created by {tx.createdByName}</span>
+                       <span className="text-[10px] text-slate-400 opacity-60">{copy.createdBy} {tx.createdByName}</span>
                     )}
                   </div>
                 </div>
@@ -311,14 +318,14 @@ export default function TransactionPageClient({
               {/* Desktop Actions & Amount */}
               <div className="hidden sm:flex items-center gap-4 shrink-0">
                 <p className={`text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
-                  {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency)}
+                  {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency, userLocale)}
                 </p>
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                   {!isGoalTransaction(tx) && (
                     <button
                       onClick={() => handleEdit(tx)}
                       className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-indigo-500 dark:hover:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/10 transition-all"
-                      title="Edit Transaction"
+                      title={copy.editTitle}
                     >
                       <Edit2 className="h-4 w-4" />
                     </button>
@@ -326,7 +333,7 @@ export default function TransactionPageClient({
                   <button
                     onClick={() => handleDelete(tx.id)}
                     className="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10 transition-all"
-                    title="Delete Transaction"
+                    title={copy.deleteTitle}
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>
@@ -341,7 +348,7 @@ export default function TransactionPageClient({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
                   >
                     <Edit2 className="h-3.5 w-3.5" />
-                    Edit
+                    {common.edit}
                   </button>
                 )}
                 <button
@@ -349,7 +356,7 @@ export default function TransactionPageClient({
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-red-50 dark:hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
-                  Delete
+                  {common.delete}
                 </button>
               </div>
                 </div>
@@ -381,28 +388,28 @@ export default function TransactionPageClient({
       <Modal 
         isOpen={isModalOpen} 
         onClose={handleCloseModal} 
-        title={editingTransaction ? "Edit Transaction" : "Add Transaction"}
+        title={editingTransaction ? copy.editTransaction : copy.addTransaction}
       >
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="flex gap-2">
             <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'INCOME' ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400' : 'border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent'}`}>
               <input type="radio" value="INCOME" {...register('type')} className="hidden" />
-              <TrendingUp className="h-4 w-4" /> Income
+              <TrendingUp className="h-4 w-4" /> {getTransactionTypeLabel('INCOME', userLocale)}
             </label>
             <label className={`flex-1 flex items-center justify-center gap-2 p-3 rounded-xl border cursor-pointer transition-all ${selectedType === 'EXPENSE' ? 'border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-400' : 'border-slate-300 dark:border-slate-600/50 text-slate-500 dark:text-slate-400 bg-white dark:bg-transparent'}`}>
               <input type="radio" value="EXPENSE" {...register('type')} className="hidden" />
-              <TrendingDown className="h-4 w-4" /> Expense
+              <TrendingDown className="h-4 w-4" /> {getTransactionTypeLabel('EXPENSE', userLocale)}
             </label>
           </div>
-          <Input id="amount" label="Amount" type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
-          <Input id="description" label="Description" error={errors.description?.message} {...register('description')} />
-          <Select id="accountId" label="Account" options={accounts.map(a => ({ value: a.id, label: a.name }))} error={errors.accountId?.message} {...register('accountId')} />
-          <Select id="categoryId" label="Category" options={filteredCategories.map(c => ({ value: c.id, label: c.name }))} error={errors.categoryId?.message} {...register('categoryId')} />
-          <Input id="date" label="Date" type="date" error={errors.date?.message} {...register('date')} />
-          <Input id="tags" label="Tags (comma separated)" placeholder="food, groceries" {...register('tags')} />
-          <Input id="notes" label="Notes (optional)" {...register('notes')} />
+          <Input id="amount" label={common.amount} type="number" step="0.01" error={errors.amount?.message} {...register('amount')} />
+          <Input id="description" label={common.description} error={errors.description?.message} {...register('description')} />
+          <Select id="accountId" label={common.account} options={accounts.map(a => ({ value: a.id, label: a.name }))} error={errors.accountId?.message} {...register('accountId')} />
+          <Select id="categoryId" label={common.category} options={filteredCategories.map(c => ({ value: c.id, label: c.name }))} error={errors.categoryId?.message} {...register('categoryId')} />
+          <Input id="date" label={common.date} type="date" error={errors.date?.message} {...register('date')} />
+          <Input id="tags" label={copy.tags} placeholder={copy.tagsPlaceholder} {...register('tags')} />
+          <Input id="notes" label={copy.notes} {...register('notes')} />
           <Button type="submit" className="w-full" isLoading={isPending}>
-            {editingTransaction ? "Update Transaction" : "Create Transaction"}
+            {editingTransaction ? copy.updateTransaction : copy.createTransaction}
           </Button>
         </form>
       </Modal>

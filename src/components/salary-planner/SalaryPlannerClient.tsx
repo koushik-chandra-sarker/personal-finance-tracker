@@ -2,29 +2,28 @@
 
 import { useCallback, useState, useMemo, useTransition } from 'react';
 import { Calculator, DollarSign, TrendingUp, Minus, Plus, Trash2, PieChart, BarChart3, Info, ChevronDown, ChevronUp, Save, FolderOpen, AlertTriangle, ArrowLeftRight, FileText, Landmark, MapPin, ReceiptText, ShieldCheck } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
 import { calculateSalary, calculateTax, DEFAULT_STRUCTURE, DEFAULT_DEDUCTIONS, getSalaryValidationMessages, type SalaryStructure, type DeductionItem, type TaxSlab } from '@/lib/salary-calculator';
 import { deleteSalaryScenarioAction, saveSalaryScenarioAction } from '@/actions/salary-planner.actions';
 import type { SalaryBudgetCategory, SalaryBudgetRule, SalaryScenarioPayload, SalaryScenarioRow, SalaryTaxCategory } from '@/types/salary-planner';
 import SalaryCharts from './SalaryCharts';
 import SalaryBudgetPlanner, { DEFAULT_SALARY_BUDGET_CATEGORIES } from './SalaryBudgetPlanner';
+import { useI18n } from '@/i18n/client';
 
-function fmt(n: number, currency: string) {
-  const sym: Record<string, string> = { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹' };
-  const s = sym[currency] || currency + ' ';
-  return s + n.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function fmt(n: number, currency: string, locale = 'bn-BD') {
+  return formatCurrency(n, currency, locale);
 }
 
-function fmtSigned(n: number, currency: string) {
+function fmtSigned(n: number, currency: string, locale = 'bn-BD') {
   const prefix = n > 0 ? '+' : '';
-  return `${prefix}${fmt(n, currency)}`;
+  return `${prefix}${fmt(n, currency, locale)}`;
 }
 
 const MINIMUM_TAX_OPTIONS = [
-  { key: 'dhakaChittagong', label: 'Dhaka / Chittagong city corporation', amount: 5000 },
-  { key: 'otherCity', label: 'Other city corporation', amount: 4000 },
-  { key: 'otherArea', label: 'Other area', amount: 3000 },
-  { key: 'none', label: 'Do not apply minimum tax', amount: 0 },
+  { key: 'dhakaChittagong', amount: 5000 },
+  { key: 'otherCity', amount: 4000 },
+  { key: 'otherArea', amount: 3000 },
+  { key: 'none', amount: 0 },
 ] as const;
 
 type PayrollVariationRow = {
@@ -60,13 +59,15 @@ export default function SalaryPlannerClient({
   taxConfigsByYear: Record<string, { male: TaxSlab[]; female: TaxSlab[] }>;
   initialScenarios: SalaryScenarioRow[];
 }) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.salaryPlanner;
   const [grossMonthly, setGrossMonthly] = useState(50000);
   const [structure, setStructure] = useState<SalaryStructure>({ ...DEFAULT_STRUCTURE });
   const [deductions, setDeductions] = useState<DeductionItem[]>(DEFAULT_DEDUCTIONS.map(d => ({ ...d })));
   const [taxCategory, setTaxCategory] = useState<SalaryTaxCategory>('male');
   const [bonusMonths, setBonusMonths] = useState(2);
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(initialFiscalYear);
-  const [planName, setPlanName] = useState('Current Salary Plan');
+  const [planName, setPlanName] = useState<string>(copy.currentSalaryPlan);
   const [scenarios, setScenarios] = useState<SalaryScenarioRow[]>(initialScenarios);
   const [selectedScenarioId, setSelectedScenarioId] = useState(initialScenarios[0]?.id ?? '');
   const [editingScenarioId, setEditingScenarioId] = useState<string | undefined>();
@@ -82,8 +83,8 @@ export default function SalaryPlannerClient({
   const [additionalTaxPaid, setAdditionalTaxPaid] = useState(0);
   const [usePayrollVariations, setUsePayrollVariations] = useState(false);
   const [payrollRows, setPayrollRows] = useState<PayrollVariationRow[]>([
-    createPayrollRow('Before increment', 6, 50000),
-    createPayrollRow('After increment', 6, 50000),
+    createPayrollRow(copy.beforeIncrement, 6, 50000),
+    createPayrollRow(copy.afterIncrement, 6, 50000),
   ]);
   const [payrollRowsCustomized, setPayrollRowsCustomized] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
@@ -224,16 +225,16 @@ export default function SalaryPlannerClient({
     const messages = getSalaryValidationMessages(grossMonthly, structure, deductions, bonusMonths);
     const activeConfig = taxConfigsByYear[selectedFiscalYear];
     if (!activeConfig?.male?.length && !activeConfig?.female?.length) {
-      messages.push(`No active tax config was found for FY ${selectedFiscalYear}. Default Bangladesh slabs are being used.`);
+      messages.push(`${copy.noTaxConfig} ${copy.fiscalYearShort} ${selectedFiscalYear}`);
     }
     if (budgetTotal !== 100) {
-      messages.push(`Budget allocation is ${budgetTotal}%. Keep it at 100% before using this as a monthly plan.`);
+      messages.push(`${copy.budgetAllocationWarning} ${budgetTotal}%. ${copy.budgetAllocationHelp}`);
     }
     return messages;
-  }, [grossMonthly, structure, deductions, bonusMonths, selectedFiscalYear, taxConfigsByYear, budgetTotal]);
+  }, [grossMonthly, structure, deductions, bonusMonths, selectedFiscalYear, taxConfigsByYear, budgetTotal, copy]);
 
   const buildPayload = (name = planName): SalaryScenarioPayload => ({
-    name: name.trim() || 'Salary Plan',
+    name: name.trim() || copy.salaryPlan,
     fiscalYear: selectedFiscalYear,
     currency,
     taxCategory,
@@ -259,7 +260,7 @@ export default function SalaryPlannerClient({
   const handleSave = (mode: 'update' | 'new') => {
     setMessage(null);
     const id = mode === 'update' ? editingScenarioId : undefined;
-    const payload = buildPayload(mode === 'new' && editingScenarioId ? `${planName} Copy` : planName);
+    const payload = buildPayload(mode === 'new' && editingScenarioId ? `${planName} ${copy.copySuffix}` : planName);
     startTransition(async () => {
       const res = await saveSalaryScenarioAction(payload, id);
       if (res.success && res.data) {
@@ -284,7 +285,7 @@ export default function SalaryPlannerClient({
     setBudgetCategories(scenario.budgetCategories.map(category => ({ ...category })));
     setSelectedScenarioId(scenario.id);
     setEditingScenarioId(scenario.id);
-    setMessage({ type: 'success', text: `${scenario.name} loaded.` });
+    setMessage({ type: 'success', text: `${scenario.name} ${copy.loaded}` });
   };
 
   const handleLoadSelected = () => {
@@ -294,7 +295,7 @@ export default function SalaryPlannerClient({
 
   const handleDeleteSelected = () => {
     const scenario = scenarios.find(item => item.id === selectedScenarioId);
-    if (!scenario || !confirm(`Delete salary plan "${scenario.name}"?`)) return;
+    if (!scenario || !confirm(`${copy.deleteConfirm} "${scenario.name}"?`)) return;
     setMessage(null);
     startTransition(async () => {
       const res = await deleteSalaryScenarioAction(scenario.id);
@@ -324,7 +325,7 @@ export default function SalaryPlannerClient({
     : null;
 
   const addDeduction = () => {
-    setDeductions(prev => [...prev, { id: `custom-${Date.now()}`, label: 'New Deduction', amount: 0, isPercentage: false }]);
+    setDeductions(prev => [...prev, { id: `custom-${Date.now()}`, label: copy.addDeduction, amount: 0, isPercentage: false }]);
   };
 
   const updateDeduction = (index: number, field: keyof DeductionItem, value: string | number | boolean) => {
@@ -358,14 +359,14 @@ export default function SalaryPlannerClient({
 
   const addPayrollRow = () => {
     setPayrollRowsCustomized(true);
-    setPayrollRows(prev => [...prev, createPayrollRow(`Period ${prev.length + 1}`, 1, grossMonthly, currentPfMonthly, monthlyTaxDeducted)]);
+    setPayrollRows(prev => [...prev, createPayrollRow(`${copy.period} ${prev.length + 1}`, 1, grossMonthly, currentPfMonthly, monthlyTaxDeducted)]);
   };
 
   const resetPayrollRowsFromCurrent = () => {
     setPayrollRowsCustomized(false);
     setPayrollRows([
-      createPayrollRow('Before increment', 6, grossMonthly, currentPfMonthly, monthlyTaxDeducted),
-      createPayrollRow('After increment', 6, grossMonthly, currentPfMonthly, monthlyTaxDeducted),
+      createPayrollRow(copy.beforeIncrement, 6, grossMonthly, currentPfMonthly, monthlyTaxDeducted),
+      createPayrollRow(copy.afterIncrement, 6, grossMonthly, currentPfMonthly, monthlyTaxDeducted),
     ]);
   };
 
@@ -378,15 +379,15 @@ export default function SalaryPlannerClient({
             <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/25">
               <Calculator className="h-6 w-6" />
             </div>
-            Salary Planner
+            {copy.title}
           </h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Bangladesh Fiscal Year {selectedFiscalYear} &middot; Tax Calculation &amp; Saved Scenarios
+            {copy.subtitle} {selectedFiscalYear} &middot; {copy.taxCalculation}
           </p>
         </div>
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <label className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-            FY
+            {copy.fiscalYearShort}
             <select
               value={selectedFiscalYear}
               onChange={(event) => setSelectedFiscalYear(event.target.value)}
@@ -399,7 +400,7 @@ export default function SalaryPlannerClient({
             {(['male', 'female'] as const).map(cat => (
               <button key={cat} onClick={() => setTaxCategory(cat)}
                 className={cn('px-4 py-2 text-xs font-semibold capitalize transition-all', taxCategory === cat ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700')}>
-                {cat}
+                {cat === 'female' ? copy.female : copy.male}
               </button>
             ))}
           </div>
@@ -409,7 +410,7 @@ export default function SalaryPlannerClient({
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)_auto] lg:items-end">
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Plan Name</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{copy.planName}</label>
             <input
               type="text"
               value={planName}
@@ -418,13 +419,13 @@ export default function SalaryPlannerClient({
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Saved Plans</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{copy.savedPlans}</label>
             <select
               value={selectedScenarioId}
               onChange={(event) => setSelectedScenarioId(event.target.value)}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
             >
-              <option value="">No saved plan selected</option>
+              <option value="">{copy.noSavedPlan}</option>
               {scenarios.map(scenario => (
                 <option key={scenario.id} value={scenario.id}>{scenario.name}</option>
               ))}
@@ -436,28 +437,28 @@ export default function SalaryPlannerClient({
               disabled={!selectedScenarioId || isPending}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-300 dark:border-slate-600 px-3 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700 disabled:opacity-50"
             >
-              <FolderOpen className="h-3.5 w-3.5" /> Load
+              <FolderOpen className="h-3.5 w-3.5" /> {copy.load}
             </button>
             <button
               onClick={() => handleSave('update')}
               disabled={!editingScenarioId || isPending}
               className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700 disabled:opacity-50"
             >
-              <Save className="h-3.5 w-3.5" /> Update
+              <Save className="h-3.5 w-3.5" /> {copy.update}
             </button>
             <button
               onClick={() => handleSave('new')}
               disabled={isPending}
               className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
-              <Plus className="h-3.5 w-3.5" /> Save New
+              <Plus className="h-3.5 w-3.5" /> {copy.saveNew}
             </button>
             <button
               onClick={handleDeleteSelected}
               disabled={!selectedScenarioId || isPending}
               className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:border-rose-500/30 dark:hover:bg-rose-500/10 disabled:opacity-50"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <Trash2 className="h-3.5 w-3.5" /> {copy.delete}
             </button>
           </div>
         </div>
@@ -481,10 +482,10 @@ export default function SalaryPlannerClient({
       {/* Summary Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { label: 'Gross Monthly', value: result.grossMonthly, icon: DollarSign, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
-          { label: 'Net Monthly', value: result.netMonthly, icon: TrendingUp, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20' },
-          { label: 'Annual Tax', value: result.totalTax, icon: Minus, gradient: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' },
-          { label: 'Effective Tax Rate', value: null, icon: PieChart, gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/20', display: `${result.effectiveTaxRate.toFixed(1)}%` },
+          { label: copy.grossMonthly, value: result.grossMonthly, icon: DollarSign, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
+          { label: copy.netMonthly, value: result.netMonthly, icon: TrendingUp, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20' },
+          { label: copy.annualTax, value: result.totalTax, icon: Minus, gradient: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' },
+          { label: copy.effectiveTaxRate, value: null, icon: PieChart, gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/20', display: `${result.effectiveTaxRate.toFixed(1)}%` },
         ].map((card, i) => (
           <div key={i} className={cn('rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4 sm:p-5 animate-slide-up', `stagger-${i + 1}`)}>
             <div className="flex items-center gap-2 mb-3">
@@ -494,7 +495,7 @@ export default function SalaryPlannerClient({
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{card.label}</span>
             </div>
             <p className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white">
-              {card.display ?? fmt(card.value!, currency)}
+              {card.display ?? fmt(card.value!, currency, locale)}
             </p>
           </div>
         ))}
@@ -507,13 +508,13 @@ export default function SalaryPlannerClient({
           {/* Gross Salary */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-indigo-500" /> Gross Salary
+              <DollarSign className="h-4 w-4 text-indigo-500" /> {copy.grossSalary}
             </h2>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">Monthly Gross ({currency})</label>
+            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{copy.monthlyGross} ({currency})</label>
             <input type="number" value={grossMonthly} onChange={e => updateGrossMonthly(Math.max(0, Number(e.target.value)))}
               className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
             <div className="mt-3 flex items-center gap-2">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Festival Bonus (months):</label>
+              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.festivalBonus}:</label>
               <input type="number" min={0} max={6} value={bonusMonths} onChange={e => setBonusMonths(Math.max(0, Math.min(6, Number(e.target.value))))}
                 className="w-16 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1.5 text-sm text-center text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
             </div>
@@ -523,15 +524,15 @@ export default function SalaryPlannerClient({
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
             <button onClick={() => setShowAdvanced(!showAdvanced)}
               className="w-full flex items-center justify-between text-sm font-semibold text-slate-900 dark:text-white">
-              <span className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-purple-500" /> Salary Structure</span>
+              <span className="flex items-center gap-2"><BarChart3 className="h-4 w-4 text-purple-500" /> {copy.salaryStructure}</span>
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </button>
             {showAdvanced && (
               <div className="mt-4 space-y-3">
                 {[
-                  { label: 'Basic (% of Gross)', key: 'basicPercent' as const, min: 30, max: 100 },
-                  { label: 'House Rent (% of Basic)', key: 'houseRentPercent' as const, min: 0, max: 100 },
-                  { label: 'Medical (% of Basic)', key: 'medicalPercent' as const, min: 0, max: 100 },
+                  { label: copy.basicPercent, key: 'basicPercent' as const, min: 30, max: 100 },
+                  { label: copy.houseRentPercent, key: 'houseRentPercent' as const, min: 0, max: 100 },
+                  { label: copy.medicalPercent, key: 'medicalPercent' as const, min: 0, max: 100 },
                 ].map(f => (
                   <div key={f.key}>
                     <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{f.label}</label>
@@ -541,7 +542,7 @@ export default function SalaryPlannerClient({
                   </div>
                 ))}
                 <div>
-                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Conveyance (flat {currency})</label>
+                  <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.conveyanceFlat} ({currency})</label>
                   <input type="number" min={0} value={structure.conveyanceFlat}
                     onChange={e => setStructure(prev => ({ ...prev, conveyanceFlat: Math.max(0, Number(e.target.value)) }))}
                     className="w-full mt-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
@@ -553,7 +554,7 @@ export default function SalaryPlannerClient({
           {/* Deductions */}
           <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
             <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
-              <Minus className="h-4 w-4 text-rose-500" /> Monthly Deductions
+              <Minus className="h-4 w-4 text-rose-500" /> {copy.monthlyDeductions}
             </h2>
             <div className="space-y-3">
               {deductions.map((d, i) => (
@@ -575,7 +576,7 @@ export default function SalaryPlannerClient({
             </div>
             <button onClick={addDeduction}
               className="mt-3 flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
-              <Plus className="h-3.5 w-3.5" /> Add Deduction
+              <Plus className="h-3.5 w-3.5" /> {copy.addDeduction}
             </button>
           </div>
         </div>
@@ -584,7 +585,7 @@ export default function SalaryPlannerClient({
         <div className="lg:col-span-3 space-y-4">
           {/* Tab Navigation */}
           <div className="flex rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            {([['overview', 'Overview'], ['tax', 'Tax Breakdown'], ['compare', 'Compare'], ['charts', 'Charts'], ['planner', 'Budget Planner']] as const).map(([key, label]) => (
+            {([['overview', copy.overview], ['tax', copy.taxBreakdown], ['compare', copy.compare], ['charts', copy.charts], ['planner', copy.budgetPlanner]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setActiveTab(key)}
                 className={cn('flex-1 px-4 py-2.5 text-xs font-semibold transition-all', activeTab === key ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700')}>
                 {label}
@@ -595,56 +596,56 @@ export default function SalaryPlannerClient({
           {activeTab === 'overview' && (
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
               <div className="p-5 border-b border-slate-100 dark:border-slate-700/50">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Salary Breakdown</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.salaryBreakdown}</h3>
               </div>
               <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                 {[
-                  { label: 'Basic Salary', monthly: result.basicMonthly, annual: result.basicAnnual, color: 'text-blue-600 dark:text-blue-400' },
-                  { label: 'House Rent', monthly: result.houseRentMonthly, annual: result.houseRentAnnual, color: 'text-purple-600 dark:text-purple-400' },
-                  { label: 'Medical', monthly: result.medicalMonthly, annual: result.medicalAnnual, color: 'text-teal-600 dark:text-teal-400' },
-                  { label: 'Conveyance', monthly: result.conveyanceMonthly, annual: result.conveyanceAnnual, color: 'text-amber-600 dark:text-amber-400' },
-                  { label: 'Other Allowance', monthly: result.otherAllowanceMonthly, annual: result.otherAllowanceAnnual, color: 'text-slate-600 dark:text-slate-400' },
+                  { label: copy.basicSalary, monthly: result.basicMonthly, annual: result.basicAnnual, color: 'text-blue-600 dark:text-blue-400' },
+                  { label: copy.houseRent, monthly: result.houseRentMonthly, annual: result.houseRentAnnual, color: 'text-purple-600 dark:text-purple-400' },
+                  { label: copy.medical, monthly: result.medicalMonthly, annual: result.medicalAnnual, color: 'text-teal-600 dark:text-teal-400' },
+                  { label: copy.conveyance, monthly: result.conveyanceMonthly, annual: result.conveyanceAnnual, color: 'text-amber-600 dark:text-amber-400' },
+                  { label: copy.otherAllowance, monthly: result.otherAllowanceMonthly, annual: result.otherAllowanceAnnual, color: 'text-slate-600 dark:text-slate-400' },
                 ].map(row => (
                   <div key={row.label} className="flex items-center justify-between px-5 py-3">
                     <span className={cn('text-sm font-medium', row.color)}>{row.label}</span>
                     <div className="text-right">
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{fmt(row.monthly, currency)}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{fmt(row.monthly, currency, locale)}</span>
                       <span className="text-xs text-slate-400 dark:text-slate-500 ml-2">/ mo</span>
                     </div>
                   </div>
                 ))}
                 <div className="flex items-center justify-between px-5 py-3 bg-slate-50 dark:bg-slate-700/30">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">Gross Monthly</span>
-                  <span className="text-sm font-bold text-slate-900 dark:text-white">{fmt(result.grossMonthly, currency)}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{copy.grossMonthly}</span>
+                  <span className="text-sm font-bold text-slate-900 dark:text-white">{fmt(result.grossMonthly, currency, locale)}</span>
                 </div>
                 {result.deductionDetails.filter(d => d.monthly > 0).map(d => (
                   <div key={d.label} className="flex items-center justify-between px-5 py-3">
                     <span className="text-sm font-medium text-rose-600 dark:text-rose-400">(-) {d.label}</span>
-                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">{fmt(d.monthly, currency)}</span>
+                    <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">{fmt(d.monthly, currency, locale)}</span>
                   </div>
                 ))}
                 <div className="flex items-center justify-between px-5 py-3">
-                  <span className="text-sm font-medium text-rose-600 dark:text-rose-400">(-) Monthly Tax</span>
-                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">{fmt(result.monthlyTax, currency)}</span>
+                  <span className="text-sm font-medium text-rose-600 dark:text-rose-400">(-) {copy.monthlyTax}</span>
+                  <span className="text-sm font-semibold text-rose-600 dark:text-rose-400">{fmt(result.monthlyTax, currency, locale)}</span>
                 </div>
                 <div className="flex items-center justify-between px-5 py-4 bg-gradient-to-r from-emerald-50 to-green-50 dark:from-emerald-500/10 dark:to-green-500/10">
-                  <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">Net Take-Home (Monthly)</span>
-                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{fmt(result.netMonthly, currency)}</span>
+                  <span className="text-sm font-bold text-emerald-700 dark:text-emerald-400">{copy.netTakeHomeMonthly}</span>
+                  <span className="text-lg font-bold text-emerald-700 dark:text-emerald-400">{fmt(result.netMonthly, currency, locale)}</span>
                 </div>
               </div>
               {/* Annual summary */}
               <div className="p-5 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700/50">
-                <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">Annual Summary</h4>
+                <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">{copy.annualSummary}</h4>
                 <div className="grid grid-cols-2 gap-3">
                   {[
-                    { label: 'Gross Annual', value: result.grossAnnual, color: 'text-blue-600 dark:text-blue-400' },
-                    { label: 'Total Deductions', value: result.totalDeductionsAnnual, color: 'text-orange-600 dark:text-orange-400' },
-                    { label: 'Total Tax', value: result.totalTax, color: 'text-rose-600 dark:text-rose-400' },
-                    { label: 'Net Annual', value: result.netAnnual, color: 'text-emerald-600 dark:text-emerald-400' },
+                    { label: copy.grossAnnual, value: result.grossAnnual, color: 'text-blue-600 dark:text-blue-400' },
+                    { label: copy.totalDeductions, value: result.totalDeductionsAnnual, color: 'text-orange-600 dark:text-orange-400' },
+                    { label: copy.totalTax, value: result.totalTax, color: 'text-rose-600 dark:text-rose-400' },
+                    { label: copy.netAnnual, value: result.netAnnual, color: 'text-emerald-600 dark:text-emerald-400' },
                   ].map(item => (
                     <div key={item.label} className="bg-white dark:bg-slate-700/40 rounded-xl p-3 border border-slate-200 dark:border-slate-600/50">
                       <p className="text-xs text-slate-500 dark:text-slate-400">{item.label}</p>
-                      <p className={cn('text-sm font-bold mt-1', item.color)}>{fmt(item.value, currency)}</p>
+                      <p className={cn('text-sm font-bold mt-1', item.color)}>{fmt(item.value, currency, locale)}</p>
                     </div>
                   ))}
                 </div>
@@ -656,60 +657,60 @@ export default function SalaryPlannerClient({
             <div className="space-y-4">
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700/50">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Employee Tax Worksheet — FY {selectedFiscalYear}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.employeeTaxWorksheet} — {copy.fiscalYearShort} {selectedFiscalYear}</h3>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <Info className="h-3 w-3" /> {taxCategory === 'female' ? 'Female/Senior/Disabled' : 'Male (General)'} slabs from admin tax configuration. {usePayrollVariations ? 'Using payroll variation rows.' : 'Using current gross salary.'}
+                    <Info className="h-3 w-3" /> {taxCategory === 'female' ? copy.femaleSlabs : copy.maleSlabs} {copy.slabsFromAdmin} {usePayrollVariations ? copy.usingPayrollRows : copy.usingCurrentGross}
                   </p>
                 </div>
 
                 <div className="grid gap-3 p-5 md:grid-cols-2 xl:grid-cols-4">
                   <label className="space-y-1.5">
-                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400"><MapPin className="h-3.5 w-3.5" /> Minimum Tax Area</span>
+                    <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400"><MapPin className="h-3.5 w-3.5" /> {copy.minimumTaxArea}</span>
                     <select
                       value={minimumTaxArea}
                       onChange={(event) => setMinimumTaxArea(event.target.value as typeof minimumTaxArea)}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
                     >
-                      {MINIMUM_TAX_OPTIONS.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}
+                      {MINIMUM_TAX_OPTIONS.map(option => <option key={option.key} value={option.key}>{copy.minimumTaxOptions[option.key]}</option>)}
                     </select>
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Manual Rebate / Credit</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.manualRebate}</span>
                     <input type="number" min={0} value={investmentRebate} onChange={event => setInvestmentRebate(Math.max(0, Number(event.target.value)))}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                   </label>
                   <div className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">PF Rebate</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.pfRebate}</span>
                     <label className="flex h-[42px] items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm dark:border-slate-700/50 dark:bg-slate-900/30">
-                      <span className="font-medium text-slate-700 dark:text-slate-200">Calculate on PF</span>
+                      <span className="font-medium text-slate-700 dark:text-slate-200">{copy.calculateOnPf}</span>
                       <input type="checkbox" checked={includePfInRebate} onChange={event => setIncludePfInRebate(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
                     </label>
                   </div>
                   <label className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">PF Rebate Rate (%)</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.pfRebateRate}</span>
                     <input type="number" min={0} max={100} value={pfRebateRate} disabled={!includePfInRebate} onChange={event => setPfRebateRate(Math.min(100, Math.max(0, Number(event.target.value))))}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Monthly Tax Deducted</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.monthlyTaxDeducted}</span>
                     <input type="number" min={0} value={monthlyTaxDeducted} disabled={usePayrollVariations} onChange={event => setMonthlyTaxDeducted(Math.max(0, Number(event.target.value)))}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Other Tax Adjustment</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.otherTaxAdjustment}</span>
                     <input type="number" value={otherTaxAdjustment} onChange={event => setOtherTaxAdjustment(Number(event.target.value))}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                   </label>
                   <label className="space-y-1.5">
-                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Additional Tax Already Paid</span>
+                    <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.additionalTaxPaid}</span>
                     <input type="number" min={0} value={additionalTaxPaid} onChange={event => setAdditionalTaxPaid(Math.max(0, Number(event.target.value)))}
                       className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
                   </label>
                   <div className="flex items-end md:col-span-2">
                     <label className="flex w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 dark:border-slate-700/50 dark:bg-slate-900/30">
                       <span>
-                        <span className="block text-xs font-semibold text-slate-700 dark:text-slate-200">Use month-wise payroll variations</span>
-                        <span className="block text-[11px] text-slate-500 dark:text-slate-400">Use this when increment, PF, or monthly tax deduction changed during the year.</span>
+                        <span className="block text-xs font-semibold text-slate-700 dark:text-slate-200">{copy.usePayrollVariations}</span>
+                        <span className="block text-[11px] text-slate-500 dark:text-slate-400">{copy.usePayrollVariationsHelp}</span>
                       </span>
                       <input type="checkbox" checked={usePayrollVariations} onChange={event => setUsePayrollVariations(event.target.checked)} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
                     </label>
@@ -721,24 +722,24 @@ export default function SalaryPlannerClient({
                 <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50 overflow-hidden">
                   <div className="flex flex-col gap-3 border-b border-slate-100 p-5 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Increment / Payroll Variation</h3>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Split the fiscal year into periods. PF/deductions and tax deducted can differ for each period.</p>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.payrollVariation}</h3>
+                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.payrollVariationHelp}</p>
                     </div>
                     <div className="flex gap-2">
-                      <button onClick={resetPayrollRowsFromCurrent} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">Reset</button>
-                      <button onClick={addPayrollRow} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"><Plus className="h-3.5 w-3.5" /> Period</button>
+                      <button onClick={resetPayrollRowsFromCurrent} className="rounded-xl border border-slate-300 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:hover:bg-slate-700">{copy.reset}</button>
+                      <button onClick={addPayrollRow} className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white hover:bg-indigo-700"><Plus className="h-3.5 w-3.5" /> {copy.period}</button>
                     </div>
                   </div>
                   <div className="overflow-x-auto">
                     <table className="w-full min-w-[760px] text-sm">
                       <thead>
                         <tr className="bg-slate-50 dark:bg-slate-700/30">
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Period</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Months</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Gross / Month</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">PF / Deduction</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Tax Deducted</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Annual Gross</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.period}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.months}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.grossPerMonth}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.pfDeduction}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.taxDeducted}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.annualGross}</th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400"></th>
                         </tr>
                       </thead>
@@ -777,7 +778,7 @@ export default function SalaryPlannerClient({
                     </table>
                   </div>
                   <div className={cn('border-t px-5 py-3 text-xs font-medium', payrollTaxBase.months === 12 ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300')}>
-                    Total months: {payrollTaxBase.months}. {payrollTaxBase.months === 12 ? 'Full fiscal year covered.' : 'Adjust periods so the total is 12 months for a full-year estimate.'}
+                    {copy.totalMonths}: {payrollTaxBase.months}. {payrollTaxBase.months === 12 ? copy.fullFiscalYearCovered : copy.adjustPeriods}
                     {payrollRowsCustomized ? ' Main gross salary changes will not overwrite customized periods. Use Reset to sync periods from the current gross salary.' : ' Period gross values are synced from the main gross salary until you edit the period table.'}
                   </div>
                 </div>
@@ -785,17 +786,17 @@ export default function SalaryPlannerClient({
 
               <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 {[
-                  { label: 'Estimated Annual Tax', value: employeeTaxWorksheet.estimatedAnnualTax, icon: Landmark, color: 'text-rose-600 dark:text-rose-400' },
-                  { label: 'Monthly Payroll Target', value: employeeTaxWorksheet.monthlyWithholdingTarget, icon: ReceiptText, color: 'text-indigo-600 dark:text-indigo-400' },
-                  { label: 'Already Paid / Deducted', value: employeeTaxWorksheet.alreadyPaid, icon: ShieldCheck, color: 'text-emerald-600 dark:text-emerald-400' },
-                  { label: employeeTaxWorksheet.balance >= 0 ? 'Balance Due' : 'Possible Refund', value: Math.abs(employeeTaxWorksheet.balance), icon: FileText, color: employeeTaxWorksheet.balance >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
+                  { label: copy.estimatedAnnualTax, value: employeeTaxWorksheet.estimatedAnnualTax, icon: Landmark, color: 'text-rose-600 dark:text-rose-400' },
+                  { label: copy.monthlyPayrollTarget, value: employeeTaxWorksheet.monthlyWithholdingTarget, icon: ReceiptText, color: 'text-indigo-600 dark:text-indigo-400' },
+                  { label: copy.alreadyPaidDeducted, value: employeeTaxWorksheet.alreadyPaid, icon: ShieldCheck, color: 'text-emerald-600 dark:text-emerald-400' },
+                  { label: employeeTaxWorksheet.balance >= 0 ? copy.balanceDue : copy.possibleRefund, value: Math.abs(employeeTaxWorksheet.balance), icon: FileText, color: employeeTaxWorksheet.balance >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400' },
                 ].map(item => (
                   <div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
                     <div className="mb-2 flex items-center gap-2">
                       <item.icon className={cn('h-4 w-4', item.color)} />
                       <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{item.label}</p>
                     </div>
-                    <p className={cn('text-lg font-bold', item.color)}>{fmt(item.value, currency)}</p>
+                    <p className={cn('text-lg font-bold', item.color)}>{fmt(item.value, currency, locale)}</p>
                   </div>
                 ))}
               </div>
@@ -803,65 +804,65 @@ export default function SalaryPlannerClient({
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50 overflow-hidden">
                   <div className="border-b border-slate-100 p-5 dark:border-slate-700/50">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Annual Income To Taxable Income</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.annualIncomeToTaxable}</h3>
                   </div>
                   <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {[
-                      ['Basic salary', taxBase.basicAnnual],
-                      ['House rent allowance', taxBase.houseRentAnnual],
-                      ['Medical allowance', taxBase.medicalAnnual],
-                      ['Conveyance allowance', taxBase.conveyanceAnnual],
-                      ['Other allowance', taxBase.otherAllowanceAnnual],
-                      [`Festival bonus (${bonusMonths} month${bonusMonths === 1 ? '' : 's'} of current basic)`, taxBase.bonusAnnual],
+                      [copy.basicSalary, taxBase.basicAnnual],
+                      [copy.houseRent, taxBase.houseRentAnnual],
+                      [copy.medical, taxBase.medicalAnnual],
+                      [copy.conveyance, taxBase.conveyanceAnnual],
+                      [copy.otherAllowance, taxBase.otherAllowanceAnnual],
+                      [copy.festivalBonus, taxBase.bonusAnnual],
                     ].map(([label, value]) => (
                       <div key={String(label)} className="flex items-center justify-between px-5 py-3">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
-                        <span className="text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(value), currency)}</span>
+                        <span className="text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(value), currency, locale)}</span>
                       </div>
                     ))}
                     <div className="flex items-center justify-between bg-slate-50 px-5 py-3 dark:bg-slate-700/30">
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">Gross annual income</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">{fmt(taxBase.grossAnnual, currency)}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{copy.grossAnnualIncome}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-white">{fmt(taxBase.grossAnnual, currency, locale)}</span>
                     </div>
                     <div className="flex items-center justify-between px-5 py-3">
-                      <span className="text-xs font-medium text-rose-600 dark:text-rose-400">Less: annual deductions</span>
-                      <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">{fmt(taxBase.totalDeductionsAnnual, currency)}</span>
+                      <span className="text-xs font-medium text-rose-600 dark:text-rose-400">{copy.lessAnnualDeductions}</span>
+                      <span className="text-xs font-semibold text-rose-600 dark:text-rose-400">{fmt(taxBase.totalDeductionsAnnual, currency, locale)}</span>
                     </div>
                     <div className="flex items-center justify-between bg-emerald-50 px-5 py-3 dark:bg-emerald-500/10">
-                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">Taxable income</span>
-                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{fmt(taxBase.taxableIncome, currency)}</span>
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{copy.taxableIncome}</span>
+                      <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{fmt(taxBase.taxableIncome, currency, locale)}</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50 overflow-hidden">
                   <div className="border-b border-slate-100 p-5 dark:border-slate-700/50">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Employee Filing Summary</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.filingSummary}</h3>
                   </div>
                   <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {[
-                      ['Tax-free band', employeeTaxWorksheet.taxFreeBand],
-                      ['Slab-based annual tax', taxBase.slabTax],
-                      ['Less: manual rebate / credit', -investmentRebate],
-                      [`Less: PF rebate${includePfInRebate ? ` (${pfRebateRate}%)` : ''}`, -pfRebate],
-                      ['Minimum tax applied', employeeTaxWorksheet.minimumTax],
-                      ['Other adjustment', otherTaxAdjustment],
-                      ['Estimated annual tax', employeeTaxWorksheet.estimatedAnnualTax],
-                      ['Already paid / withheld', -employeeTaxWorksheet.alreadyPaid],
+                      [copy.taxFreeBand, employeeTaxWorksheet.taxFreeBand],
+                      [copy.slabBasedAnnualTax, taxBase.slabTax],
+                      [copy.manualRebate, -investmentRebate],
+                      [`${copy.pfRebate}${includePfInRebate ? ` (${pfRebateRate}%)` : ''}`, -pfRebate],
+                      [copy.minimumTaxApplied, employeeTaxWorksheet.minimumTax],
+                      [copy.otherAdjustment, otherTaxAdjustment],
+                      [copy.estimatedAnnualTax, employeeTaxWorksheet.estimatedAnnualTax],
+                      [copy.alreadyPaidWithheld, -employeeTaxWorksheet.alreadyPaid],
                     ].map(([label, value]) => (
                       <div key={String(label)} className="flex items-center justify-between px-5 py-3">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-300">{label}</span>
                         <span className={cn('text-xs font-semibold', Number(value) < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white')}>
-                          {Number(value) < 0 ? fmtSigned(Number(value), currency) : fmt(Number(value), currency)}
+                          {Number(value) < 0 ? fmtSigned(Number(value), currency, locale) : fmt(Number(value), currency, locale)}
                         </span>
                       </div>
                     ))}
                     <div className={cn('flex items-center justify-between px-5 py-3', employeeTaxWorksheet.balance >= 0 ? 'bg-amber-50 dark:bg-amber-500/10' : 'bg-emerald-50 dark:bg-emerald-500/10')}>
                       <span className={cn('text-xs font-bold', employeeTaxWorksheet.balance >= 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300')}>
-                        {employeeTaxWorksheet.balance >= 0 ? 'Estimated balance due' : 'Estimated overpaid/refund'}
+                        {employeeTaxWorksheet.balance >= 0 ? copy.estimatedBalanceDue : copy.estimatedOverpaidRefund}
                       </span>
                       <span className={cn('text-xs font-bold', employeeTaxWorksheet.balance >= 0 ? 'text-amber-700 dark:text-amber-300' : 'text-emerald-700 dark:text-emerald-300')}>
-                        {fmt(Math.abs(employeeTaxWorksheet.balance), currency)}
+                        {fmt(Math.abs(employeeTaxWorksheet.balance), currency, locale)}
                       </span>
                     </div>
                   </div>
@@ -870,16 +871,16 @@ export default function SalaryPlannerClient({
 
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
                 <div className="p-5 border-b border-slate-100 dark:border-slate-700/50">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Slab Calculation</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.slabCalculation}</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-700/30">
-                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Slab</th>
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Rate</th>
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Taxable In Slab</th>
-                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">Tax</th>
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.slab}</th>
+                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.rate}</th>
+                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.taxableInSlab}</th>
+                        <th className="text-right px-5 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.tax}</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
@@ -887,8 +888,8 @@ export default function SalaryPlannerClient({
                         <tr key={`${row.slab.label}-${i}`} className={cn(row.taxableAmount > 0 ? '' : 'opacity-40')}>
                           <td className="px-5 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">{row.slab.label}</td>
                           <td className="px-5 py-3 text-xs text-right font-semibold text-slate-900 dark:text-white">{row.slab.rate}%</td>
-                          <td className="px-5 py-3 text-xs text-right text-slate-600 dark:text-slate-400">{fmt(row.taxableAmount, currency)}</td>
-                          <td className="px-5 py-3 text-xs text-right font-semibold text-rose-600 dark:text-rose-400">{fmt(row.tax, currency)}</td>
+                          <td className="px-5 py-3 text-xs text-right text-slate-600 dark:text-slate-400">{fmt(row.taxableAmount, currency, locale)}</td>
+                          <td className="px-5 py-3 text-xs text-right font-semibold text-rose-600 dark:text-rose-400">{fmt(row.tax, currency, locale)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -897,15 +898,15 @@ export default function SalaryPlannerClient({
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-700/50 dark:bg-slate-800/50">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Employee Tax Documents</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.employeeTaxDocuments}</h3>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
-                    'TIN / e-return account information',
-                    'Salary certificate from employer',
-                    'Monthly tax deduction or TDS certificate',
-                    'Investment and PF rebate documents or contribution proof',
-                    'Bank, mobile banking, or challan payment proof',
-                    'Previous return acknowledgement if available',
+                    locale === 'bn-BD' ? 'TIN / ই-রিটার্ন অ্যাকাউন্ট তথ্য' : 'TIN / e-return account information',
+                    locale === 'bn-BD' ? 'নিয়োগকর্তার বেতন সার্টিফিকেট' : 'Salary certificate from employer',
+                    locale === 'bn-BD' ? 'মাসিক কর কর্তন বা TDS সার্টিফিকেট' : 'Monthly tax deduction or TDS certificate',
+                    locale === 'bn-BD' ? 'বিনিয়োগ ও PF রিবেট ডকুমেন্ট বা কন্ট্রিবিউশন প্রমাণ' : 'Investment and PF rebate documents or contribution proof',
+                    locale === 'bn-BD' ? 'ব্যাংক, মোবাইল ব্যাংকিং বা চালান পেমেন্ট প্রমাণ' : 'Bank, mobile banking, or challan payment proof',
+                    locale === 'bn-BD' ? 'থাকলে আগের রিটার্ন অ্যাকনলেজমেন্ট' : 'Previous return acknowledgement if available',
                   ].map(item => (
                     <div key={item} className="flex items-center gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 dark:border-slate-700/50 dark:bg-slate-900/30 dark:text-slate-300">
                       <ShieldCheck className="h-4 w-4 text-emerald-500" />
@@ -914,7 +915,7 @@ export default function SalaryPlannerClient({
                   ))}
                 </div>
                 <p className="mt-4 text-xs text-slate-500 dark:text-slate-400">
-                  This is an employee planning estimate based on configured slabs and your inputs. Final filing may need employer certificates, rebates, surcharge, and NBR return rules.
+                  {copy.taxDisclaimer}
                 </p>
               </div>
             </div>
@@ -925,16 +926,16 @@ export default function SalaryPlannerClient({
               <div className="flex flex-col gap-3 p-5 border-b border-slate-100 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
-                    <ArrowLeftRight className="h-4 w-4 text-indigo-500" /> Compare With Saved Plan
+                    <ArrowLeftRight className="h-4 w-4 text-indigo-500" /> {copy.compareWithSavedPlan}
                   </h3>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Current inputs are compared against one saved salary scenario.</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.compareHelp}</p>
                 </div>
                 <select
                   value={compareScenarioId}
                   onChange={(event) => setCompareScenarioId(event.target.value)}
                   className="rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
                 >
-                  <option value="">Choose saved plan</option>
+                  <option value="">{copy.chooseSavedPlan}</option>
                   {scenarios.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}
                 </select>
               </div>
@@ -942,8 +943,8 @@ export default function SalaryPlannerClient({
                 <div className="p-5 space-y-4">
                   <div className="grid sm:grid-cols-2 gap-3">
                     {[
-                      { label: 'Current Plan', name: planName, fiscalYear: selectedFiscalYear, net: result.netMonthly, tax: result.totalTax },
-                      { label: 'Saved Plan', name: compareScenario.name, fiscalYear: compareScenario.fiscalYear, net: compareResult.netMonthly, tax: compareResult.totalTax },
+                      { label: copy.currentPlan, name: planName, fiscalYear: selectedFiscalYear, net: result.netMonthly, tax: result.totalTax },
+                      { label: copy.savedPlan, name: compareScenario.name, fiscalYear: compareScenario.fiscalYear, net: compareResult.netMonthly, tax: compareResult.totalTax },
                     ].map(item => (
                       <div key={item.label} className="rounded-xl border border-slate-200 dark:border-slate-700/50 p-4">
                         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.label}</p>
@@ -951,12 +952,12 @@ export default function SalaryPlannerClient({
                         <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">FY {item.fiscalYear}</p>
                         <div className="mt-3 grid grid-cols-2 gap-2">
                           <div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Net Monthly</p>
-                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmt(item.net, currency)}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.netMonthly}</p>
+                            <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{fmt(item.net, currency, locale)}</p>
                           </div>
                           <div>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400">Annual Tax</p>
-                            <p className="text-sm font-bold text-rose-600 dark:text-rose-400">{fmt(item.tax, currency)}</p>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.annualTax}</p>
+                            <p className="text-sm font-bold text-rose-600 dark:text-rose-400">{fmt(item.tax, currency, locale)}</p>
                           </div>
                         </div>
                       </div>
@@ -966,28 +967,28 @@ export default function SalaryPlannerClient({
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="bg-slate-50 dark:bg-slate-700/30">
-                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">Metric</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Current</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Saved</th>
-                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">Difference</th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.metric}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.current}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.saved}</th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.difference}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-700/50">
                         {[
-                          ['Monthly Gross', result.grossMonthly, compareResult.grossMonthly],
-                          ['Monthly Net', result.netMonthly, compareResult.netMonthly],
-                          ['Annual Gross', result.grossAnnual, compareResult.grossAnnual],
-                          ['Annual Net', result.netAnnual, compareResult.netAnnual],
-                          ['Annual Tax', result.totalTax, compareResult.totalTax],
+                          [copy.monthlyGross, result.grossMonthly, compareResult.grossMonthly],
+                          [copy.netMonthly, result.netMonthly, compareResult.netMonthly],
+                          [copy.grossAnnual, result.grossAnnual, compareResult.grossAnnual],
+                          [copy.netAnnual, result.netAnnual, compareResult.netAnnual],
+                          [copy.annualTax, result.totalTax, compareResult.totalTax],
                         ].map(([label, current, saved]) => {
                           const diff = Number(current) - Number(saved);
                           return (
                             <tr key={label}>
                               <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">{label}</td>
-                              <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(current), currency)}</td>
-                              <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{fmt(Number(saved), currency)}</td>
+                              <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(current), currency, locale)}</td>
+                              <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{fmt(Number(saved), currency, locale)}</td>
                               <td className={cn('px-4 py-3 text-right text-xs font-bold', diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                                {diff >= 0 ? '+' : ''}{fmt(diff, currency)}
+                                {diff >= 0 ? '+' : ''}{fmt(diff, currency, locale)}
                               </td>
                             </tr>
                           );
@@ -998,8 +999,8 @@ export default function SalaryPlannerClient({
                 </div>
               ) : (
                 <div className="p-8 text-center">
-                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Save at least one salary plan to compare.</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Use Save New after entering a salary, then return here to compare offers or revisions.</p>
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-200">{copy.saveAtLeastOne}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.saveAtLeastOneHelp}</p>
                 </div>
               )}
             </div>

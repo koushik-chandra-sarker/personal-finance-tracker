@@ -4,6 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type ContinuePaymentButtonProps = {
   packageId: string;
@@ -17,6 +18,7 @@ function paymentHref(packageId: string) {
 
 export default function ContinuePaymentButton({ packageId, className, icon = 'check' }: ContinuePaymentButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const { messages } = useI18n();
   const Icon = icon === 'arrow' ? ArrowRight : CheckCircle2;
 
   return (
@@ -38,7 +40,7 @@ export default function ContinuePaymentButton({ packageId, className, icon = 'ch
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
         </svg>
       )}
-      Continue to Payment <Icon className="h-4 w-4" />
+      {isLoading ? messages.subscription.loadingPayment : messages.subscription.continuePayment} <Icon className="h-4 w-4" />
     </Link>
   );
 }

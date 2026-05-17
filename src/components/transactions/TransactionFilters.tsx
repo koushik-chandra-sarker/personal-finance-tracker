@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useTransition, useState, useMemo } from 'react';
 import { Search, Loader2, X, Filter } from 'lucide-react';
 import MultiSelectFilter, { type FilterMode } from '@/components/ui/MultiSelectFilter';
+import { useI18n } from '@/i18n/client';
+import { getTransactionTypeLabel } from '@/lib/utils';
 
 interface Category { id: string; name: string; type: string }
 interface Account { id: string; name: string; type: string }
@@ -24,6 +26,9 @@ export default function TransactionFilters({
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.transactions;
+  const common = messages.pages.common;
 
   // Local state for tracking inputs before applying
   const [search, setSearch] = useState(searchParams.get('search') || '');
@@ -101,7 +106,7 @@ export default function TransactionFilters({
     const current = searchParams.toString() ? `/transactions?${searchParams.toString()}` : '/transactions';
     if (target === current) return;
 
-    onNavigateStart?.('Applying filters...');
+    onNavigateStart?.(copy.applyingFilters);
     startTransition(() => {
       router.push(target);
     });
@@ -120,7 +125,7 @@ export default function TransactionFilters({
     setSortBy('createdAt_desc');
     if (!searchParams.toString()) return;
 
-    onNavigateStart?.('Clearing filters...');
+    onNavigateStart?.(copy.clearingFilters);
     startTransition(() => {
       router.push('/transactions');
     });
@@ -130,8 +135,8 @@ export default function TransactionFilters({
 
   // Build option arrays
   const typeOptions = [
-    { value: 'INCOME', label: 'Income' },
-    { value: 'EXPENSE', label: 'Expense' },
+    { value: 'INCOME', label: getTransactionTypeLabel('INCOME', locale) },
+    { value: 'EXPENSE', label: getTransactionTypeLabel('EXPENSE', locale) },
   ];
 
   // Filter categories based on selected types (if only one type is selected in include mode)
@@ -155,7 +160,7 @@ export default function TransactionFilters({
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
           <input
             type="text"
-            placeholder="Search descriptions or notes..."
+            placeholder={copy.searchPlaceholder}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
@@ -170,35 +175,38 @@ export default function TransactionFilters({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 max-w-full">
         {/* Type Multi-Select */}
         <MultiSelectFilter
-          label="Types"
+          label={copy.types}
           options={typeOptions}
           selected={selectedTypes}
           onChange={setSelectedTypes}
           mode={typeMode}
           onModeChange={setTypeMode}
-          placeholder="All Types"
+          placeholder={copy.allTypes}
+          copy={common.multiSelect}
         />
 
         {/* Category Multi-Select */}
         <MultiSelectFilter
-          label="Categories"
+          label={copy.categories}
           options={filteredCategoryOptions}
           selected={selectedCategories}
           onChange={setSelectedCategories}
           mode={categoryMode}
           onModeChange={setCategoryMode}
-          placeholder="All Categories"
+          placeholder={copy.allCategories}
+          copy={common.multiSelect}
         />
 
         {/* Account Multi-Select */}
         <MultiSelectFilter
-          label="Accounts"
+          label={copy.accounts}
           options={accountOptions}
           selected={selectedAccounts}
           onChange={setSelectedAccounts}
           mode={accountMode}
           onModeChange={setAccountMode}
-          placeholder="All Accounts"
+          placeholder={copy.allAccounts}
+          copy={common.multiSelect}
         />
 
         {/* Date From */}
@@ -207,7 +215,7 @@ export default function TransactionFilters({
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            title="Start Date"
+            title={common.startDate}
             className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
@@ -218,7 +226,7 @@ export default function TransactionFilters({
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            title="End Date"
+            title={common.endDate}
             className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
@@ -230,12 +238,12 @@ export default function TransactionFilters({
           className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
         >
-          <option value="createdAt_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Latest Added</option>
-          <option value="createdAt_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Oldest Added</option>
-          <option value="date_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Newest Date</option>
-          <option value="date_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Oldest Date</option>
-          <option value="amount_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Highest Amount</option>
-          <option value="amount_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">Lowest Amount</option>
+          <option value="createdAt_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.latestAdded}</option>
+          <option value="createdAt_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.oldestAdded}</option>
+          <option value="date_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.newestDate}</option>
+          <option value="date_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.oldestDate}</option>
+          <option value="amount_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.highestAmount}</option>
+          <option value="amount_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.lowestAmount}</option>
         </select>
       </div>
 
@@ -247,7 +255,7 @@ export default function TransactionFilters({
             disabled={isPending}
             className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-200 dark:bg-slate-700/30 hover:bg-slate-300 dark:hover:bg-slate-700/50 rounded-xl transition-colors border border-transparent hover:border-slate-400 dark:hover:border-slate-600 disabled:opacity-50"
           >
-            <X className="h-4 w-4" /> Clear
+            <X className="h-4 w-4" /> {copy.clear}
           </button>
         )}
         <button
@@ -255,7 +263,7 @@ export default function TransactionFilters({
           disabled={isPending}
           className="flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 rounded-xl transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50"
         >
-          <Filter className="h-4 w-4" /> Apply Filters
+          <Filter className="h-4 w-4" /> {copy.applyFilters}
         </button>
       </div>
     </div>

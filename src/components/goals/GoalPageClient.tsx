@@ -7,8 +7,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { goalSchema, type GoalInput } from '@/lib/validations/goal';
 import type { z } from 'zod';
 import { Plus, Trash2, Target, DollarSign, MinusCircle, History, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import { formatCurrency, getPercentage } from '@/lib/utils';
-import { formatDistanceToNow, format } from 'date-fns';
+import { formatCurrency, formatDate, getPercentage } from '@/lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { bn, enUS } from 'date-fns/locale';
 import { createGoalAction, contributeToGoalAction, deductFromGoalAction, deleteGoalAction } from '@/actions/goal.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
@@ -17,6 +18,7 @@ import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Loader from '@/components/ui/Loader';
 import { useSession } from 'next-auth/react';
+import { useI18n } from '@/i18n/client';
 
 interface GoalProgress {
   id: string;
@@ -54,9 +56,13 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
   const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
     ? session.user.currency
     : 'USD';
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.goals;
+  const common = messages.pages.common;
+  const dateFnsLocale = locale === 'bn-BD' ? bn : enUS;
   const accountOptions = accounts.map((account) => ({
     value: account.id,
-    label: `${account.name} (${formatCurrency(Number(account.balance), userCurrency)})`,
+    label: `${account.name} (${formatCurrency(Number(account.balance), userCurrency, locale)})`,
   }));
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<GoalFormValues, unknown, GoalInput>({
@@ -128,7 +134,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this goal?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     startTransition(async () => {
       await deleteGoalAction(id);
       router.refresh();
@@ -137,21 +143,21 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message="Processing..." />
+      <Loader show={isPending} message={common.processing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Savings Goals</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{goals.length} active goals</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{goals.length} {copy.activeGoals}</p>
         </div>
-        <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> New Goal</Button>
+        <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.newGoal}</Button>
       </div>
 
       {goals.length === 0 ? (
         <EmptyState
-          title="No savings goals"
-          description="Set goals to track your savings progress"
+          title={copy.noGoals}
+          description={copy.noGoalsHelp}
           icon={<Target className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
-          action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> New Goal</Button>}
+          action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.newGoal}</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -159,7 +165,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
             const current = Number(goal.currentAmount);
             const target = Number(goal.targetAmount);
             const pct = getPercentage(current, target);
-            const daysLeft = formatDistanceToNow(new Date(goal.deadline), { addSuffix: false });
+            const daysLeft = formatDistanceToNow(new Date(goal.deadline), { addSuffix: false, locale: dateFnsLocale });
 
             return (
               <div key={goal.id} className="group rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6 hover:border-slate-300 dark:hover:border-slate-600/50 transition-all">
@@ -172,7 +178,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                   </button>
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{goal.name}</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{daysLeft} left</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{daysLeft} {copy.left}</p>
 
                 {/* Progress circle */}
                 <div className="flex items-center justify-center my-6">
@@ -192,24 +198,24 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current, userCurrency)} <span className="text-slate-500 dark:text-slate-400">of</span> {formatCurrency(target, userCurrency)}</p>
+                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current, userCurrency, locale)} <span className="text-slate-500 dark:text-slate-400">{copy.of}</span> {formatCurrency(target, userCurrency, locale)}</p>
                   
                   <div className="flex flex-wrap justify-center gap-2 pt-2">
                     {!goal.isCompleted && (
                       <Button size="sm" variant="outline" className="h-8 px-2" disabled={accounts.length === 0} onClick={() => openContribute(goal.id)}>
-                        <DollarSign className="h-3 w-3 mr-1" /> Add
+                        <DollarSign className="h-3 w-3 mr-1" /> {copy.add}
                       </Button>
                     )}
                     <Button size="sm" variant="outline" className="h-8 px-2 text-red-500 hover:text-red-600 dark:text-red-400" disabled={accounts.length === 0} onClick={() => openDeduct(goal.id)}>
-                      <MinusCircle className="h-3 w-3 mr-1" /> Take
+                      <MinusCircle className="h-3 w-3 mr-1" /> {copy.take}
                     </Button>
                     <Button size="sm" variant="outline" className="h-8 px-2" onClick={() => setHistoryGoalId(goal.id)}>
-                      <History className="h-3 w-3 mr-1" /> History
+                      <History className="h-3 w-3 mr-1" /> {copy.history}
                     </Button>
                   </div>
                   
                   {goal.isCompleted && (
-                    <p className="text-xs text-emerald-400 font-medium pt-2">🎉 Goal reached!</p>
+                    <p className="text-xs text-emerald-400 font-medium pt-2">{copy.reached}</p>
                   )}
                 </div>
               </div>
@@ -219,29 +225,29 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
       )}
 
       {/* Create Goal Modal */}
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Create Savings Goal">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={copy.createTitle}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input id="name" label="Goal Name" placeholder="Emergency Fund" error={errors.name?.message} {...register('name')} />
-          <Input id="targetAmount" label="Target Amount" type="number" step="0.01" error={errors.targetAmount?.message} {...register('targetAmount')} />
-          <Input id="deadline" label="Deadline" type="date" error={errors.deadline?.message} {...register('deadline')} />
-          <Input id="color" label="Color" type="color" defaultValue="#10b981" {...register('color')} />
-          <Button type="submit" className="w-full" isLoading={isPending}>Create Goal</Button>
+          <Input id="name" label={copy.goalName} placeholder={copy.goalPlaceholder} error={errors.name?.message} {...register('name')} />
+          <Input id="targetAmount" label={copy.targetAmount} type="number" step="0.01" error={errors.targetAmount?.message} {...register('targetAmount')} />
+          <Input id="deadline" label={copy.deadline} type="date" error={errors.deadline?.message} {...register('deadline')} />
+          <Input id="color" label={common.color} type="color" defaultValue="#10b981" {...register('color')} />
+          <Button type="submit" className="w-full" isLoading={isPending}>{copy.createGoal}</Button>
         </form>
       </Modal>
 
       {/* Contribute Modal */}
-      <Modal isOpen={!!contributeGoalId} onClose={closeTransferModal} title="Add Contribution">
+      <Modal isOpen={!!contributeGoalId} onClose={closeTransferModal} title={copy.addContribution}>
         <div className="space-y-4">
           <Select
             id="contributeAccount"
-            label="Account"
+            label={common.account}
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             options={accountOptions}
           />
           <Input
             id="contributeAmount"
-            label="Amount"
+            label={common.amount}
             type="number"
             step="0.01"
             value={amount}
@@ -250,28 +256,28 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
           />
           <Input
             id="contributeDescription"
-            label="Reason / Description (Optional)"
+            label={copy.reasonOptional}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Monthly saving"
+            placeholder={copy.contributionPlaceholder}
           />
-          <Button onClick={handleContribute} className="w-full" isLoading={isPending} disabled={!amount || !selectedAccountId}>Add Contribution</Button>
+          <Button onClick={handleContribute} className="w-full" isLoading={isPending} disabled={!amount || !selectedAccountId}>{copy.contributionButton}</Button>
         </div>
       </Modal>
 
       {/* Deduct Modal */}
-      <Modal isOpen={!!deductGoalId} onClose={closeTransferModal} title="Withdraw Funds">
+      <Modal isOpen={!!deductGoalId} onClose={closeTransferModal} title={copy.withdrawFunds}>
         <div className="space-y-4">
           <Select
             id="deductAccount"
-            label="Account"
+            label={common.account}
             value={selectedAccountId}
             onChange={(e) => setSelectedAccountId(e.target.value)}
             options={accountOptions}
           />
           <Input
             id="deductAmount"
-            label="Amount"
+            label={common.amount}
             type="number"
             step="0.01"
             value={amount}
@@ -280,20 +286,20 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
           />
           <Input
             id="deductDescription"
-            label="Reason for withdrawal"
+            label={copy.reasonWithdrawal}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder="Unexpected expense"
+            placeholder={copy.withdrawalPlaceholder}
           />
-          <Button onClick={handleDeduct} variant="outline" className="w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" isLoading={isPending} disabled={!amount || !selectedAccountId}>Confirm Withdrawal</Button>
+          <Button onClick={handleDeduct} variant="outline" className="w-full text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" isLoading={isPending} disabled={!amount || !selectedAccountId}>{copy.confirmWithdrawal}</Button>
         </div>
       </Modal>
 
       {/* History Modal */}
-      <Modal isOpen={!!historyGoalId} onClose={() => setHistoryGoalId(null)} title="Goal History">
+      <Modal isOpen={!!historyGoalId} onClose={() => setHistoryGoalId(null)} title={copy.goalHistory}>
         <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
           {historyGoalId && (goals.find(g => g.id === historyGoalId)?.progress.length || 0) === 0 ? (
-            <p className="text-center text-slate-500 py-8">No history yet</p>
+            <p className="text-center text-slate-500 py-8">{copy.noHistory}</p>
           ) : (
             <div className="space-y-3">
               {historyGoalId && goals.find(g => g.id === historyGoalId)?.progress.map((p) => (
@@ -303,13 +309,13 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                       {p.type === 'CONTRIBUTION' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white capitalize">{p.type.toLowerCase()}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{p.description || format(new Date(p.createdAt), 'MMM dd, yyyy')}</p>
-                      {p.description && <p className="text-[10px] text-slate-400 dark:text-slate-500">{format(new Date(p.createdAt), 'MMM dd, yyyy')}</p>}
+                      <p className="text-sm font-medium text-slate-900 dark:text-white capitalize">{p.type === 'CONTRIBUTION' ? copy.contribution : copy.deduction}</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400">{p.description || formatDate(p.createdAt, undefined, locale)}</p>
+                      {p.description && <p className="text-[10px] text-slate-400 dark:text-slate-500">{formatDate(p.createdAt, undefined, locale)}</p>}
                     </div>
                   </div>
                   <p className={`text-sm font-semibold ${p.type === 'CONTRIBUTION' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                    {p.type === 'CONTRIBUTION' ? '+' : '-'}{formatCurrency(Number(p.amount), userCurrency)}
+                    {p.type === 'CONTRIBUTION' ? '+' : '-'}{formatCurrency(Number(p.amount), userCurrency, locale)}
                   </p>
                 </div>
               ))}

@@ -1,4 +1,6 @@
 import { formatCurrency, formatRelativeDate } from '@/lib/utils';
+import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
 import { TrendingUp, TrendingDown } from 'lucide-react';
 import Link from 'next/link';
 
@@ -17,20 +19,23 @@ interface Transaction {
 interface RecentTransactionsProps {
   transactions: Transaction[];
   currency?: string;
+  locale?: AppLocale;
 }
 
-export default function RecentTransactions({ transactions, currency = 'USD' }: RecentTransactionsProps) {
+export default function RecentTransactions({ transactions, currency = 'USD', locale = DEFAULT_LOCALE }: RecentTransactionsProps) {
+  const copy = getMessages(locale).dashboard;
+
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Last 7 Days Transactions</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{copy.recentTransactions}</h3>
         <Link href="/transactions" className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300">
-          View All →
+          {copy.viewAll} →
         </Link>
       </div>
 
       {transactions.length === 0 ? (
-        <p className="text-sm text-slate-500 text-center py-8">No transactions in the last 7 days</p>
+        <p className="text-sm text-slate-500 text-center py-8">{copy.noRecentTransactions}</p>
       ) : (
         <div className="max-h-[420px] overflow-y-auto pr-1 space-y-3">
           {transactions.map((tx) => (
@@ -47,12 +52,12 @@ export default function RecentTransactions({ transactions, currency = 'USD' }: R
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  {tx.category.name} · {tx.account.name} · {formatRelativeDate(tx.date)}
+                  {tx.category.name} · {tx.account.name} · {formatRelativeDate(tx.date, locale)}
                   {tx.createdByName && <span className="ml-1 opacity-60">· {tx.createdByName}</span>}
                 </p>
               </div>
               <p className={`text-sm font-semibold ${tx.type === 'INCOME' ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount), currency)}
+                {tx.type === 'INCOME' ? '+' : '-'}{formatCurrency(Number(tx.amount), currency, locale)}
               </p>
             </div>
           ))}

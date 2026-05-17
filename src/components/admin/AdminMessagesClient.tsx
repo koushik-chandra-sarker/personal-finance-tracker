@@ -11,29 +11,12 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import Select from '@/components/ui/Select';
 import { formatDate } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   initialMessages: AdminMessageRow[];
   users: AdminMessageUserOption[];
 };
-
-const severityOptions = [
-  { value: 'INFO', label: 'Info' },
-  { value: 'SUCCESS', label: 'Success' },
-  { value: 'WARNING', label: 'Warning' },
-  { value: 'CRITICAL', label: 'Critical' },
-];
-
-const displayModeOptions = [
-  { value: 'MODAL', label: 'Popup modal' },
-  { value: 'BANNER', label: 'Top banner' },
-];
-
-const frequencyOptions = [
-  { value: 'ONCE', label: 'Show one time' },
-  { value: 'EVERY_REFRESH', label: 'Show every refresh' },
-  { value: 'UNTIL_DISMISSED', label: 'Show until dismissed' },
-];
 
 function badgeForSeverity(severity: AdminMessageRow['severity']) {
   if (severity === 'SUCCESS') return 'success';
@@ -42,10 +25,10 @@ function badgeForSeverity(severity: AdminMessageRow['severity']) {
   return 'info';
 }
 
-function formatFrequency(frequency: AdminMessageRow['frequency']) {
-  if (frequency === 'EVERY_REFRESH') return 'Every refresh';
-  if (frequency === 'UNTIL_DISMISSED') return 'Until dismissed';
-  return 'One time';
+function formatFrequency(frequency: AdminMessageRow['frequency'], copy: ReturnType<typeof useI18n>['messages']['pages']['adminMessages']) {
+  if (frequency === 'EVERY_REFRESH') return copy.everyRefresh;
+  if (frequency === 'UNTIL_DISMISSED') return copy.untilDismissed;
+  return copy.oneTime;
 }
 
 function toDatetimeLocal(value: string | null) {
@@ -57,6 +40,23 @@ function toDatetimeLocal(value: string | null) {
 }
 
 export default function AdminMessagesClient({ initialMessages, users }: Props) {
+  const { locale, messages: i18nMessages } = useI18n();
+  const copy = i18nMessages.pages.adminMessages;
+  const severityOptions = [
+    { value: 'INFO', label: locale === 'bn-BD' ? 'তথ্য' : 'Info' },
+    { value: 'SUCCESS', label: locale === 'bn-BD' ? 'সফল' : 'Success' },
+    { value: 'WARNING', label: locale === 'bn-BD' ? 'সতর্কতা' : 'Warning' },
+    { value: 'CRITICAL', label: locale === 'bn-BD' ? 'গুরুতর' : 'Critical' },
+  ];
+  const displayModeOptions = [
+    { value: 'MODAL', label: copy.popupModal },
+    { value: 'BANNER', label: copy.topBanner },
+  ];
+  const frequencyOptions = [
+    { value: 'ONCE', label: copy.oneTime },
+    { value: 'EVERY_REFRESH', label: copy.everyRefresh },
+    { value: 'UNTIL_DISMISSED', label: copy.untilDismissed },
+  ];
   const [messages, setMessages] = useState(initialMessages);
   const [isOpen, setIsOpen] = useState(false);
   const [editingMessage, setEditingMessage] = useState<AdminMessageRow | null>(null);
@@ -149,7 +149,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this message? Users will stop seeing it immediately.')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     setFeedback(null);
     startTransition(async () => {
       const result = await deleteAdminMessageAction(id);
@@ -164,31 +164,31 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Admin Messages</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-            Send popup or banner messages to all users or selected users.
+            {copy.subtitle}
           </p>
         </div>
         <Button onClick={openCreateModal}>
           <MessageSquarePlus className="h-4 w-4" />
-          New Message
+          {copy.newMessage}
         </Button>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
         <Card className="p-5">
           <Megaphone className="mb-3 h-5 w-5 text-indigo-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Total Messages</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.totalMessages}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{messages.length}</p>
         </Card>
         <Card className="p-5">
           <PlayCircle className="mb-3 h-5 w-5 text-emerald-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Active</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.active}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeCount}</p>
         </Card>
         <Card className="p-5">
           <Users className="mb-3 h-5 w-5 text-amber-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Available Recipients</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.availableRecipients}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{users.length}</p>
         </Card>
       </div>
@@ -203,20 +203,20 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
         {messages.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <Bell className="mx-auto mb-4 h-10 w-10 text-slate-300 dark:text-slate-700" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">No admin messages yet</h2>
-            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">Create your first popup or banner announcement.</p>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.noMessages}</h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{copy.noMessagesHelp}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[920px] text-left">
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
                 <tr>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Message</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Display</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Audience</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Schedule</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Seen</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">Actions</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.message}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.display}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.audience}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.schedule}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.seen}</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">{copy.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -226,24 +226,24 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                       <div className="max-w-md">
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                           <Badge variant={badgeForSeverity(message.severity)}>{message.severity}</Badge>
-                          <Badge variant={message.isActive ? 'success' : 'default'}>{message.isActive ? 'Active' : 'Paused'}</Badge>
+                          <Badge variant={message.isActive ? 'success' : 'default'}>{message.isActive ? copy.active : copy.paused}</Badge>
                         </div>
                         <p className="font-bold text-slate-900 dark:text-white">{message.title}</p>
                         <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{message.message}</p>
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
-                      <p className="font-semibold">{message.displayMode === 'MODAL' ? 'Popup modal' : 'Top banner'}</p>
-                      <p className="text-xs text-slate-400">{formatFrequency(message.frequency)}</p>
+                      <p className="font-semibold">{message.displayMode === 'MODAL' ? copy.popupModal : copy.topBanner}</p>
+                      <p className="text-xs text-slate-400">{formatFrequency(message.frequency, copy)}</p>
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
-                      <p className="font-semibold">{message.audience === 'ALL' ? 'All users' : `${message.recipients.length} selected`}</p>
-                      <p className="text-xs text-slate-400">{message.showToUnsubscribed ? 'Includes unsubscribed users' : 'Subscribed users only'}</p>
+                      <p className="font-semibold">{message.audience === 'ALL' ? copy.allUsers : `${message.recipients.length} ${copy.selected}`}</p>
+                      <p className="text-xs text-slate-400">{message.showToUnsubscribed ? copy.includesUnsubscribed : copy.subscribedOnly}</p>
                       <p className="text-xs text-slate-400">{message.createdBy}</p>
                     </td>
                     <td className="px-5 py-4 text-xs text-slate-500 dark:text-slate-400">
-                      <p>{message.startsAt ? formatDate(message.startsAt, 'MMM dd, yyyy') : 'Starts immediately'}</p>
-                      <p>{message.endsAt ? `Ends ${formatDate(message.endsAt, 'MMM dd, yyyy')}` : 'No end date'}</p>
+                      <p>{message.startsAt ? formatDate(message.startsAt, 'MMM dd, yyyy', locale) : copy.startsImmediately}</p>
+                      <p>{message.endsAt ? `${copy.ends} ${formatDate(message.endsAt, 'MMM dd, yyyy', locale)}` : copy.noEndDate}</p>
                     </td>
                     <td className="px-5 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{message.seenCount}</td>
                     <td className="px-5 py-4">
@@ -254,7 +254,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                           onClick={() => openEditModal(message)}
                           disabled={isPending}
                           className="h-9 w-9 p-0"
-                          title="Edit message"
+                          title={copy.editMessage}
                         >
                           <Edit3 className="h-4 w-4" />
                         </Button>
@@ -286,49 +286,49 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
         )}
       </Card>
 
-      <Modal isOpen={isOpen} onClose={closeModal} title={editingMessage ? 'Edit Admin Message' : 'Create Admin Message'} size="xl">
+      <Modal isOpen={isOpen} onClose={closeModal} title={editingMessage ? copy.editMessage : copy.createMessage} size="xl">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <Input label="Title" name="title" required placeholder="Short message title" defaultValue={editingMessage?.title || ''} />
+          <Input label={copy.titleLabel} name="title" required placeholder={copy.titlePlaceholder} defaultValue={editingMessage?.title || ''} />
           <div className="space-y-1.5">
-            <label htmlFor="admin-message-body" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Message</label>
+            <label htmlFor="admin-message-body" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.message}</label>
             <textarea
               id="admin-message-body"
               name="message"
               required
               rows={5}
-              placeholder="What should users know?"
+              placeholder={copy.bodyPlaceholder}
               defaultValue={editingMessage?.message || ''}
               className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-3">
-            <Select label="Severity" name="severity" defaultValue={editingMessage?.severity || 'INFO'} options={severityOptions} />
-            <Select label="Display" name="displayMode" defaultValue={editingMessage?.displayMode || 'MODAL'} options={displayModeOptions} />
-            <Select label="Frequency" name="frequency" defaultValue={editingMessage?.frequency || 'ONCE'} options={frequencyOptions} />
+            <Select label={copy.severity} name="severity" defaultValue={editingMessage?.severity || 'INFO'} options={severityOptions} />
+            <Select label={copy.display} name="displayMode" defaultValue={editingMessage?.displayMode || 'MODAL'} options={displayModeOptions} />
+            <Select label={copy.frequency} name="frequency" defaultValue={editingMessage?.frequency || 'ONCE'} options={frequencyOptions} />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Input label="Action label" name="actionLabel" placeholder="Open billing" defaultValue={editingMessage?.actionLabel || ''} />
-            <Input label="Action URL" name="actionUrl" placeholder="/subscription" defaultValue={editingMessage?.actionUrl || ''} />
+            <Input label={copy.actionLabel} name="actionLabel" placeholder={copy.actionLabelPlaceholder} defaultValue={editingMessage?.actionLabel || ''} />
+            <Input label={copy.actionUrl} name="actionUrl" placeholder="/subscription" defaultValue={editingMessage?.actionUrl || ''} />
           </div>
           <div className="grid gap-4 md:grid-cols-2">
-            <Input label="Start date" name="startsAt" type="datetime-local" defaultValue={toDatetimeLocal(editingMessage?.startsAt || null)} />
-            <Input label="End date" name="endsAt" type="datetime-local" defaultValue={toDatetimeLocal(editingMessage?.endsAt || null)} />
+            <Input label={copy.startDate} name="startsAt" type="datetime-local" defaultValue={toDatetimeLocal(editingMessage?.startsAt || null)} />
+            <Input label={copy.endDate} name="endsAt" type="datetime-local" defaultValue={toDatetimeLocal(editingMessage?.endsAt || null)} />
           </div>
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-900 dark:text-white">Audience</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-white">{copy.audience}</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                 <input type="radio" name="audience" value="ALL" checked={audience === 'ALL'} onChange={() => setAudience('ALL')} className="mt-1" />
                 <span>
-                  <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">All users</span>
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">Every active user can see this message.</span>
+                  <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{copy.allUsers}</span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">{copy.allUsersHelp}</span>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                 <input type="radio" name="audience" value="SELECTED" checked={audience === 'SELECTED'} onChange={() => setAudience('SELECTED')} className="mt-1" />
                 <span>
-                  <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">Selected users</span>
-                  <span className="block text-xs text-slate-500 dark:text-slate-400">Choose exactly who should receive it.</span>
+                  <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{copy.selectedUsers}</span>
+                  <span className="block text-xs text-slate-500 dark:text-slate-400">{copy.selectedUsersHelp}</span>
                 </span>
               </label>
             </div>
@@ -341,24 +341,24 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                       type="search"
                       value={recipientSearch}
                       onChange={(event) => setRecipientSearch(event.target.value)}
-                      placeholder="Search by name, email, or role"
+                      placeholder={copy.searchRecipients}
                       className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 sm:justify-end">
-                    <span>{selectedUsers.length} selected</span>
+                    <span>{selectedUsers.length} {copy.selected}</span>
                     <Button type="button" variant="ghost" size="sm" onClick={selectVisibleUsers} disabled={filteredUsers.length === 0}>
-                      Select visible
+                      {copy.selectVisible}
                     </Button>
                     <Button type="button" variant="ghost" size="sm" onClick={() => setSelectedUsers([])} disabled={selectedUsers.length === 0}>
-                      Clear
+                      {copy.clear}
                     </Button>
                   </div>
                 </div>
                 <div className="mt-3 max-h-56 space-y-2 overflow-y-auto">
                   {filteredUsers.length === 0 ? (
                     <div className="rounded-lg border border-dashed border-slate-300 px-3 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                      No users match this search.
+                      {copy.noUsersMatch}
                     </div>
                   ) : (
                     filteredUsers.map((user) => (
@@ -381,18 +381,18 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
           </div>
           <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
             <input type="checkbox" name="isActive" defaultChecked={editingMessage?.isActive ?? true} />
-            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">Publish immediately</span>
+            <span className="text-sm font-bold text-slate-700 dark:text-slate-200">{copy.publishImmediately}</span>
           </label>
           <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950/40">
             <input type="checkbox" name="showToUnsubscribed" defaultChecked={editingMessage?.showToUnsubscribed ?? false} className="mt-1" />
             <span>
-              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">Show to unsubscribed users</span>
-              <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">Keep this off for normal in-app announcements. Turn it on only for billing or access notices.</span>
+              <span className="block text-sm font-bold text-slate-700 dark:text-slate-200">{copy.showUnsubscribed}</span>
+              <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.showUnsubscribedHelp}</span>
             </span>
           </label>
           <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="ghost" onClick={closeModal} disabled={isPending}>Cancel</Button>
-            <Button type="submit" isLoading={isPending}>{editingMessage ? 'Update Message' : 'Create Message'}</Button>
+            <Button type="button" variant="ghost" onClick={closeModal} disabled={isPending}>{copy.close}</Button>
+            <Button type="submit" isLoading={isPending}>{editingMessage ? copy.updateMessage : copy.createMessage}</Button>
           </div>
         </form>
       </Modal>

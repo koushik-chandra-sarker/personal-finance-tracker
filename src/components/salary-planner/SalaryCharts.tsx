@@ -2,22 +2,23 @@
 
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import type { SalaryBreakdown } from '@/lib/salary-calculator';
+import { formatCurrency, getMonthName } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 const COLORS = ['#6366f1', '#8b5cf6', '#14b8a6', '#f59e0b', '#64748b', '#ef4444', '#10b981'];
 
-function fmt(n: number, currency: string) {
-  const sym: Record<string, string> = { BDT: '৳', USD: '$', EUR: '€', GBP: '£', INR: '₹' };
-  return (sym[currency] || currency + ' ') + n.toLocaleString('en-IN', { maximumFractionDigits: 0 });
+function fmt(n: number, currency: string, locale: string) {
+  return formatCurrency(n, currency, locale);
 }
 
-function SalaryChartTooltip({ active, payload, label, currency }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string; currency: string }) {
+function SalaryChartTooltip({ active, payload, label, currency, locale }: { active?: boolean; payload?: Array<{ value: number; name: string; color: string }>; label?: string; currency: string; locale: string }) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
       {label && <p className="font-semibold text-slate-900 dark:text-white mb-1">{label}</p>}
       {payload.map((p, i) => (
         <p key={i} className="text-slate-600 dark:text-slate-300">
-          <span style={{ color: p.color }}>●</span> {p.name}: {fmt(p.value, currency)}
+          <span style={{ color: p.color }}>●</span> {p.name}: {fmt(p.value, currency, locale)}
         </p>
       ))}
     </div>
@@ -25,22 +26,24 @@ function SalaryChartTooltip({ active, payload, label, currency }: { active?: boo
 }
 
 export default function SalaryCharts({ result, currency }: { result: SalaryBreakdown; currency: string }) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.salaryPlanner;
   const structureData = [
-    { name: 'Basic', value: result.basicMonthly },
-    { name: 'House Rent', value: result.houseRentMonthly },
-    { name: 'Medical', value: result.medicalMonthly },
-    { name: 'Conveyance', value: result.conveyanceMonthly },
-    { name: 'Other', value: result.otherAllowanceMonthly },
+    { name: copy.basicSalary, value: result.basicMonthly },
+    { name: copy.houseRent, value: result.houseRentMonthly },
+    { name: copy.medical, value: result.medicalMonthly },
+    { name: copy.conveyance, value: result.conveyanceMonthly },
+    { name: copy.otherAllowance, value: result.otherAllowanceMonthly },
   ].filter(d => d.value > 0);
 
   const distributionData = [
-    { name: 'Take-Home', value: result.netMonthly },
-    { name: 'Tax', value: result.monthlyTax },
-    { name: 'Deductions', value: result.totalDeductionsMonthly },
+    { name: copy.netTakeHomeMonthly, value: result.netMonthly },
+    { name: copy.tax, value: result.monthlyTax },
+    { name: copy.totalDeductions, value: result.totalDeductionsMonthly },
   ].filter(d => d.value > 0);
 
   const monthlyData = Array.from({ length: 12 }, (_, i) => ({
-    month: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][i],
+    month: getMonthName(i + 1, locale).slice(0, 3),
     gross: result.grossMonthly,
     net: result.netMonthly,
     tax: result.monthlyTax,
@@ -51,13 +54,13 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
       <div className="grid sm:grid-cols-2 gap-4">
         {/* Salary Structure Pie */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Salary Structure</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryStructure}</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={structureData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
                 {structureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
-              <Tooltip content={<SalaryChartTooltip currency={currency} />} />
+              <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -65,7 +68,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
 
         {/* Income Distribution Pie */}
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Income Distribution</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryBreakdown}</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={distributionData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
@@ -73,7 +76,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
                 <Cell fill="#ef4444" />
                 <Cell fill="#f59e0b" />
               </Pie>
-              <Tooltip content={<SalaryChartTooltip currency={currency} />} />
+              <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
               <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
             </PieChart>
           </ResponsiveContainer>
@@ -82,17 +85,17 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
 
       {/* Monthly Bar Chart */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Monthly Overview</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.overview}</h3>
         <ResponsiveContainer width="100%" height={280}>
           <BarChart data={monthlyData} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
             <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
             <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip content={<SalaryChartTooltip currency={currency} />} />
+            <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
             <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="gross" name="Gross" fill="#6366f1" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="net" name="Net" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="tax" name="Tax" fill="#ef4444" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="gross" name={copy.grossMonthly} fill="#6366f1" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="net" name={copy.netMonthly} fill="#10b981" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="tax" name={copy.tax} fill="#ef4444" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>

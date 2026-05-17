@@ -5,12 +5,15 @@ import { Eye, LogOut } from 'lucide-react';
 import { exitSupportViewAction, type SupportViewState } from '@/actions/support.actions';
 import Button from '@/components/ui/Button';
 import { formatDate } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type Props = {
   supportView: NonNullable<SupportViewState>;
 };
 
 export default function SupportViewBanner({ supportView }: Props) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.support;
   const [isPending, startTransition] = useTransition();
 
   const handleExit = () => {
@@ -26,12 +29,12 @@ export default function SupportViewBanner({ supportView }: Props) {
         <div className="flex min-w-0 items-center gap-2 text-sm">
           <Eye className="h-4 w-4 shrink-0" />
           <span className="min-w-0 truncate">
-            Viewing user data for support: <span className="font-bold">{supportView.user.name}</span> ({supportView.user.email}) until {formatDate(supportView.expiresAt, 'MMM dd, h:mm a')}.
+            {copy.viewingSupportData}: <span className="font-bold">{supportView.user.name}</span> ({supportView.user.email}) {copy.until} {formatDate(supportView.expiresAt, 'MMM dd, h:mm a', locale)}.
           </span>
         </div>
         <Button type="button" variant="outline" size="sm" onClick={handleExit} isLoading={isPending} className="border-amber-300 bg-white/70 text-amber-900 hover:bg-white dark:border-amber-400/40 dark:bg-amber-950/30 dark:text-amber-100">
           <LogOut className="h-4 w-4" />
-          Exit support view
+          {copy.exitSupportView}
         </Button>
       </div>
     </div>

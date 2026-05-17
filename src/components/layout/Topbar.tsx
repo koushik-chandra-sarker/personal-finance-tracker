@@ -21,6 +21,8 @@ import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
 import AppLogo from '@/components/brand/AppLogo';
 import { getSubscriptionLockedHref, hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
+import { useI18n } from '@/i18n/client';
 
 type NavItem = {
   href: string;
@@ -92,6 +94,8 @@ const NOTIFICATION_STALE_MS = 5 * 60 * 1000;
 
 export default function Topbar() {
   const { data: session, status } = useSession();
+  const { messages } = useI18n();
+  const notificationCopy = messages.pages.notifications;
   const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
   const [mobileInvestmentsOpen, setMobileInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
@@ -104,11 +108,13 @@ export default function Topbar() {
   const [payingNotificationId, setPayingNotificationId] = useState<string | null>(null);
   const [notificationActionMessage, setNotificationActionMessage] = useState<Record<string, string>>({});
   const currentUser = session?.user;
+  const userLocale = currentUser?.preferredLocale;
   const isAdmin = currentUser?.role === 'ADMIN';
   const isSubscriptionLocked = status === 'authenticated' && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
   const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
+  const navLabel = useCallback((label: string) => messages.navigation[label as keyof typeof messages.navigation] || label, [messages.navigation]);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
   const latestNotificationIdRef = useRef<string | null>(null);
@@ -316,7 +322,7 @@ export default function Topbar() {
     } catch (error) {
       setNotificationActionMessage((current) => ({
         ...current,
-        [notification.id]: error instanceof Error ? error.message : 'Failed to pay installment',
+        [notification.id]: error instanceof Error ? error.message : notificationCopy.payFailed,
       }));
     } finally {
       setPayingNotificationId(null);
@@ -350,7 +356,7 @@ export default function Topbar() {
 
           {/* Mobile logo */}
           <div className="lg:hidden">
-            <AppLogo size="sm" taglineClassName="hidden" />
+            <AppLogo size="sm" tagline={messages.brand.tagline} taglineClassName="hidden" />
           </div>
 
           {/* Search (desktop) */}
@@ -359,7 +365,7 @@ export default function Topbar() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500 dark:text-slate-400" />
               <input
                 type="text"
-                placeholder="Search transactions..."
+                placeholder={messages.navigation.SearchTransactions}
                 className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
             </div>
@@ -371,8 +377,8 @@ export default function Topbar() {
             {isAdmin && (
               <Link
                 href="/admin/payments"
-                title="Manual payment review"
-                aria-label="Manual payment review"
+                title={messages.navigation.ManualPaymentReview}
+                aria-label={messages.navigation.ManualPaymentReview}
                 className={cn(
                   'hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white sm:inline-flex',
                   isActiveRoute(pathname, '/admin/payments') && 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300'
@@ -381,6 +387,7 @@ export default function Topbar() {
                 <ReceiptText className="h-5 w-5" />
               </Link>
             )}
+            <LanguageSwitcher variant="topbar" />
             <ThemeToggle />
             <div className="relative" ref={notificationRef}>
               <button
@@ -392,7 +399,7 @@ export default function Topbar() {
                   }
                 }}
                 className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
-                aria-label="Notifications"
+                aria-label={messages.navigation.Notifications}
                 aria-expanded={notificationOpen}
               >
                 <Bell className="h-5 w-5" />
@@ -405,18 +412,18 @@ export default function Topbar() {
               {notificationOpen && (
                 <div className="absolute right-0 mt-2 w-[min(calc(100vw-2rem),24rem)] rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700/50">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">Notifications</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{messages.navigation.Notifications}</p>
                     <button
                       onClick={handleMarkAllRead}
                       disabled={unreadCount === 0}
                       className="text-xs font-medium text-indigo-600 dark:text-indigo-400 disabled:text-slate-400 dark:disabled:text-slate-600"
                     >
-                      Mark all read
+                      {messages.navigation.MarkAllRead}
                     </button>
                   </div>
                   {notifications.length === 0 ? (
                     <div className="px-4 py-8 text-center text-sm text-slate-500 dark:text-slate-400">
-                      No notifications yet
+                      {messages.navigation.NoNotifications}
                     </div>
                   ) : (
                     <div className="max-h-96 overflow-y-auto">
@@ -436,7 +443,7 @@ export default function Topbar() {
                             <div className="min-w-0 flex-1">
                               <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{notification.title}</p>
                               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{notification.message}</p>
-                              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt)}</p>
+                              <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt, userLocale)}</p>
                               {isDpsReminder && (
                                 <div className="mt-2 flex flex-wrap items-center gap-2">
                                   <button
@@ -449,7 +456,7 @@ export default function Topbar() {
                                     disabled={payingNotificationId === notification.id}
                                     className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-60"
                                   >
-                                    {payingNotificationId === notification.id ? 'Paying...' : 'Pay'}
+                                    {payingNotificationId === notification.id ? messages.navigation.Paying : messages.navigation.Pay}
                                   </button>
                                   {notification.actionUrl && (
                                     <Link
@@ -460,7 +467,7 @@ export default function Topbar() {
                                       }}
                                       className="inline-flex items-center justify-center rounded-lg border border-slate-300 px-2.5 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-700/60"
                                     >
-                                      Open
+                                      {messages.navigation.Open}
                                     </Link>
                                   )}
                                 </div>
@@ -512,13 +519,13 @@ export default function Topbar() {
               {userMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                   <Link href={navHref('/settings')} prefetch={!isSubscriptionLocked} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
-                    <Settings className="h-4 w-4" /> Settings
+                    <Settings className="h-4 w-4" /> {messages.navigation.Settings}
                   </Link>
                   <button
                     onClick={() => signOut({ callbackUrl: '/login' })}
                     className="flex items-center gap-2 w-full px-4 py-2 text-sm text-red-500 dark:text-red-400 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors"
                   >
-                    <LogOut className="h-4 w-4" /> Sign Out
+                    <LogOut className="h-4 w-4" /> {messages.navigation.SignOut}
                   </button>
                 </div>
               )}
@@ -543,7 +550,7 @@ export default function Topbar() {
                     onClick={() => void handleNotificationClick(notificationToast.id)}
                     className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
                   >
-                    Open
+                    {messages.navigation.Open}
                   </Link>
                 )}
                 <button
@@ -551,7 +558,7 @@ export default function Topbar() {
                   onClick={() => setNotificationToast(null)}
                   className="inline-flex items-center justify-center rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-700"
                 >
-                  Dismiss
+                  {messages.navigation.Dismiss}
                 </button>
               </div>
             </div>
@@ -559,7 +566,7 @@ export default function Topbar() {
               type="button"
               onClick={() => setNotificationToast(null)}
               className="h-8 w-8 shrink-0 rounded-lg p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-              aria-label="Dismiss notification"
+              aria-label={messages.navigation.Dismiss}
             >
               <X className="h-5 w-5" />
             </button>
@@ -574,7 +581,7 @@ export default function Topbar() {
           <div className="absolute left-0 top-0 h-full w-72 overflow-y-auto bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700/50 p-4">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
-                <AppLogo size="sm" taglineClassName="hidden" />
+              <AppLogo size="sm" tagline={messages.brand.tagline} taglineClassName="hidden" />
               </div>
               <button onClick={() => setMobileOpen(false)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <X className="h-5 w-5" />
@@ -597,7 +604,7 @@ export default function Topbar() {
                     )}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
+                    <span>{navLabel(item.label)}</span>
                   </Link>
                 );
               })}
@@ -615,7 +622,7 @@ export default function Topbar() {
                   aria-expanded={mobileInvestmentsOpen}
                 >
                   <TrendingUp className="h-5 w-5" />
-                  <span className="flex-1 text-left">Investments</span>
+                  <span className="flex-1 text-left">{messages.navigation.Investments}</span>
                   <ChevronDown className={cn('h-4 w-4 transition-transform', mobileInvestmentsOpen && 'rotate-180')} />
                 </button>
 
@@ -637,7 +644,7 @@ export default function Topbar() {
                           )}
                         >
                           <item.icon className="h-5 w-5" />
-                          <span>{item.label}</span>
+                          <span>{navLabel(item.label)}</span>
                         </Link>
                       );
                     })}
@@ -661,7 +668,7 @@ export default function Topbar() {
                     )}
                   >
                     <item.icon className="h-5 w-5" />
-                    <span>{item.label}</span>
+                    <span>{navLabel(item.label)}</span>
                   </Link>
                 );
               })}
@@ -680,7 +687,7 @@ export default function Topbar() {
                     aria-expanded={mobileAdminOpen}
                   >
                     <KeyRound className="h-5 w-5" />
-                    <span className="flex-1 text-left">Admin</span>
+                    <span className="flex-1 text-left">{messages.navigation.Admin}</span>
                     <ChevronDown className={cn('h-4 w-4 transition-transform', mobileAdminOpen && 'rotate-180')} />
                   </button>
 
@@ -702,7 +709,7 @@ export default function Topbar() {
                             )}
                           >
                             <item.icon className="h-5 w-5" />
-                            <span>{item.label}</span>
+                            <span>{navLabel(item.label)}</span>
                           </Link>
                         );
                       })}

@@ -21,7 +21,7 @@ export async function createCategoryAction(formData: FormData): Promise<ActionRe
     };
     
     const parsed = categorySchema.safeParse(raw);
-    if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+    if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
     await categoryService.createCategory(userId, executorId, parsed.data);
     revalidatePath('/dashboard');
@@ -29,9 +29,9 @@ export async function createCategoryAction(formData: FormData): Promise<ActionRe
     revalidatePath('/transactions');
     revalidatePath('/budgets');
     
-    return { success: true, message: 'Category created successfully' };
+    return { success: true, message: 'ক্যাটাগরি তৈরি হয়েছে' };
   } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to create category' };
+    return { success: false, message: error.message || 'ক্যাটাগরি তৈরি করা যায়নি' };
   }
 }
 
@@ -50,7 +50,7 @@ export async function updateCategoryAction(id: string, formData: FormData): Prom
     };
     
     const parsed = categorySchema.safeParse(raw);
-    if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+    if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
     await categoryService.updateCategory(userId, executorId, id, parsed.data);
     revalidatePath('/dashboard');
@@ -58,9 +58,9 @@ export async function updateCategoryAction(id: string, formData: FormData): Prom
     revalidatePath('/transactions');
     revalidatePath('/budgets');
 
-    return { success: true, message: 'Category updated successfully' };
+    return { success: true, message: 'ক্যাটাগরি আপডেট হয়েছে' };
   } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to update category' };
+    return { success: false, message: error.message || 'ক্যাটাগরি আপডেট করা যায়নি' };
   }
 }
 
@@ -73,8 +73,8 @@ export async function deleteCategoryAction(id: string): Promise<ActionResponse> 
     revalidatePath('/categories');
     revalidatePath('/transactions');
     revalidatePath('/budgets');
-    return { success: true, message: 'Category deleted' };
+    return { success: true, message: 'ক্যাটাগরি ডিলিট হয়েছে' };
   } catch (error: any) {
-    return { success: false, message: error.message || 'Failed to delete category' };
+    return { success: false, message: error.message || 'ক্যাটাগরি ডিলিট করা যায়নি' };
   }
 }

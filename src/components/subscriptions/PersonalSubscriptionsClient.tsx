@@ -19,6 +19,7 @@ import {
   updatePersonalSubscriptionAction,
 } from '@/actions/personal-subscription.actions';
 import { formatCurrency, formatDate } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 type SubscriptionStatus = 'ACTIVE' | 'PAUSED' | 'CANCELLED';
 type BillingCycle = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY' | 'YEARLY' | 'CUSTOM';
@@ -63,25 +64,7 @@ type Props = {
   categories: Category[];
 };
 
-const billingCycleOptions = [
-  { value: 'WEEKLY', label: 'Weekly' },
-  { value: 'MONTHLY', label: 'Monthly' },
-  { value: 'QUARTERLY', label: 'Quarterly' },
-  { value: 'YEARLY', label: 'Yearly' },
-  { value: 'CUSTOM', label: 'Custom' },
-];
-
-const statusOptions = [
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'PAUSED', label: 'Paused' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-];
-
 const colorOptions = ['#6366f1', '#e11d48', '#0f766e', '#f59e0b', '#7c3aed', '#2563eb', '#16a34a'];
-
-function cycleLabel(value: BillingCycle) {
-  return value.toLowerCase().replace(/^\w/, (char) => char.toUpperCase());
-}
 
 function statusVariant(status: SubscriptionStatus) {
   if (status === 'ACTIVE') return 'success';
@@ -119,6 +102,9 @@ function monthlyEquivalent(subscription: TrackedSubscription) {
 
 export default function PersonalSubscriptionsClient({ subscriptions, accounts, categories }: Props) {
   const router = useRouter();
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.serviceTracker;
+  const common = messages.pages.common;
   const [items, setItems] = useState(subscriptions);
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | SubscriptionStatus>('all');
@@ -134,6 +120,44 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
   const monthlyTotal = activeItems.reduce((sum, item) => sum + monthlyEquivalent(item), 0);
   const annualTotal = monthlyTotal * 12;
   const primaryCurrency = activeItems[0]?.currency || items[0]?.currency || 'USD';
+  const billingCycleOptions = [
+    { value: 'WEEKLY', label: copy.cycles.WEEKLY },
+    { value: 'MONTHLY', label: copy.cycles.MONTHLY },
+    { value: 'QUARTERLY', label: copy.cycles.QUARTERLY },
+    { value: 'YEARLY', label: copy.cycles.YEARLY },
+    { value: 'CUSTOM', label: copy.cycles.CUSTOM },
+  ];
+  const statusOptions = [
+    { value: 'ACTIVE', label: copy.statuses.ACTIVE },
+    { value: 'PAUSED', label: copy.statuses.PAUSED },
+    { value: 'CANCELLED', label: copy.statuses.CANCELLED },
+  ];
+  const actionMessageMap: Record<string, string> = {
+    'Validation failed.': copy.messages.validationFailed,
+    'Subscription added.': copy.messages.added,
+    'Subscription updated.': copy.messages.updated,
+    'Subscription status updated.': copy.messages.statusUpdated,
+    'Subscription deleted.': copy.messages.deleted,
+    'Failed to add subscription.': copy.messages.addFailed,
+    'Failed to update subscription.': copy.messages.updateFailed,
+    'Failed to update status.': copy.messages.statusFailed,
+    'Failed to delete subscription.': copy.messages.deleteFailed,
+    'তথ্য যাচাই করা যায়নি': copy.messages.validationFailed,
+    'সাবস্ক্রিপশন যোগ হয়েছে।': copy.messages.added,
+    'সাবস্ক্রিপশন আপডেট হয়েছে।': copy.messages.updated,
+    'সাবস্ক্রিপশন স্ট্যাটাস আপডেট হয়েছে।': copy.messages.statusUpdated,
+    'সাবস্ক্রিপশন ডিলিট হয়েছে।': copy.messages.deleted,
+    'সাবস্ক্রিপশন যোগ করা যায়নি।': copy.messages.addFailed,
+    'সাবস্ক্রিপশন আপডেট করা যায়নি।': copy.messages.updateFailed,
+    'স্ট্যাটাস আপডেট করা যায়নি।': copy.messages.statusFailed,
+    'সাবস্ক্রিপশন ডিলিট করা যায়নি।': copy.messages.deleteFailed,
+  };
+  const localizeActionMessage = (text: string) => actionMessageMap[text] || text;
+  const formatDueLabel = (dueIn: number) => {
+    if (dueIn < 0) return locale === 'bn-BD' ? `${Math.abs(dueIn)} ${copy.overdueDays}` : `${Math.abs(dueIn)}${copy.overdueDays}`;
+    if (dueIn === 0) return locale === 'bn-BD' ? `${copy.today} ${copy.due}` : `${copy.due} ${copy.today}`;
+    return locale === 'bn-BD' ? `${dueIn} ${copy.inDays}` : `In ${dueIn}${copy.inDays}`;
+  };
 
   const filteredItems = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -169,7 +193,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
       const result = editing
         ? await updatePersonalSubscriptionAction(editing.id, formData)
         : await createPersonalSubscriptionAction(formData);
-      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
+      setFeedback({ type: result.success ? 'success' : 'error', text: localizeActionMessage(result.message) });
       if (result.success) {
         setIsModalOpen(false);
         router.refresh();
@@ -181,7 +205,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
     setFeedback(null);
     startTransition(async () => {
       const result = await togglePersonalSubscriptionAction(id);
-      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
+      setFeedback({ type: result.success ? 'success' : 'error', text: localizeActionMessage(result.message) });
       if (result.success) {
         setItems((current) => current.map((item) => (
           item.id === id ? { ...item, status: item.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : item
@@ -191,27 +215,27 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this subscription?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     setFeedback(null);
     startTransition(async () => {
       const result = await deletePersonalSubscriptionAction(id);
-      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
+      setFeedback({ type: result.success ? 'success' : 'error', text: localizeActionMessage(result.message) });
       if (result.success) setItems((current) => current.filter((item) => item.id !== id));
     });
   };
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message="Updating service tracker..." />
+      <Loader show={isPending} message={copy.updating} />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Tracker</h1>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Track Netflix, LinkedIn, tools, movie sites, and other recurring memberships.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <Button type="button" onClick={openCreate}>
           <Plus className="h-4 w-4" />
-          Add Subscription
+          {copy.addSubscription}
         </Button>
       </div>
 
@@ -224,21 +248,21 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
       <div className="grid gap-4 md:grid-cols-4">
         <Card className="p-5">
           <CreditCard className="mb-3 h-5 w-5 text-indigo-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Active</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.active}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeItems.length}</p>
         </Card>
         <Card className="p-5">
           <CalendarClock className="mb-3 h-5 w-5 text-emerald-500" />
-          <p className="text-sm text-slate-500 dark:text-slate-400">Due Soon</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.dueSoon}</p>
           <p className="text-2xl font-bold text-slate-900 dark:text-white">{upcomingItems.length}</p>
         </Card>
         <Card className="p-5">
-          <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">Monthly Cost</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(monthlyTotal, primaryCurrency)}</p>
+          <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.monthlyCost}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(monthlyTotal, primaryCurrency, locale)}</p>
         </Card>
         <Card className="p-5">
-          <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">Yearly Cost</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(annualTotal, primaryCurrency)}</p>
+          <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.yearlyCost}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(annualTotal, primaryCurrency, locale)}</p>
         </Card>
       </div>
 
@@ -247,7 +271,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
           <div className="flex flex-wrap gap-2">
             {upcomingItems.slice(0, 5).map((item) => (
               <span key={item.id} className="rounded-full bg-white px-3 py-1.5 text-sm font-semibold text-amber-800 shadow-sm dark:bg-slate-900 dark:text-amber-200">
-                {item.name} due {daysUntil(item.nextBillingDate) <= 0 ? 'today' : `in ${daysUntil(item.nextBillingDate)}d`}
+                {item.name} {formatDueLabel(daysUntil(item.nextBillingDate))}
               </span>
             ))}
           </div>
@@ -262,16 +286,16 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search by service, provider, plan, or account"
+              placeholder={copy.searchPlaceholder}
               className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
             />
           </div>
           <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-950/40">
             {[
-              { value: 'all', label: 'All' },
-              { value: 'ACTIVE', label: 'Active' },
-              { value: 'PAUSED', label: 'Paused' },
-              { value: 'CANCELLED', label: 'Cancelled' },
+              { value: 'all', label: copy.all },
+              { value: 'ACTIVE', label: copy.statuses.ACTIVE },
+              { value: 'PAUSED', label: copy.statuses.PAUSED },
+              { value: 'CANCELLED', label: copy.statuses.CANCELLED },
             ].map((option) => (
               <button
                 key={option.value}
@@ -289,22 +313,22 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
       <Card className="overflow-hidden p-0">
         {filteredItems.length === 0 ? (
           <EmptyState
-            title="No subscriptions tracked"
-            description="Add Netflix, LinkedIn, streaming, SaaS, or any recurring membership to monitor renewals and cost."
+            title={copy.noSubscriptions}
+            description={copy.noSubscriptionsHelp}
             icon={<CreditCard className="h-12 w-12 text-slate-500" />}
-            action={<Button type="button" onClick={openCreate}><Plus className="h-4 w-4" /> Add Subscription</Button>}
+            action={<Button type="button" onClick={openCreate}><Plus className="h-4 w-4" /> {copy.addSubscription}</Button>}
           />
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[980px] text-left">
               <thead className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/60">
                 <tr>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Service</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Amount</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Next Billing</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Payment</th>
-                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">Status</th>
-                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">Actions</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.service}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.amount}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.nextBilling}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.payment}</th>
+                  <th className="px-5 py-3 text-xs font-bold uppercase text-slate-400">{copy.status}</th>
+                  <th className="px-5 py-3 text-right text-xs font-bold uppercase text-slate-400">{copy.actions}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -322,22 +346,22 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(item.amount), item.currency)}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{cycleLabel(item.billingCycle)}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(item.amount), item.currency, locale)}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{copy.cycles[item.billingCycle]}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900 dark:text-white">{formatDate(item.nextBillingDate)}</p>
+                        <p className="font-semibold text-slate-900 dark:text-white">{formatDate(item.nextBillingDate, undefined, locale)}</p>
                         <p className={`text-xs ${dueIn <= item.reminderDays && item.status === 'ACTIVE' ? 'text-amber-600 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400'}`}>
-                          {dueIn < 0 ? `${Math.abs(dueIn)}d overdue` : dueIn === 0 ? 'Due today' : `In ${dueIn}d`}
+                          {formatDueLabel(dueIn)}
                         </p>
                       </td>
                       <td className="px-5 py-4 text-sm text-slate-500 dark:text-slate-400">
                         <p className="font-medium text-slate-700 dark:text-slate-200">{item.account?.name || '-'}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400">{item.category?.name || 'Subscriptions'}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">{item.category?.name || copy.subscriptionsAuto}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <Badge variant={statusVariant(item.status)}>{item.status.toLowerCase()}</Badge>
-                        <p className="mt-1 text-xs text-slate-500">{item.autoRenew ? 'Auto renew' : 'Manual'}</p>
+                        <Badge variant={statusVariant(item.status)}>{copy.statuses[item.status]}</Badge>
+                        <p className="mt-1 text-xs text-slate-500">{item.autoRenew ? copy.autoRenew : copy.manual}</p>
                       </td>
                       <td className="px-5 py-4">
                         <div className="flex justify-end gap-1">
@@ -366,40 +390,40 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
         )}
       </Card>
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? 'Edit Subscription' : 'Add Subscription'} size="lg">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editing ? copy.editSubscription : copy.addSubscription} size="lg">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Input id="subscriptionName" name="name" label="Service Name" defaultValue={editing?.name || ''} placeholder="Netflix" required />
-            <Input id="provider" name="provider" label="Provider" defaultValue={editing?.provider || ''} placeholder="Netflix, LinkedIn, Disney+" required />
+            <Input id="subscriptionName" name="name" label={copy.serviceName} defaultValue={editing?.name || ''} placeholder={copy.serviceNamePlaceholder} required />
+            <Input id="provider" name="provider" label={copy.provider} defaultValue={editing?.provider || ''} placeholder={copy.providerPlaceholder} required />
           </div>
-          <Input id="planName" name="planName" label="Plan" defaultValue={editing?.planName || ''} placeholder="Premium, Standard, Career" />
+          <Input id="planName" name="planName" label={copy.plan} defaultValue={editing?.planName || ''} placeholder={copy.planPlaceholder} />
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input id="amount" name="amount" label="Amount" type="number" step="0.01" defaultValue={editing ? Number(editing.amount) : ''} required />
-            <Input id="currency" name="currency" label="Currency" maxLength={3} defaultValue={editing?.currency || 'BDT'} required />
-            <Select id="billingCycle" name="billingCycle" label="Billing Cycle" defaultValue={editing?.billingCycle || 'MONTHLY'} options={billingCycleOptions} />
+            <Input id="amount" name="amount" label={copy.amount} type="number" step="0.01" defaultValue={editing ? Number(editing.amount) : ''} required />
+            <Input id="currency" name="currency" label={copy.currency} maxLength={3} defaultValue={editing?.currency || 'BDT'} required />
+            <Select id="billingCycle" name="billingCycle" label={copy.billingCycle} defaultValue={editing?.billingCycle || 'MONTHLY'} options={billingCycleOptions} />
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <Input id="nextBillingDate" name="nextBillingDate" label="Next Billing Date" type="date" defaultValue={editing ? toDateInput(editing.nextBillingDate) : new Date().toISOString().split('T')[0]} required />
-            <Select id="status" name="status" label="Status" defaultValue={editing?.status || 'ACTIVE'} options={statusOptions} />
-            <Input id="reminderDays" name="reminderDays" label="Reminder Days" type="number" min={0} max={60} defaultValue={editing?.reminderDays ?? 3} required />
+            <Input id="nextBillingDate" name="nextBillingDate" label={copy.nextBillingDate} type="date" defaultValue={editing ? toDateInput(editing.nextBillingDate) : new Date().toISOString().split('T')[0]} required />
+            <Select id="status" name="status" label={copy.status} defaultValue={editing?.status || 'ACTIVE'} options={statusOptions} />
+            <Input id="reminderDays" name="reminderDays" label={copy.reminderDays} type="number" min={0} max={60} defaultValue={editing?.reminderDays ?? 3} required />
           </div>
           <Select
             id="accountId"
             name="accountId"
-            label="Payment Account"
+            label={copy.paymentAccount}
             defaultValue={editing?.accountId || ''}
-            options={[{ value: '', label: 'No account selected' }, ...accounts.map((account) => ({ value: account.id, label: account.name }))]}
+            options={[{ value: '', label: copy.noAccountSelected }, ...accounts.map((account) => ({ value: account.id, label: account.name }))]}
           />
           <Select
             id="categoryId"
             name="categoryId"
-            label="Transaction Category"
+            label={copy.transactionCategory}
             defaultValue={editing?.categoryId || ''}
-            options={[{ value: '', label: 'Subscriptions (auto)' }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
+            options={[{ value: '', label: copy.subscriptionsAuto }, ...categories.map((category) => ({ value: category.id, label: category.name }))]}
           />
-          <Input id="websiteUrl" name="websiteUrl" label="Website URL" type="url" defaultValue={editing?.websiteUrl || ''} placeholder="https://www.netflix.com" />
+          <Input id="websiteUrl" name="websiteUrl" label={copy.websiteUrl} type="url" defaultValue={editing?.websiteUrl || ''} placeholder="https://www.netflix.com" />
           <div className="space-y-2">
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">Color</p>
+            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">{common.color}</p>
             <div className="flex flex-wrap gap-2">
               {colorOptions.map((color) => (
                 <label key={color} className="relative h-9 w-9 cursor-pointer rounded-xl border border-slate-200 dark:border-slate-700" style={{ backgroundColor: color }}>
@@ -410,18 +434,18 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
             <input type="checkbox" name="autoRenew" defaultChecked={editing?.autoRenew ?? true} className="h-4 w-4 rounded border-slate-300 text-indigo-600" />
-            Auto renews
+            {copy.autoRenews}
           </label>
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
-            Automatic payment transactions are created only for active auto-renew subscriptions with a payment account selected.
+            {copy.autoPaymentHelp}
           </p>
           <div className="space-y-1.5">
-            <label htmlFor="notes" className="block text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+            <label htmlFor="notes" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.notes}</label>
             <textarea id="notes" name="notes" rows={3} defaultValue={editing?.notes || ''} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white" />
           </div>
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>Cancel</Button>
-            <Button type="submit" isLoading={isPending}>{editing ? 'Update Subscription' : 'Add Subscription'}</Button>
+            <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>{copy.cancel}</Button>
+            <Button type="submit" isLoading={isPending}>{editing ? copy.updateSubscription : copy.addSubscription}</Button>
           </div>
         </form>
       </Modal>

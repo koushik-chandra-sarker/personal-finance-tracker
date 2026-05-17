@@ -7,9 +7,12 @@ import {
   createSanchayapatraConfigAction, 
   deleteSanchayapatraConfigAction 
 } from '@/actions/sanchayapatra-config.actions';
-import { cn } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 export default function SanchayapatraAdminClient({ initialConfigs }: { initialConfigs: any[] }) {
+  const { messages } = useI18n();
+  const copy = messages.pages.admin.investmentConfig;
+  const common = messages.pages.admin.common;
   const [configs, setConfigs] = useState(initialConfigs);
   const [selectedConfig, setSelectedConfig] = useState<any>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -39,12 +42,12 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
       // In a real app, revalidatePath handles this, but for local state:
       window.location.reload(); 
     } else {
-      setStatus({ success: false, message: result.message || 'Error saving' });
+      setStatus({ success: false, message: result.message || copy.errorSaving });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this configuration?')) return;
+    if (!confirm(copy.deleteConfirm)) return;
     setIsDeleting(id);
     const result = await deleteSanchayapatraConfigAction(id);
     setIsDeleting(null);
@@ -61,7 +64,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
           className="flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-bold transition-all shadow-lg shadow-indigo-500/20"
         >
           <Plus className="h-4 w-4" />
-          Add Configuration
+          {copy.addConfiguration}
         </button>
       </div>
 
@@ -70,10 +73,10 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700/50">
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Type / Name</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Frequency</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Rate</th>
-                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">Actions</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">{copy.typeName}</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">{copy.frequency}</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">{copy.rate}</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-right">{common.actions}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 dark:divide-slate-700/50">
@@ -126,9 +129,9 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200 dark:border-slate-700">
               <div>
                 <h2 className="text-xl font-bold text-slate-900 dark:text-white">
-                  {selectedConfig ? 'Edit Configuration' : 'Add New Configuration'}
+                  {selectedConfig ? copy.editConfiguration : copy.addNewConfiguration}
                 </h2>
-                <p className="text-xs text-slate-500 mt-1">Configure Sanchayapatra certificate rules.</p>
+                <p className="text-xs text-slate-500 mt-1">{copy.modalHelp}</p>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)}
@@ -141,7 +144,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
             <form onSubmit={handleSave} className="p-8 space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Unique Slug (e.g. 'poribar')</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{copy.uniqueSlug}</label>
                   <input 
                     name="type" 
                     defaultValue={selectedConfig?.type} 
@@ -150,7 +153,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Display Name</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{copy.displayName}</label>
                   <input 
                     name="name" 
                     defaultValue={selectedConfig?.name} 
@@ -161,7 +164,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
               </div>
 
               <div>
-                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Description</label>
+                <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{copy.description}</label>
                 <textarea 
                   name="description" 
                   defaultValue={selectedConfig?.description || ''} 
@@ -172,19 +175,19 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Profit Frequency</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{copy.profitFrequency}</label>
                   <select 
                     name="payoutFrequency" 
                     defaultValue={selectedConfig?.payoutFrequency || 'MONTHLY'}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-sm focus:ring-2 ring-indigo-500/20 outline-none"
                   >
-                    <option value="MONTHLY">Monthly</option>
-                    <option value="QUARTERLY">Quarterly</option>
-                    <option value="AT_MATURITY">At Maturity</option>
+                    <option value="MONTHLY">{copy.monthly}</option>
+                    <option value="QUARTERLY">{copy.quarterly}</option>
+                    <option value="AT_MATURITY">{copy.atMaturity}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">Profit Rate (%)</label>
+                  <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">{copy.profitRate}</label>
                   <input 
                     name="rate" 
                     type="number" 
@@ -197,15 +200,15 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
 
               <div className="grid grid-cols-3 gap-4 p-5 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-100 dark:border-slate-700">
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Tax Threshold</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">{copy.taxThreshold}</label>
                   <input name="taxThreshold" type="number" defaultValue={selectedConfig ? Number(selectedConfig.taxThreshold) : 500000} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Tax % (Below)</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">{copy.taxBelow}</label>
                   <input name="taxRateBelow" type="number" defaultValue={selectedConfig ? Number(selectedConfig.taxRateBelow) : 5} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-slate-400 mb-1">Tax % (Above)</label>
+                  <label className="block text-[10px] font-bold text-slate-400 mb-1">{copy.taxAbove}</label>
                   <input name="taxRateAbove" type="number" defaultValue={selectedConfig ? Number(selectedConfig.taxRateAbove) : 10} className="w-full px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-xs" />
                 </div>
               </div>
@@ -223,14 +226,14 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
                   onClick={() => setIsModalOpen(false)}
                   className="flex-1 px-6 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-all"
                 >
-                  Cancel
+                  {common.cancel}
                 </button>
                 <button 
                   type="submit" 
                   disabled={loading}
                   className="flex-[2] px-6 py-3 rounded-2xl bg-indigo-600 text-white font-bold hover:bg-indigo-700 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
                 >
-                  {loading ? 'Saving...' : 'Save Configuration'}
+                  {loading ? common.saving : copy.saveConfiguration}
                 </button>
               </div>
             </form>

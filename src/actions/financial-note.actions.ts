@@ -44,13 +44,13 @@ export async function createFinancialNoteAction(formData: FormData): Promise<Act
     await validateAccess('NOTES', 'EDIT');
 
     const parsed = financialNoteSchema.safeParse(readFinancialNoteFormData(formData));
-    if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+    if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
     await financialNoteService.createFinancialNote(userId, executorId, parsed.data);
     revalidatePath('/notes');
-    return { success: true, message: 'Note created' };
+    return { success: true, message: 'নোট তৈরি হয়েছে' };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'Failed to create note' };
+    return { success: false, message: error instanceof Error ? error.message : 'নোট তৈরি করা যায়নি' };
   }
 }
 
@@ -63,13 +63,13 @@ export async function updateFinancialNoteAction(id: string, formData: FormData):
     await validateAccess('NOTES', 'EDIT');
 
     const parsed = financialNoteSchema.safeParse(readFinancialNoteFormData(formData));
-    if (!parsed.success) return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+    if (!parsed.success) return { success: false, message: 'তথ্য যাচাই করা যায়নি', errors: parsed.error.flatten().fieldErrors };
 
     await financialNoteService.updateFinancialNote(userId, executorId, id, parsed.data);
     revalidatePath('/notes');
-    return { success: true, message: 'Note updated' };
+    return { success: true, message: 'নোট আপডেট হয়েছে' };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'Failed to update note' };
+    return { success: false, message: error instanceof Error ? error.message : 'নোট আপডেট করা যায়নি' };
   }
 }
 
@@ -79,8 +79,8 @@ export async function deleteFinancialNoteAction(id: string): Promise<ActionRespo
     await validateAccess('NOTES', 'EDIT');
     await financialNoteService.deleteFinancialNote(userId, id);
     revalidatePath('/notes');
-    return { success: true, message: 'Note deleted' };
+    return { success: true, message: 'নোট ডিলিট হয়েছে' };
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : 'Failed to delete note' };
+    return { success: false, message: error instanceof Error ? error.message : 'নোট ডিলিট করা যায়নি' };
   }
 }

@@ -14,7 +14,8 @@ import Modal from '@/components/ui/Modal';
 import EmptyState from '@/components/ui/EmptyState';
 import Loader from '@/components/ui/Loader';
 import { Plus, Trash2, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, Edit2 } from 'lucide-react';
-import { formatCurrency, ACCOUNT_TYPE_LABELS } from '@/lib/utils';
+import { formatCurrency, ACCOUNT_TYPE_LABELS, getAccountTypeLabel } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 interface Account {
   id: string; name: string; type: string; balance: unknown;
@@ -37,6 +38,9 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
 
   const { data: session } = useSession();
   const userCurrency = (session?.user as any)?.currency || 'USD';
+  const { locale: userLocale, messages } = useI18n();
+  const copy = messages.pages.accounts;
+  const common = messages.pages.common;
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<AccountInput>({
     resolver: zodResolver(accountSchema) as any,
@@ -75,7 +79,7 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Deactivate this account?')) return;
+    if (!confirm(copy.deactivateConfirm)) return;
     startTransition(async () => {
       await deleteAccountAction(id);
       router.refresh();
@@ -86,23 +90,23 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
 
   return (
     <div className="space-y-6">
-      <Loader show={isPending} message={editingAccount ? "Updating account..." : "Creating account..."} />
+      <Loader show={isPending} message={editingAccount ? copy.updating : copy.creating} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Accounts</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Total Balance: {formatCurrency(totalBalance, userCurrency)}</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.totalBalance}: {formatCurrency(totalBalance, userCurrency, userLocale)}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
-          <Plus className="h-4 w-4" /> Add Account
+          <Plus className="h-4 w-4" /> {copy.addAccount}
         </Button>
       </div>
 
       {accounts.length === 0 ? (
         <EmptyState
-          title="No accounts yet"
-          description="Add your first account to start tracking balances"
+          title={copy.noAccounts}
+          description={copy.noAccountsHelp}
           icon={<Wallet className="h-12 w-12 text-slate-400 dark:text-slate-500" />}
-          action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> Add Account</Button>}
+          action={<Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.addAccount}</Button>}
         />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -130,10 +134,10 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
                   </div>
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{ACCOUNT_TYPE_LABELS[account.type]}</p>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">{getAccountTypeLabel(account.type, userLocale)}</p>
                   <p className="text-lg font-semibold text-slate-900 dark:text-white mt-1">{account.name}</p>
                   <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
-                    {formatCurrency(Number(account.balance), userCurrency)}
+                    {formatCurrency(Number(account.balance), userCurrency, userLocale)}
                   </p>
                 </div>
                 <div className="absolute -bottom-4 -right-4 w-24 h-24 rounded-full opacity-5 blur-2xl" style={{ backgroundColor: account.color }} />
@@ -143,14 +147,14 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingAccount ? "Edit Account" : "Add Account"}>
+      <Modal isOpen={isModalOpen} onClose={handleCloseModal} title={editingAccount ? copy.editAccount : copy.addAccount}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input id="name" label="Account Name" placeholder="My Bank" error={errors.name?.message} {...register('name')} />
-          <Select id="type" label="Account Type" options={Object.entries(ACCOUNT_TYPE_LABELS).map(([v, l]) => ({ value: v, label: l }))} error={errors.type?.message} {...register('type')} />
-          <Input id="balance" label="Initial Balance" type="number" step="0.01" error={errors.balance?.message} {...register('balance')} disabled={!!editingAccount} />
-          <Input id="color" label="Color" type="color" {...register('color')} />
+          <Input id="name" label={copy.accountName} placeholder={copy.accountPlaceholder} error={errors.name?.message} {...register('name')} />
+          <Select id="type" label={copy.accountType} options={Object.keys(ACCOUNT_TYPE_LABELS).map((value) => ({ value, label: getAccountTypeLabel(value, userLocale) }))} error={errors.type?.message} {...register('type')} />
+          <Input id="balance" label={copy.initialBalance} type="number" step="0.01" error={errors.balance?.message} {...register('balance')} disabled={!!editingAccount} />
+          <Input id="color" label={common.color} type="color" {...register('color')} />
           <Button type="submit" className="w-full" isLoading={isPending}>
-            {editingAccount ? "Update Account" : "Create Account"}
+            {editingAccount ? copy.updateAccount : copy.createAccount}
           </Button>
         </form>
       </Modal>

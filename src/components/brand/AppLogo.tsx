@@ -7,6 +7,7 @@ export const APP_TAGLINE = 'Personal Finance Manager';
 type AppLogoProps = {
   showText?: boolean;
   size?: 'sm' | 'md' | 'lg';
+  tagline?: string;
   textClassName?: string;
   taglineClassName?: string;
 };
@@ -41,6 +42,7 @@ const sizeClasses = {
 export default function AppLogo({
   showText = true,
   size = 'md',
+  tagline = APP_TAGLINE,
   textClassName,
   taglineClassName,
 }: AppLogoProps) {
@@ -66,7 +68,7 @@ export default function AppLogo({
             {APP_NAME}
           </h1>
           <p className={cn('leading-tight text-slate-500 dark:text-slate-400', classes.tagline, taglineClassName)}>
-            {APP_TAGLINE}
+            {tagline}
           </p>
         </div>
       )}

@@ -6,11 +6,13 @@ export type SubscriptionPlan = 'FREE' | 'PRO';
 export type SubscriptionInterval = 'MONTHLY' | 'YEARLY';
 export type SubscriptionStatus = 'ACTIVE' | 'TRIALING' | 'PAST_DUE' | 'CANCELED';
 export type SubscriptionSource = 'SELF_SERVICE' | 'ADMIN_GRANT';
+export type PreferredLocale = 'bn-BD' | 'en-US';
 
 declare module 'next-auth' {
   interface User {
     id: string;
     currency?: string;
+    preferredLocale?: PreferredLocale;
     role?: UserRole;
     status?: UserStatus;
     lastLoginAt?: string | null;
@@ -29,6 +31,7 @@ declare module 'next-auth' {
     user: {
       id: string;
       currency?: string;
+      preferredLocale?: PreferredLocale;
       role?: UserRole;
       status?: UserStatus;
       lastLoginAt?: string | null;

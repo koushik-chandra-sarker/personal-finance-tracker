@@ -30,7 +30,8 @@ import {
   type ManualPaymentRequestRow,
   type SubscriptionPackageRow,
 } from '@/actions/settings.actions';
-import { cn, formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency, formatDate } from '@/lib/utils';
+import { useI18n } from '@/i18n/client';
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300',
@@ -56,12 +57,6 @@ function paymentMethodLabel(method: ManualPaymentMethodRow) {
   return `${providerLabel(method.provider)} - ${method.label}`;
 }
 
-function intervalLabel(interval: string) {
-  if (interval === 'MONTHLY') return '1 Month';
-  if (interval === 'YEARLY') return '1 Year';
-  return 'Subscription';
-}
-
 function statusIcon(status: string) {
   if (status === 'APPROVED') return <CheckCircle2 className="h-4 w-4" />;
   if (status === 'REJECTED') return <AlertCircle className="h-4 w-4" />;
@@ -85,6 +80,8 @@ export default function PaymentPageClient({
 }: PaymentPageClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { locale, messages } = useI18n();
+  const copy = messages.payment;
   const [requests, setRequests] = useState(initialPaymentRequests);
   const [selectedProvider, setSelectedProvider] = useState<PaymentProvider>(paymentMethods[0]?.provider || 'BKASH');
   const [selectedMethodId, setSelectedMethodId] = useState(paymentMethods[0]?.id || '');
@@ -111,7 +108,7 @@ export default function PaymentPageClient({
   const canUseProviderTabs = paymentMethods.length > 0;
   const activePackage = packages.find((pkg) => pkg.id === session?.user?.subscriptionPackageId) || null;
   const accessEndDate = session?.user?.subscriptionCurrentPeriodEnd ? new Date(session.user.subscriptionCurrentPeriodEnd) : null;
-  const accessEndLabel = accessEndDate ? accessEndDate.toLocaleDateString() : 'Unlimited';
+  const accessEndLabel = accessEndDate ? formatDate(accessEndDate, undefined, locale) : copy.noExpiry;
   const daysRemaining = accessEndDate
     ? Math.max(0, Math.ceil((accessEndDate.getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
     : null;
@@ -125,6 +122,9 @@ export default function PaymentPageClient({
     `Hello, I submitted a takapilot payment request. Reference: ${pendingRequest?.reference || userReference}. TrxID: ${pendingRequest?.transactionId || ''}`
   );
   const whatsAppHref = whatsAppNumber ? `https://wa.me/${whatsAppNumber}?text=${whatsAppText}` : '';
+  const selectedIntervalLabel = selectedPackage?.interval === 'YEARLY'
+    ? messages.subscription.yearly
+    : messages.subscription.monthly;
 
   const copyValue = async (value: string) => {
     await navigator.clipboard.writeText(value);
@@ -162,19 +162,19 @@ export default function PaymentPageClient({
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Payment approved</p>
-                <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">Your subscription is active</h1>
+                <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{copy.paymentApproved}</p>
+                <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{copy.subscriptionActive}</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-                  The payment form is hidden while your access is active. When the current period expires, you can return here to renew or upgrade.
+                  {copy.activeFormHidden}
                 </p>
               </div>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row lg:flex-col">
               <Link href="/dashboard" className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-                Go to dashboard <ArrowRight className="h-4 w-4" />
+                {messages.subscription.goDashboard} <ArrowRight className="h-4 w-4" />
               </Link>
               <Link href="/settings" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-                Back to billing
+                {copy.backBilling}
               </Link>
             </div>
           </div>
@@ -183,30 +183,30 @@ export default function PaymentPageClient({
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <CreditCard className="h-5 w-5" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Current plan</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.currentPlan}</p>
               <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{session?.user?.subscriptionSource === 'ADMIN_GRANT' ? 'Admin granted' : 'Manual payment'}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{session?.user?.subscriptionSource === 'ADMIN_GRANT' ? 'Admin granted' : messages.subscription.payManually}</p>
             </div>
             <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <CalendarClock className="h-5 w-5" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Valid until</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.validUntil}</p>
               <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{accessEndLabel}</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {daysRemaining !== null ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : 'No expiry date'}
+                {daysRemaining !== null ? `${daysRemaining} ${copy.remainingSuffix}` : copy.noExpiry}
               </p>
             </div>
             <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                 <ReceiptText className="h-5 w-5" />
               </div>
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Last approved payment</p>
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.lastApproved}</p>
               <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
-                {latestApprovedRequest ? formatCurrency(latestApprovedRequest.amount, latestApprovedRequest.currency) : 'Approved'}
+                {latestApprovedRequest ? formatCurrency(latestApprovedRequest.amount, latestApprovedRequest.currency, locale) : copy.approved}
               </p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                {latestApprovedRequest ? `${providerLabel(latestApprovedRequest.provider)} - ${latestApprovedRequest.transactionId}` : 'No manual payment history'}
+                {latestApprovedRequest ? `${providerLabel(latestApprovedRequest.provider)} - ${latestApprovedRequest.transactionId}` : copy.noManualHistory}
               </p>
             </div>
           </div>
@@ -216,11 +216,11 @@ export default function PaymentPageClient({
           <Card className="p-0">
             <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50">
               <History className="h-5 w-5 text-indigo-500" />
-              <h2 className="font-semibold text-slate-900 dark:text-white">Payment History</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.history}</h2>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {requests.length === 0 ? (
-                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">No payment request submitted yet.</div>
+                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">{copy.noHistory}</div>
               ) : requests.map((request) => (
                 <div key={request.id} className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
@@ -231,12 +231,12 @@ export default function PaymentPageClient({
                       </span>
                     </div>
                     <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                      {providerLabel(request.provider)} - {formatCurrency(request.amount, request.currency)}
+                      {providerLabel(request.provider)} - {formatCurrency(request.amount, request.currency, locale)}
                     </p>
                     <p className="mt-1 break-all text-xs text-slate-400">TrxID {request.transactionId} - Ref {request.reference}</p>
-                    {request.adminNote && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">Admin note: {request.adminNote}</p>}
+                    {request.adminNote && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">{copy.adminNote}: {request.adminNote}</p>}
                   </div>
-                  <p className="text-xs text-slate-400">{new Date(request.createdAt).toLocaleString()}</p>
+                  <p className="text-xs text-slate-400">{formatDate(request.createdAt, 'MMM dd, yyyy h:mm a', locale)}</p>
                 </div>
               ))}
             </div>
@@ -244,11 +244,11 @@ export default function PaymentPageClient({
 
           <Card>
             <ShieldCheck className="mb-3 h-5 w-5 text-emerald-500" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Renewal rules</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.renewalRules}</h2>
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
-              <p>The payment form is locked while your subscription is active.</p>
-              <p>After expiry, package selection and manual payment submission will become available again.</p>
-              <p>Admin approval activates your next billing period after wallet verification.</p>
+              <p>{copy.renewalRule1}</p>
+              <p>{copy.renewalRule2}</p>
+              <p>{copy.renewalRule3}</p>
             </div>
           </Card>
         </div>
@@ -261,14 +261,14 @@ export default function PaymentPageClient({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <Link href="/subscription" className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300">
-            <ArrowLeft className="h-4 w-4" /> Back to packages
+            <ArrowLeft className="h-4 w-4" /> {copy.backToPackages}
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Complete Payment</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">Send payment first, then submit the transaction details for admin verification.</p>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.completePayment}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.completePaymentHelp}</p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
           <ShieldCheck className="h-4 w-4" />
-          Verified within 24 hours
+          {copy.verifiedWithin}
         </div>
       </div>
 
@@ -284,9 +284,9 @@ export default function PaymentPageClient({
             <div className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm dark:border-emerald-500/30 dark:bg-slate-900/60">
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Selected Plan</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.selectedPlan}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-bold text-slate-950 dark:text-white">{intervalLabel(selectedPackage.interval)}</h2>
+                    <h2 className="text-xl font-bold text-slate-950 dark:text-white">{selectedIntervalLabel}</h2>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{selectedPackage.name}</span>
                     {selectedPackage.discountLabel && (
                       <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{selectedPackage.discountLabel}</span>
@@ -294,8 +294,8 @@ export default function PaymentPageClient({
                   </div>
                 </div>
                 <div className="text-left sm:text-right">
-                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Payable Amount</p>
-                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{formatCurrency(selectedPackage.price, selectedPackage.currency)}</p>
+                  <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.payableAmount}</p>
+                  <p className="text-3xl font-black text-emerald-600 dark:text-emerald-300">{formatCurrency(selectedPackage.price, selectedPackage.currency, locale)}</p>
                 </div>
               </div>
             </div>
@@ -313,8 +313,8 @@ export default function PaymentPageClient({
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">1</span>
                     <div>
-                      <h2 className="font-bold text-slate-950 dark:text-white">Send Payment</h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">Send the exact amount to the selected wallet number.</p>
+                      <h2 className="font-bold text-slate-950 dark:text-white">{copy.sendPayment}</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{copy.sendPaymentHelp}</p>
                     </div>
                   </div>
                 </div>
@@ -347,7 +347,7 @@ export default function PaymentPageClient({
 
                   {providerMethods.length > 1 && (
                     <div>
-                      <label htmlFor="paymentMethod" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Payment Account</label>
+                      <label htmlFor="paymentMethod" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.paymentAccount}</label>
                       <select
                         id="paymentMethod"
                         value={selectedMethodId}
@@ -370,7 +370,7 @@ export default function PaymentPageClient({
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Send {formatCurrency(selectedPackage.price, selectedPackage.currency)} to this {providerLabel(selectedMethod.provider)} number
+                            {formatCurrency(selectedPackage.price, selectedPackage.currency, locale)} {providerLabel(selectedMethod.provider)} {copy.sendAmountTo}
                           </p>
                           <p className="mt-2 break-all text-2xl font-black text-slate-950 dark:text-white">{selectedMethod.accountNumber}</p>
                           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{selectedMethod.accountName} - {selectedMethod.label}</p>
@@ -381,7 +381,7 @@ export default function PaymentPageClient({
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-white dark:ring-slate-700 dark:hover:bg-slate-700"
                         >
                           <Copy className="h-4 w-4" />
-                          {copiedValue === selectedMethod.accountNumber ? 'Copied' : 'Copy'}
+                          {copiedValue === selectedMethod.accountNumber ? copy.copied : copy.copy}
                         </button>
                       </div>
                       {selectedMethod.instructions && (
@@ -390,7 +390,7 @@ export default function PaymentPageClient({
                     </div>
                   ) : (
                     <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-                      No active payment account is configured. Contact support before sending money.
+                      {copy.noPaymentAccount}
                     </div>
                   )}
                 </div>
@@ -401,8 +401,8 @@ export default function PaymentPageClient({
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">2</span>
                     <div>
-                      <h2 className="font-bold text-slate-950 dark:text-white">Enter Payment Details</h2>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">These details help admin match your wallet transaction.</p>
+                      <h2 className="font-bold text-slate-950 dark:text-white">{copy.enterDetails}</h2>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">{copy.enterDetailsHelp}</p>
                     </div>
                   </div>
                 </div>
@@ -411,27 +411,27 @@ export default function PaymentPageClient({
                   <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/50">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">Your Payment Reference</p>
+                        <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.reference}</p>
                         <p className="mt-1 break-all text-sm font-bold text-slate-900 dark:text-white">{userReference}</p>
                       </div>
                       <button type="button" onClick={() => copyValue(userReference)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
                         <Copy className="h-4 w-4" />
-                        {copiedValue === userReference ? 'Copied' : 'Copy'}
+                        {copiedValue === userReference ? copy.copied : copy.copy}
                       </button>
                     </div>
                   </div>
 
                   <div className="grid gap-4 sm:grid-cols-2">
-                    <Input id="senderAccount" name="senderAccount" label={`Your ${providerLabel(selectedProvider)} Phone Number`} placeholder="01XXXXXXXXX" required />
-                    <Input id="transactionId" name="transactionId" label="Transaction ID" placeholder="e.g. TXN1234ABCD" required />
+                    <Input id="senderAccount" name="senderAccount" label={`${providerLabel(selectedProvider)} ${copy.phoneNumber}`} placeholder="01XXXXXXXXX" required />
+                    <Input id="transactionId" name="transactionId" label={copy.transactionId} placeholder={copy.transactionPlaceholder} required />
                   </div>
                   <div>
-                    <label htmlFor="paymentNote" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">Note for Admin</label>
+                    <label htmlFor="paymentNote" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.noteForAdmin}</label>
                     <textarea
                       id="paymentNote"
                       name="note"
                       rows={3}
-                      placeholder="Anything that helps admin match this payment"
+                      placeholder={copy.notePlaceholder}
                       className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
                     />
                   </div>
@@ -442,9 +442,9 @@ export default function PaymentPageClient({
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-500" />
                   <div>
-                    <h2 className="font-bold text-slate-950 dark:text-white">Payment and Activation Terms</h2>
+                    <h2 className="font-bold text-slate-950 dark:text-white">{copy.termsTitle}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                      After payment, your PRO subscription will be activated within 24 hours after verification. If payment cannot be verified, admin may contact you for more details. Manual payments are not refundable after activation.
+                      {copy.termsText}
                     </p>
                   </div>
                 </div>
@@ -456,12 +456,12 @@ export default function PaymentPageClient({
                     onChange={(event) => setAcceptedTerms(event.target.checked)}
                     className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
                   />
-                  <span>I agree to the payment and activation terms</span>
+                  <span>{copy.agreeTerms}</span>
                 </label>
               </Card>
 
               <Button type="submit" size="lg" className="w-full from-emerald-600 to-emerald-600 shadow-lg shadow-emerald-500/20 hover:from-emerald-700 hover:to-emerald-700" isLoading={isPending} disabled={!acceptedTerms || !selectedMethod}>
-                I&apos;ve Paid - Submit Details
+                {copy.submitPaid}
               </Button>
             </form>
           ) : (
@@ -469,9 +469,9 @@ export default function PaymentPageClient({
               <div className="flex items-start gap-3">
                 <Clock3 className="mt-1 h-5 w-5 text-amber-500" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">Payment already submitted</h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.alreadySubmitted}</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                    Your payment is waiting for admin review. Account activation usually completes within 24 hours.
+                    {copy.alreadySubmittedHelp}
                   </p>
                   {pendingRequest && (
                     <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
@@ -492,22 +492,22 @@ export default function PaymentPageClient({
                 <ReceiptText className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-950 dark:text-white">Before You Submit</h2>
-                <p className="text-sm text-slate-500 dark:text-slate-400">A quick checklist</p>
+                <h2 className="font-bold text-slate-950 dark:text-white">{copy.beforeSubmit}</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{copy.quickChecklist}</p>
               </div>
             </div>
             <div className="mt-5 space-y-3 text-sm text-slate-600 dark:text-slate-300">
-              <div className="flex gap-3"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /><span>Pay from the same wallet number you enter in the form.</span></div>
-              <div className="flex gap-3"><Copy className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" /><span>Copy the Transaction ID exactly from bKash or Nagad.</span></div>
-              <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /><span>Admin verifies the wallet history before activating access.</span></div>
+              <div className="flex gap-3"><Smartphone className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" /><span>{copy.checklistWallet}</span></div>
+              <div className="flex gap-3"><Copy className="mt-0.5 h-4 w-4 shrink-0 text-sky-500" /><span>{copy.checklistTrx}</span></div>
+              <div className="flex gap-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-indigo-500" /><span>{copy.checklistAdmin}</span></div>
             </div>
           </Card>
 
           <Card>
             <MessageCircle className="mb-3 h-5 w-5 text-emerald-500" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">Need faster activation?</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.fasterActivation}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-              Contact WhatsApp with your reference and TrxID after submitting the payment.
+              {copy.whatsappHelp}
             </p>
             {whatsAppHref ? (
               <>
@@ -521,12 +521,12 @@ export default function PaymentPageClient({
                 </button>
                 <a href={whatsAppHref} target="_blank" rel="noreferrer" className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
                   <MessageCircle className="h-4 w-4" />
-                  Contact via WhatsApp
+                  {copy.contactWhatsapp}
                 </a>
               </>
             ) : (
               <p className="mt-4 rounded-xl bg-slate-100 p-3 text-xs leading-5 text-slate-500 dark:bg-slate-900/50 dark:text-slate-400">
-                Add `NEXT_PUBLIC_PAYMENT_WHATSAPP_NUMBER` or an active payment account number to enable the direct WhatsApp link.
+                {copy.whatsappMissing}
               </p>
             )}
           </Card>
@@ -534,11 +534,11 @@ export default function PaymentPageClient({
           <Card className="p-0">
             <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50">
               <History className="h-5 w-5 text-indigo-500" />
-              <h2 className="font-semibold text-slate-900 dark:text-white">Payment History</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.history}</h2>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {requests.length === 0 ? (
-                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">No payment request submitted yet.</div>
+                <div className="p-4 text-sm text-slate-500 dark:text-slate-400">{copy.noHistory}</div>
               ) : requests.map((request) => (
                 <div key={request.id} className="p-4">
                   <div className="flex flex-wrap items-center gap-2">
@@ -548,12 +548,12 @@ export default function PaymentPageClient({
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
-                    {providerLabel(request.provider)} - {formatCurrency(request.amount, request.currency)}
+                    {providerLabel(request.provider)} - {formatCurrency(request.amount, request.currency, locale)}
                   </p>
                   <p className="mt-1 break-all text-xs text-slate-400">TrxID {request.transactionId}</p>
                   <p className="mt-1 break-all text-xs text-slate-400">Ref {request.reference}</p>
-                  <p className="mt-1 text-xs text-slate-400">{new Date(request.createdAt).toLocaleString()}</p>
-                  {request.adminNote && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">Admin note: {request.adminNote}</p>}
+                  <p className="mt-1 text-xs text-slate-400">{formatDate(request.createdAt, 'MMM dd, yyyy h:mm a', locale)}</p>
+                  {request.adminNote && <p className="mt-2 rounded-xl bg-slate-50 p-2 text-xs text-slate-500 dark:bg-slate-900/40 dark:text-slate-400">{copy.adminNote}: {request.adminNote}</p>}
                 </div>
               ))}
             </div>

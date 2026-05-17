@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
+import { useI18n } from '@/i18n/client';
 
 type NavItem = {
   href: string;
@@ -69,6 +70,7 @@ function isActiveInvestmentRoute(pathname: string, href: string) {
 export default function Sidebar() {
   const pathname = usePathname();
   const { data: session, status } = useSession();
+  const { messages } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
   const [investmentsOpen, setInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'));
@@ -78,6 +80,7 @@ export default function Sidebar() {
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
   const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
+  const navLabel = (label: string) => messages.navigation[label as keyof typeof messages.navigation] || label;
   const renderNavLink = (item: NavItem) => {
     const isActive = isActiveRoute(pathname, item.href);
     return (
@@ -93,7 +96,7 @@ export default function Sidebar() {
         )}
       >
         <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
-        {!collapsed && <span>{item.label}</span>}
+        {!collapsed && <span>{navLabel(item.label)}</span>}
       </Link>
     );
   };
@@ -105,7 +108,7 @@ export default function Sidebar() {
     )}>
       {/* Logo */}
       <div className="flex items-center gap-3 p-6 border-b border-slate-200 dark:border-slate-700/50">
-        <AppLogo showText={!collapsed} />
+        <AppLogo showText={!collapsed} tagline={messages.brand.tagline} />
       </div>
 
       {/* Nav */}
@@ -116,7 +119,7 @@ export default function Sidebar() {
           <button
             type="button"
             onClick={() => setInvestmentsOpen(!investmentsOpen)}
-            title={collapsed ? 'Investments' : undefined}
+            title={collapsed ? messages.navigation.Investments : undefined}
             className={cn(
               'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
               isInvestmentsRoute
@@ -128,7 +131,7 @@ export default function Sidebar() {
             <TrendingUp className={cn('h-5 w-5 flex-shrink-0', isInvestmentsRoute ? 'text-indigo-600 dark:text-indigo-400' : '')} />
             {!collapsed && (
               <>
-                <span className="flex-1 text-left">Investments</span>
+                <span className="flex-1 text-left">{messages.navigation.Investments}</span>
                 <ChevronDown className={cn('h-4 w-4 transition-transform', investmentsOpen && 'rotate-180')} />
               </>
             )}
@@ -143,7 +146,7 @@ export default function Sidebar() {
                     key={item.href}
                     href={navHref(item.href)}
                     prefetch={!isSubscriptionLocked}
-                    title={collapsed ? item.label : undefined}
+                    title={collapsed ? navLabel(item.label) : undefined}
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                       isActive
@@ -152,7 +155,7 @@ export default function Sidebar() {
                     )}
                   >
                     <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {!collapsed && <span>{navLabel(item.label)}</span>}
                   </Link>
                 );
               })}
@@ -178,7 +181,7 @@ export default function Sidebar() {
               <KeyRound className={cn('h-5 w-5 flex-shrink-0', isAdminRoute ? 'text-indigo-600 dark:text-indigo-400' : '')} />
               {!collapsed && (
                 <>
-                  <span className="flex-1 text-left">Admin</span>
+                  <span className="flex-1 text-left">{messages.navigation.Admin}</span>
                   <ChevronDown className={cn('h-4 w-4 transition-transform', adminOpen && 'rotate-180')} />
                 </>
               )}
@@ -193,7 +196,7 @@ export default function Sidebar() {
                       key={item.href}
                       href={navHref(item.href)}
                       prefetch={!isSubscriptionLocked}
-                      title={collapsed ? item.label : undefined}
+                      title={collapsed ? navLabel(item.label) : undefined}
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                         isActive
@@ -202,7 +205,7 @@ export default function Sidebar() {
                       )}
                     >
                       <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
-                      {!collapsed && <span>{item.label}</span>}
+                      {!collapsed && <span>{navLabel(item.label)}</span>}
                     </Link>
                   );
                 })}

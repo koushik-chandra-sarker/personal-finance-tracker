@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { formatCurrency, formatDate, cn } from '@/lib/utils';
+import { formatCurrency, formatDate, cn, getFrequencyLabel, getInvestmentStatusLabel } from '@/lib/utils';
 import { X, ArrowUpRight, Plus, Calendar, Building2, Hash, TrendingUp, PiggyBank, RefreshCw, CheckCircle2 } from 'lucide-react';
 import type { ActionResponse } from '@/types';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { getInvestmentByIdAction } from '@/actions/investment.actions';
+import { useI18n } from '@/i18n/client';
 
 type Account = { id: string; name: string; type: string; balance: number | string; isActive: boolean };
 type ScheduleStatus = 'PAID' | 'MISSED' | 'DUE';
@@ -36,11 +37,6 @@ type Investment = {
   valuations?: { id: string; value: number | string; date: string }[];
 };
 
-const FREQ_LABELS: Record<string, string> = {
-  MONTHLY: 'Monthly', QUARTERLY: 'Quarterly', HALF_YEARLY: 'Half Yearly',
-  YEARLY: 'Yearly', AT_MATURITY: 'At Maturity', ON_SALE: 'On Sale',
-};
-
 const SCHEDULE_STATUS_STYLES: Record<ScheduleStatus, string> = {
   PAID: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300',
   MISSED: 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300',
@@ -62,6 +58,8 @@ export default function InvestmentDetail({
   onClose: () => void;
   initialAction?: 'pay-installment' | null;
 }) {
+  const { locale, messages } = useI18n();
+  const copy = messages.pages.investments;
   const [investment, setInvestment] = useState<Investment>(initialInvestment);
   const [isLoadingData, setIsLoadingData] = useState(true);
   
@@ -140,11 +138,11 @@ export default function InvestmentDetail({
 
   const chartData = [...(investment.valuations || [])]
     .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .map(v => ({ date: formatDate(v.date), value: Number(v.value) }));
+    .map(v => ({ date: formatDate(v.date, locale), value: Number(v.value) }));
 
   // Add the initial purchase as the first point if no valuations exist or purchase is earlier
   if (chartData.length === 0 || (chartData.length > 0 && new Date(investment.purchaseDate) < new Date((investment.valuations || [])[0]?.date || investment.purchaseDate))) {
-    chartData.unshift({ date: formatDate(investment.purchaseDate), value: invested });
+    chartData.unshift({ date: formatDate(investment.purchaseDate, locale), value: invested });
   }
 
   return (
@@ -161,25 +159,25 @@ export default function InvestmentDetail({
         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 flex-shrink-0 bg-slate-50/50 dark:bg-slate-800/50">
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Invested</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(invested, currency)}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.invested}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(invested, currency, locale)}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Current</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(current, currency)}</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.current}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(current, currency, locale)}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Gain/Loss</p>
+              <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.gainLoss}</p>
               <p className={cn('text-sm font-bold mt-1', gain >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
-                {gain >= 0 ? '+' : ''}{formatCurrency(gain, currency)} <span className="text-[10px] font-medium block sm:inline">({gainPct}%)</span>
+                {gain >= 0 ? '+' : ''}{formatCurrency(gain, currency, locale)} <span className="text-[10px] font-medium block sm:inline">({gainPct}%)</span>
               </p>
             </div>
           </div>
 
           <div className="flex border-b border-slate-200 dark:border-slate-700 mt-5">
-            <button onClick={() => setActiveTab('DETAILS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'DETAILS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>Details</button>
-            <button onClick={() => setActiveTab('VALUATIONS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'VALUATIONS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>Valuations</button>
-            <button onClick={() => setActiveTab('RETURNS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'RETURNS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>Returns</button>
+            <button onClick={() => setActiveTab('DETAILS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'DETAILS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>{copy.details}</button>
+            <button onClick={() => setActiveTab('VALUATIONS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'VALUATIONS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>{copy.valuations}</button>
+            <button onClick={() => setActiveTab('RETURNS')} className={cn("px-4 py-2 text-sm font-medium border-b-2 transition-colors", activeTab === 'RETURNS' ? "border-indigo-500 text-indigo-600 dark:text-indigo-400" : "border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300")}>{copy.returns}</button>
           </div>
         </div>
 
@@ -197,7 +195,7 @@ export default function InvestmentDetail({
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30">
                     <Building2 className="h-5 w-5 text-indigo-500" />
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Institution</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.institution}</p>
                       <p className="text-sm font-medium text-slate-900 dark:text-white">{investment.institutionName}</p>
                     </div>
                   </div>
@@ -206,7 +204,7 @@ export default function InvestmentDetail({
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30">
                     <Hash className="h-5 w-5 text-indigo-500" />
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Account No.</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.accountNo}</p>
                       <p className="text-sm font-medium text-slate-900 dark:text-white">{investment.accountNumber}</p>
                     </div>
                   </div>
@@ -214,16 +212,16 @@ export default function InvestmentDetail({
                 <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30">
                   <Calendar className="h-5 w-5 text-indigo-500" />
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">Purchased</p>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.purchaseDate)}</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.purchased}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.purchaseDate, locale)}</p>
                   </div>
                 </div>
                 {investment.maturityDate && (
                   <div className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/30">
                     <Calendar className="h-5 w-5 text-indigo-500" />
                     <div>
-                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">Maturity Date</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.maturityDate)}</p>
+                      <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.maturityDate}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.maturityDate, locale)}</p>
                     </div>
                   </div>
                 )}
@@ -232,34 +230,34 @@ export default function InvestmentDetail({
               <div className="space-y-2">
                 {investment.interestRate && (
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                    <span className="text-sm text-slate-500 dark:text-slate-400">Interest Rate</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.interestRate)}% {investment.returnFrequency && <span className="text-xs font-normal text-slate-400">({FREQ_LABELS[investment.returnFrequency] || investment.returnFrequency})</span>}</span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{copy.interestRate}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.interestRate)}% {investment.returnFrequency && <span className="text-xs font-normal text-slate-400">({getFrequencyLabel(investment.returnFrequency, locale)})</span>}</span>
                   </div>
                 )}
                 {investment.quantity && (
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                    <span className="text-sm text-slate-500 dark:text-slate-400">Quantity</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.quantity)} <span className="text-xs font-normal text-slate-400">@ {formatCurrency(Number(investment.avgBuyPrice || 0), currency)}</span></span>
+                    <span className="text-sm text-slate-500 dark:text-slate-400">{copy.quantity}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.quantity)} <span className="text-xs font-normal text-slate-400">@ {formatCurrency(Number(investment.avgBuyPrice || 0), currency, locale)}</span></span>
                   </div>
                 )}
                 {investment.monthlyInstallment && (
                   <>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Monthly Installment</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(investment.monthlyInstallment), currency)}</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">{copy.monthlyInstallment}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(investment.monthlyInstallment), currency, locale)}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Due Day</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">Day {investment.installmentDueDay || 5}</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">{copy.dueDay}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{copy.day} {investment.installmentDueDay || 5}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Missed Payments</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">{copy.missedPayments}</span>
                       <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.missedInstallmentCount || 0}</span>
                     </div>
                     {investment.lastInstallmentPaidOn && (
                       <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                         <span className="text-sm text-slate-500 dark:text-slate-400">Last Paid</span>
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatDate(investment.lastInstallmentPaidOn)}</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatDate(investment.lastInstallmentPaidOn, locale)}</span>
                       </div>
                     )}
                   </>
@@ -267,13 +265,13 @@ export default function InvestmentDetail({
                 {investment.sanchayapatraConfig && (
                   <>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Sanchayapatra Scheme</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">{copy.sanchayapatraScheme}</span>
                       <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.sanchayapatraConfig.name}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">Payout Rule</span>
                       <span className="text-sm font-semibold text-slate-900 dark:text-white">
-                        {Number(investment.sanchayapatraConfig.rate)}% / {investment.sanchayapatraConfig.payoutFrequency.replace(/_/g, ' ')}
+                        {Number(investment.sanchayapatraConfig.rate)}% / {getFrequencyLabel(investment.sanchayapatraConfig.payoutFrequency, locale)}
                       </span>
                     </div>
                   </>
@@ -292,11 +290,11 @@ export default function InvestmentDetail({
                         {projection.dpsInstallments.map((item) => (
                           <div key={item.dueDate} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/30">
                             <div>
-                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.dueDate)}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(item.amount, currency)}</p>
+                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.dueDate, locale)}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(item.amount, currency, locale)}</p>
                             </div>
                             <span className={cn('rounded-full px-2 py-1 text-[10px] font-bold', SCHEDULE_STATUS_STYLES[item.status])}>
-                              {item.status}
+                              {getInvestmentStatusLabel(item.status, locale)}
                             </span>
                           </div>
                         ))}
@@ -314,12 +312,12 @@ export default function InvestmentDetail({
                         {projection.sanchayapatraPayouts.map((item) => (
                           <div key={`${item.date}-${item.label}`} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-900/30">
                             <div>
-                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.date)}</p>
+                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{formatDate(item.date, locale)}</p>
                               <p className="text-xs capitalize text-slate-500 dark:text-slate-400">{item.label}</p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.amount, currency)}</p>
-                              <p className="text-[11px] text-slate-400">Tax {formatCurrency(item.taxAmount, currency)}</p>
+                              <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">{formatCurrency(item.amount, currency, locale)}</p>
+                              <p className="text-[11px] text-slate-400">{copy.tax} {formatCurrency(item.taxAmount, currency, locale)}</p>
                             </div>
                           </div>
                         ))}
@@ -332,11 +330,11 @@ export default function InvestmentDetail({
                       <div className="flex items-center justify-between gap-3">
                         <div>
                           <p className="text-xs font-semibold uppercase text-emerald-700 dark:text-emerald-300">Projected Maturity</p>
-                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatDate(projection.maturity.date)}</p>
+                          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatDate(projection.maturity.date, locale)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-base font-bold text-slate-900 dark:text-white">{formatCurrency(projection.maturity.projectedValue, currency)}</p>
-                          <p className="text-xs text-emerald-700 dark:text-emerald-300">Profit {formatCurrency(projection.maturity.projectedReturn, currency)}</p>
+                          <p className="text-base font-bold text-slate-900 dark:text-white">{formatCurrency(projection.maturity.projectedValue, currency, locale)}</p>
+                          <p className="text-xs text-emerald-700 dark:text-emerald-300">{copy.gainLoss} {formatCurrency(projection.maturity.projectedReturn, currency, locale)}</p>
                         </div>
                       </div>
                     </div>
@@ -346,14 +344,14 @@ export default function InvestmentDetail({
 
               {investment.notes && (
                 <div className="p-4 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
-                  <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">Notes</p>
+                  <p className="text-[10px] text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1">{copy.notes}</p>
                   <p className="text-sm text-amber-900 dark:text-amber-200">{investment.notes}</p>
                 </div>
               )}
 
               <div className="pt-2">
                 <button onClick={() => setShowFundsForm(!showFundsForm)} className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-indigo-200 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 text-sm font-semibold hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors">
-                  <PiggyBank className="h-4 w-4" /> {isInstallmentInvestment ? 'Pay Installment' : 'Add Funds'}
+                  <PiggyBank className="h-4 w-4" /> {isInstallmentInvestment ? copy.payInstallment : copy.addFunds}
                 </button>
               </div>
 
@@ -363,7 +361,7 @@ export default function InvestmentDetail({
                     {isInstallmentInvestment ? 'This will pay the oldest unpaid installment from the selected account.' : 'This will deduct the amount from the selected account and increase your invested amount.'}
                   </p>
                   <div className="grid grid-cols-2 gap-3">
-                    <input name="amount" type="number" step="0.01" required placeholder="Amount" defaultValue={investment.monthlyInstallment ? Number(investment.monthlyInstallment) : ''}
+                    <input name="amount" type="number" step="0.01" required placeholder={copy.amount} defaultValue={investment.monthlyInstallment ? Number(investment.monthlyInstallment) : ''}
                       readOnly={isInstallmentInvestment}
                       className={cn(
                         'px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500',
@@ -371,16 +369,16 @@ export default function InvestmentDetail({
                       )} />
                     <select name="accountId" required defaultValue={investment.linkedAccountId || ''}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
-                      <option value="">Select Account...</option>
-                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency)})</option>)}
+                      <option value="">{copy.linkedAccount}...</option>
+                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency, locale)})</option>)}
                     </select>
                   </div>
                   <input name="description" placeholder="Description (optional)" defaultValue={isInstallmentInvestment ? `DPS installment for ${investment.name}` : 'Additional Funds'}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
                   <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={() => setShowFundsForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : isInstallmentInvestment ? 'Pay Installment' : 'Add Funds'}</button>
+                    <button type="button" onClick={() => setShowFundsForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">{copy.cancel}</button>
+                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? copy.saving : isInstallmentInvestment ? copy.payInstallment : copy.addFunds}</button>
                   </div>
                 </form>
               )}
@@ -399,16 +397,16 @@ export default function InvestmentDetail({
                   
                   <div className="grid grid-cols-2 gap-3">
                     <select name="status" required className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
-                      <option value="MATURED">Matured</option>
-                      <option value="SOLD">Sold</option>
-                      <option value="CANCELLED">Cancelled</option>
+                      <option value="MATURED">{getInvestmentStatusLabel('MATURED', locale)}</option>
+                      <option value="SOLD">{getInvestmentStatusLabel('SOLD', locale)}</option>
+                      <option value="CANCELLED">{getInvestmentStatusLabel('CANCELLED', locale)}</option>
                     </select>
                     <input name="closeDate" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <input name="finalValue" type="number" step="0.01" required placeholder="Final Payout Value" defaultValue={current}
+                    <input name="finalValue" type="number" step="0.01" required placeholder={copy.currentValueLabel} defaultValue={current}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                     <select name="linkedAccountId" defaultValue={investment.linkedAccountId || ''}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
@@ -423,7 +421,7 @@ export default function InvestmentDetail({
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
                   
                   <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={() => setShowCloseForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
+                    <button type="button" onClick={() => setShowCloseForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">{copy.cancel}</button>
                     <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Processing...' : 'Confirm Close'}</button>
                   </div>
                 </form>
@@ -437,7 +435,7 @@ export default function InvestmentDetail({
                 <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Growth Chart</h3>
                 <button onClick={() => setShowValuationForm(!showValuationForm)}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
-                  <TrendingUp className="h-3.5 w-3.5" /> Record Valuation
+                  <TrendingUp className="h-3.5 w-3.5" /> {copy.recordValuation}
                 </button>
               </div>
 
@@ -445,15 +443,15 @@ export default function InvestmentDetail({
                 <form onSubmit={handleValuation} className="space-y-3 p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700/50">
                   <p className="text-xs text-slate-500 dark:text-slate-400 mb-2">Record the current market value of this investment to track its growth.</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <input name="value" type="number" step="0.01" required placeholder="Current Value" defaultValue={current}
+                    <input name="value" type="number" step="0.01" required placeholder={copy.currentValueLabel} defaultValue={current}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                     <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   </div>
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
                   <div className="flex gap-2 pt-1">
-                    <button type="button" onClick={() => setShowValuationForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : 'Save Valuation'}</button>
+                    <button type="button" onClick={() => setShowValuationForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">{copy.cancel}</button>
+                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? copy.saving : copy.recordValuation}</button>
                   </div>
                 </form>
               )}
@@ -465,7 +463,7 @@ export default function InvestmentDetail({
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#94a3b8" opacity={0.2} />
                       <XAxis dataKey="date" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} dy={10} />
                       <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#64748b' }} tickFormatter={(val) => `৳${(val/1000).toFixed(0)}k`} />
-                      <Tooltip formatter={(val) => formatCurrency(Number(val), currency)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                      <Tooltip formatter={(val) => formatCurrency(Number(val), currency, locale)} contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                       <Line type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={3} dot={{ r: 4, fill: '#6366f1', strokeWidth: 2, stroke: '#fff' }} activeDot={{ r: 6 }} />
                     </LineChart>
                   </ResponsiveContainer>
@@ -483,7 +481,7 @@ export default function InvestmentDetail({
                 {chartData.slice().reverse().map((v, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30">
                     <span className="text-sm text-slate-600 dark:text-slate-300">{v.date}</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(v.value, currency)}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(v.value, currency, locale)}</span>
                   </div>
                 ))}
               </div>
@@ -494,12 +492,12 @@ export default function InvestmentDetail({
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Returns</h3>
-                  {totalReturns > 0 && <p className="text-xs text-emerald-600 dark:text-emerald-400">Total: {formatCurrency(totalReturns, currency)}</p>}
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.returns}</h3>
+                  {totalReturns > 0 && <p className="text-xs text-emerald-600 dark:text-emerald-400">{copy.totalReturns}: {formatCurrency(totalReturns, currency, locale)}</p>}
                 </div>
                 <button onClick={() => setShowReturnForm(!showReturnForm)}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
-                  <Plus className="h-3.5 w-3.5" /> Record Return
+                  <Plus className="h-3.5 w-3.5" /> {copy.addReturn}
                 </button>
               </div>
 
@@ -507,7 +505,7 @@ export default function InvestmentDetail({
                 <form onSubmit={handleReturn} className="space-y-3 mb-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-700/30 border border-slate-200 dark:border-slate-700/50">
                   <p className="text-xs text-slate-500 dark:text-slate-400">Return payments are deposited into the selected account.</p>
                   <div className="grid grid-cols-2 gap-3">
-                    <input name="amount" type="number" step="0.01" required placeholder="Amount"
+                    <input name="amount" type="number" step="0.01" required placeholder={copy.amount}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                     <select name="type" required
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
@@ -521,7 +519,7 @@ export default function InvestmentDetail({
                     <select name="accountId" required defaultValue={investment.linkedAccountId || ''}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500">
                       <option value="">Deposit Account...</option>
-                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency)})</option>)}
+                      {accounts.filter(a => a.isActive).map(a => <option key={a.id} value={a.id}>{a.name} ({formatCurrency(Number(a.balance), currency, locale)})</option>)}
                     </select>
                     <input name="date" type="date" required defaultValue={new Date().toISOString().split('T')[0]}
                       className="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
@@ -530,8 +528,8 @@ export default function InvestmentDetail({
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-indigo-500" />
                   {message && <p className="text-xs text-rose-600 bg-rose-50 dark:bg-rose-500/10 rounded-lg p-2">{message}</p>}
                   <div className="flex gap-2">
-                    <button type="button" onClick={() => setShowReturnForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">Cancel</button>
-                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? 'Saving...' : 'Save'}</button>
+                    <button type="button" onClick={() => setShowReturnForm(false)} className="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-xs font-medium text-slate-600 dark:text-slate-300">{copy.cancel}</button>
+                    <button type="submit" disabled={loading} className="flex-1 px-3 py-2 rounded-lg bg-indigo-600 text-white text-xs font-semibold disabled:opacity-50">{loading ? copy.saving : copy.create}</button>
                   </div>
                 </form>
               )}
@@ -547,9 +545,9 @@ export default function InvestmentDetail({
                     <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30">
                       <div>
                         <p className="text-sm font-medium text-slate-900 dark:text-white">{r.type.replace(/_/g, ' ')}</p>
-                        <p className="text-xs text-slate-400">{formatDate(r.date)}{r.description && ` — ${r.description}`}</p>
+                        <p className="text-xs text-slate-400">{formatDate(r.date, locale)}{r.description && ` — ${r.description}`}</p>
                       </div>
-                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+{formatCurrency(Number(r.amount), currency)}</span>
+                      <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+{formatCurrency(Number(r.amount), currency, locale)}</span>
                     </div>
                   ))}
                 </div>

@@ -12,6 +12,7 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Mail, Lock, User } from 'lucide-react';
 import AppLogo from '@/components/brand/AppLogo';
+import { useI18n } from '@/i18n/client';
 
 type RegisterClientProps = {
   inviteToken?: string;
@@ -19,6 +20,8 @@ type RegisterClientProps = {
 
 export default function RegisterClient({ inviteToken }: RegisterClientProps) {
   const router = useRouter();
+  const { messages } = useI18n();
+  const copy = messages.auth;
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -64,7 +67,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
         setError(result.message);
       }
     } catch {
-      setError('An error occurred. Please try again.');
+      setError(copy.genericError);
     } finally {
       setLoading(false);
     }
@@ -74,14 +77,14 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
     <div className="min-h-screen auth-bg flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <AppLogo size="lg" textClassName="text-white" taglineClassName="text-slate-400" />
+          <AppLogo size="lg" tagline={messages.brand.tagline} textClassName="text-white" taglineClassName="text-slate-400" />
         </div>
 
         <div className="glass-card rounded-2xl p-6 sm:p-8 animate-scale-in">
           <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold text-white">Create your account</h2>
+            <h2 className="text-xl font-semibold text-white">{copy.createAccountTitle}</h2>
             <p className="text-sm text-slate-400 mt-1">
-              {inviteToken ? 'Complete your invited account setup' : 'Create your account, then choose a subscription'}
+              {inviteToken ? copy.registerInviteSubtitle : copy.registerSubtitle}
             </p>
           </div>
 
@@ -94,7 +97,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <Input
               id="name"
-              label="Full Name"
+              label={copy.fullName}
               placeholder="John Doe"
               icon={<User className="h-4 w-4" />}
               error={errors.name?.message}
@@ -102,7 +105,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
             />
             <Input
               id="email"
-              label="Email"
+              label={copy.email}
               type="email"
               placeholder="you@example.com"
               icon={<Mail className="h-4 w-4" />}
@@ -111,7 +114,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
             />
             <Input
               id="password"
-              label="Password"
+              label={copy.password}
               type="password"
               placeholder="Password"
               icon={<Lock className="h-4 w-4" />}
@@ -120,7 +123,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
             />
             <Input
               id="confirmPassword"
-              label="Confirm Password"
+              label={copy.confirmPassword}
               type="password"
               placeholder="Confirm password"
               icon={<Lock className="h-4 w-4" />}
@@ -128,14 +131,14 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
               {...register('confirmPassword')}
             />
             <Button type="submit" className="w-full" size="lg" isLoading={loading}>
-              Create Account
+              {copy.createAccount}
             </Button>
           </form>
 
           <p className="text-center text-sm text-slate-400 mt-6">
-            Already have an account?{' '}
+            {copy.alreadyAccount}{' '}
             <Link href="/login" className="text-indigo-400 hover:text-indigo-300 font-medium">
-              Sign in
+              {copy.signInLink}
             </Link>
           </p>
         </div>

@@ -2,6 +2,8 @@
 
 import { TrendingUp, TrendingDown, Wallet, ArrowLeftRight, DollarSign, PiggyBank, CalendarClock, Target } from 'lucide-react';
 import { formatCurrency, getMonthName } from '@/lib/utils';
+import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
+import { getMessages } from '@/i18n/messages';
 import type { MonthlySummary, UpcomingBillsSummary } from '@/types';
 import type { BudgetUsageSummary } from '@/services/budget.service';
 
@@ -14,9 +16,11 @@ interface SummaryCardsProps {
   month?: number;
   year?: number;
   currency?: string;
+  locale?: AppLocale;
 }
 
-export default function SummaryCards({ summary, totalBalance, upcomingBills, budgetUsage, periodLabel, month, year, currency = 'USD' }: SummaryCardsProps) {
+export default function SummaryCards({ summary, totalBalance, upcomingBills, budgetUsage, periodLabel, month, year, currency = 'USD', locale = DEFAULT_LOCALE }: SummaryCardsProps) {
+  const copy = getMessages(locale).dashboard;
   const now = new Date();
   const resolvedMonth = typeof month === 'number' && Number.isInteger(month) && month >= 1 && month <= 12
     ? month
@@ -24,7 +28,7 @@ export default function SummaryCards({ summary, totalBalance, upcomingBills, bud
   const resolvedYear = typeof year === 'number' && Number.isInteger(year) ? year : now.getFullYear();
   const selectedPeriod = periodLabel?.trim() && !periodLabel.includes('undefined')
     ? periodLabel.trim()
-    : `${getMonthName(resolvedMonth)} ${resolvedYear}`;
+    : `${getMonthName(resolvedMonth, locale)} ${resolvedYear}`;
   const safeUpcomingBills: UpcomingBillsSummary = upcomingBills ?? {
     count: 0,
     totalAmount: 0,
@@ -40,91 +44,91 @@ export default function SummaryCards({ summary, totalBalance, upcomingBills, bud
     isFallback: false,
   };
   const budgetPeriodLabel = safeBudgetUsage.month && safeBudgetUsage.year
-    ? `${getMonthName(safeBudgetUsage.month)} ${safeBudgetUsage.year}`
+    ? `${getMonthName(safeBudgetUsage.month, locale)} ${safeBudgetUsage.year}`
     : selectedPeriod;
   const savingsRate = summary.totalIncome > 0 ? Math.round((summary.balance / summary.totalIncome) * 100) : 0;
   const nextDueLabel = safeUpcomingBills.nextDueDate
-    ? new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(safeUpcomingBills.nextDueDate)
+    ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(safeUpcomingBills.nextDueDate)
     : null;
 
   const cards = [
     {
-      title: 'Total Balance',
-      value: formatCurrency(totalBalance, currency),
+      title: copy.totalBalance,
+      value: formatCurrency(totalBalance, currency, locale),
       icon: Wallet,
       gradient: 'from-indigo-500 to-purple-600',
       glow: 'glow-indigo',
-      helperText: 'Across all your accounts',
-      period: 'Live',
+      helperText: copy.totalBalanceHelp,
+      period: copy.live,
     },
     {
-      title: 'Net Savings',
+      title: copy.netSavings,
       period: selectedPeriod,
-      value: formatCurrency(summary.balance, currency),
+      value: formatCurrency(summary.balance, currency, locale),
       icon: DollarSign,
       gradient: summary.balance >= 0 ? 'from-sky-500 to-cyan-600' : 'from-orange-500 to-rose-600',
       glow: '',
-      helperText: summary.balance >= 0 ? 'Great! You spent less than you earned' : 'You spent more than you earned this period',
+      helperText: summary.balance >= 0 ? copy.netSavingsPositive : copy.netSavingsNegative,
     },
     {
-      title: 'Income',
+      title: copy.income,
       period: selectedPeriod,
-      value: formatCurrency(summary.totalIncome, currency),
+      value: formatCurrency(summary.totalIncome, currency, locale),
       icon: TrendingUp,
       gradient: 'from-emerald-500 to-teal-600',
       glow: 'glow-emerald',
-      helperText: 'Money that came in during this period',
+      helperText: copy.incomeHelp,
     },
     {
-      title: 'Expenses',
+      title: copy.expenses,
       period: selectedPeriod,
-      value: formatCurrency(summary.totalExpense, currency),
+      value: formatCurrency(summary.totalExpense, currency, locale),
       icon: TrendingDown,
       gradient: 'from-rose-500 to-pink-600',
       glow: 'glow-rose',
-      helperText: 'Total amount spent during this period',
+      helperText: copy.expensesHelp,
     },
     {
-      title: 'Savings Rate',
+      title: copy.savingsRate,
       period: selectedPeriod,
       value: `${savingsRate}%`,
       icon: PiggyBank,
       gradient: savingsRate >= 20 ? 'from-emerald-500 to-teal-600' : savingsRate >= 0 ? 'from-sky-500 to-indigo-600' : 'from-rose-500 to-pink-600',
       glow: '',
-      helperText: savingsRate >= 20 ? 'Strong monthly saving momentum' : savingsRate < 0 ? 'You are in a negative savings zone' : 'Try to move this above 20%',
+      helperText: savingsRate >= 20 ? copy.savingsStrong : savingsRate < 0 ? copy.savingsNegative : copy.savingsImprove,
     },
     {
-      title: 'Budget Used',
-      period: safeBudgetUsage.isFallback ? `${budgetPeriodLabel} (latest)` : selectedPeriod,
+      title: copy.budgetUsed,
+      period: safeBudgetUsage.isFallback ? `${budgetPeriodLabel} (${copy.latest})` : selectedPeriod,
       value: `${safeBudgetUsage.percentage}%`,
       icon: Target,
       gradient: safeBudgetUsage.percentage > 100 ? 'from-rose-500 to-pink-600' : safeBudgetUsage.percentage >= 80 ? 'from-amber-500 to-orange-600' : 'from-emerald-500 to-teal-600',
       glow: '',
       helperText:
         safeBudgetUsage.budgetCount > 0
-          ? `${formatCurrency(safeBudgetUsage.spent, currency)} of ${formatCurrency(safeBudgetUsage.total, currency)} used`
-          : 'No budget set for this period',
+          ? `${formatCurrency(safeBudgetUsage.spent, currency, locale)} / ${formatCurrency(safeBudgetUsage.total, currency, locale)} ${copy.used}`
+          : copy.noBudget,
     },
     {
-      title: 'Transactions',
+      title: copy.transactions,
       period: selectedPeriod,
       value: summary.transactionCount.toString(),
       icon: ArrowLeftRight,
       gradient: 'from-amber-500 to-orange-600',
       glow: '',
-      helperText: 'All completed records this period',
+      helperText: copy.transactionsHelp,
     },
     {
-      title: 'Upcoming Bills',
-      period: 'Next 14 days',
-      value: `${safeUpcomingBills.count} due`,
+      title: copy.upcomingBills,
+      period: copy.next14Days,
+      value: `${safeUpcomingBills.count} ${copy.due}`,
       icon: CalendarClock,
       gradient: safeUpcomingBills.count > 0 ? 'from-violet-500 to-fuchsia-600' : 'from-slate-500 to-slate-600',
       glow: '',
       helperText:
         safeUpcomingBills.count > 0
-          ? `${formatCurrency(safeUpcomingBills.totalAmount, currency)} total${nextDueLabel ? ` • Next on ${nextDueLabel}` : ''}`
-          : 'No bills due soon',
+          ? `${formatCurrency(safeUpcomingBills.totalAmount, currency, locale)}${nextDueLabel ? ` • ${copy.nextOn} ${nextDueLabel}` : ''}`
+          : copy.noBills,
     },
   ];
 

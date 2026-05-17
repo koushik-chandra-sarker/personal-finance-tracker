@@ -6,14 +6,7 @@ import Card from '@/components/ui/Card';
 import ContinuePaymentButton from '@/components/subscription/ContinuePaymentButton';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
 import { formatCurrency } from '@/lib/utils';
-import { APP_NAME } from '@/components/brand/AppLogo';
-
-const MESSAGE_BY_REASON: Record<string, string> = {
-  missing: `A subscription is required to continue using ${APP_NAME}.`,
-  inactive: 'Your subscription is not active. Choose a package and submit your payment details to restore access.',
-  expired: 'Your subscription has expired. Choose a package and submit your payment details to continue.',
-  invalid: 'Your subscription could not be verified. Choose a package and submit a new payment request.',
-};
+import { useI18n } from '@/i18n/client';
 
 interface SubscriptionPageClientProps {
   reason: string;
@@ -22,7 +15,9 @@ interface SubscriptionPageClientProps {
 }
 
 export default function SubscriptionPageClient({ reason, packages, accessState = 'blocked' }: SubscriptionPageClientProps) {
-  const reasonMessage = MESSAGE_BY_REASON[reason] || MESSAGE_BY_REASON.invalid;
+  const { locale, messages } = useI18n();
+  const copy = messages.subscription;
+  const reasonMessage = copy.reasons[reason as keyof typeof copy.reasons] || copy.reasons.invalid;
   const featuredPackage = packages.find((pkg) => pkg.isFeatured) || packages[0] || null;
 
   if (accessState === 'active') {
@@ -32,17 +27,17 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
           <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
             <CheckCircle2 className="h-7 w-7" />
           </div>
-          <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">Subscription active</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">Your access is already active</h1>
+          <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{copy.active}</p>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{copy.accessActive}</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
-            You do not need to submit another payment now. When the current period expires, this page will let you renew or upgrade.
+            {copy.activeHelp}
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <Link href="/dashboard" className="inline-flex items-center justify-center rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700">
-              Go to dashboard
+              {copy.goDashboard}
             </Link>
             <Link href="/settings" className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
-              View subscription
+              {copy.viewSubscription}
             </Link>
           </div>
         </div>
@@ -57,38 +52,38 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
           <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
             <ShieldAlert className="h-6 w-6" />
           </div>
-          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">Choose package</p>
+          <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{copy.choosePackage}</p>
           <h1 className="max-w-2xl text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
-            Select a subscription package
+            {copy.selectPackage}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{reasonMessage}</p>
 
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <CreditCard className="mb-3 h-5 w-5 text-indigo-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Pick package</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Choose monthly or yearly access in BDT.</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.pickPackage}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.pickPackageHelp}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <Smartphone className="mb-3 h-5 w-5 text-pink-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Pay manually</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Use bKash or Nagad and keep the TrxID.</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.payManually}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.payManuallyHelp}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <ReceiptText className="mb-3 h-5 w-5 text-sky-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">Submit details</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">Payment form and history live on a separate page.</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.submitDetails}</p>
+              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.submitDetailsHelp}</p>
             </div>
           </div>
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">Recommended</p>
+          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.recommended}</p>
           <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">
-            {featuredPackage ? formatCurrency(featuredPackage.price, featuredPackage.currency) : 'BDT'}
+            {featuredPackage ? formatCurrency(featuredPackage.price, featuredPackage.currency, locale) : 'BDT'}
           </p>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            {featuredPackage ? `${featuredPackage.name} · ${featuredPackage.interval === 'YEARLY' ? 'yearly' : 'monthly'}` : 'Create a package to start collecting payments.'}
+            {featuredPackage ? `${featuredPackage.name} · ${featuredPackage.interval === 'YEARLY' ? copy.yearly : copy.monthly}` : copy.noPackage}
           </p>
           {featuredPackage && (
             <ContinuePaymentButton packageId={featuredPackage.id} icon="arrow" className="mt-6 w-full" />
@@ -114,7 +109,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
               <CreditCard className="h-5 w-5 shrink-0 text-emerald-500" />
             </div>
             <p className="mb-5 text-4xl font-bold text-slate-900 dark:text-white">
-              {formatCurrency(plan.price, plan.currency)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{plan.interval === 'YEARLY' ? '/year' : '/month'}</span>
+              {formatCurrency(plan.price, plan.currency, locale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{plan.interval === 'YEARLY' ? copy.perYear : copy.perMonth}</span>
             </p>
             <div className="mb-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">
               {plan.featureBullets.map((detail) => (

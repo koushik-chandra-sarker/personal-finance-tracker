@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 export const accountSchema = z.object({
-  name: z.string().min(1, 'Name is required'),
+  name: z.string().min(1, 'নাম প্রয়োজন'),
   type: z.enum(['CASH', 'BANK', 'MOBILE_WALLET', 'CREDIT_CARD', 'INVESTMENT']),
   balance: z.coerce.number().default(0),
   color: z.string().default('#6366f1'),

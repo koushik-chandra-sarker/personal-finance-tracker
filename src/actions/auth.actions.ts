@@ -7,6 +7,7 @@ import { auth, signIn } from '@/lib/auth';
 import { registerSchema, changePasswordSchema, backdoorResetSchema, firstLoginPasswordSchema } from '@/lib/validations/auth';
 import { assertRecoveryBackdoorEnabled } from '@/lib/recovery-backdoor';
 import type { ActionResponse } from '@/types';
+import { getRequestLocale } from '@/i18n/server';
 
 const DEFAULT_CATEGORIES = [
   { name: 'Salary', type: 'INCOME' as const, icon: 'briefcase', color: '#10b981' },
@@ -49,6 +50,7 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
   }
 
   const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
+  const preferredLocale = await getRequestLocale();
   const userCount = await prisma.user.count();
   const inviteToken = parsed.data.inviteToken;
   const invite = inviteToken
@@ -79,6 +81,7 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
         name: parsed.data.name,
         email: parsed.data.email.toLowerCase(),
         password: hashedPassword,
+        preferredLocale,
         role: userCount === 0 ? 'ADMIN' : invite?.role || 'USER',
         status: 'ACTIVE',
         emailVerifiedAt: invite ? new Date() : null,

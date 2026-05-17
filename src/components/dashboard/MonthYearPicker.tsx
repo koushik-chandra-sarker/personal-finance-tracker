@@ -3,6 +3,7 @@
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, Loader2 } from 'lucide-react';
 import { useTransition } from 'react';
+import { getMonthName } from '@/lib/utils';
 
 interface MonthYearPickerProps {
   month: number;
@@ -10,20 +11,7 @@ interface MonthYearPickerProps {
   route?: string;
 }
 
-const MONTHS = [
-  { value: 1, label: 'January' },
-  { value: 2, label: 'February' },
-  { value: 3, label: 'March' },
-  { value: 4, label: 'April' },
-  { value: 5, label: 'May' },
-  { value: 6, label: 'June' },
-  { value: 7, label: 'July' },
-  { value: 8, label: 'August' },
-  { value: 9, label: 'September' },
-  { value: 10, label: 'October' },
-  { value: 11, label: 'November' },
-  { value: 12, label: 'December' },
-];
+const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
 export default function MonthYearPicker({ month, year, route = '/dashboard' }: MonthYearPickerProps) {
   const router = useRouter();
@@ -63,7 +51,7 @@ export default function MonthYearPicker({ month, year, route = '/dashboard' }: M
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
       >
         {MONTHS.map((m) => (
-          <option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>
+          <option key={m} value={m} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{getMonthName(m)}</option>
         ))}
       </select>
 

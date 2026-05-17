@@ -7,7 +7,7 @@ const optionalText = z.preprocess(
 
 const optionalNumber = z.preprocess(
   (value) => (value === '' || value === null ? undefined : value),
-  z.coerce.number().positive('Amount must be positive').optional()
+  z.coerce.number().positive('পরিমাণ ০-এর বেশি হতে হবে').optional()
 );
 
 const optionalDate = z.preprocess(
@@ -17,8 +17,8 @@ const optionalDate = z.preprocess(
 
 export const financialNoteSchema = z.object({
   mode: z.enum(['SIMPLE', 'EXTENDED']).default('SIMPLE'),
-  title: z.string().trim().min(1, 'Title is required'),
-  description: z.string().trim().min(1, 'Description is required'),
+  title: z.string().trim().min(1, 'শিরোনাম প্রয়োজন'),
+  description: z.string().trim().min(1, 'বিবরণ প্রয়োজন'),
   tags: z.union([
     z.array(z.string()),
     z.string().transform(s => s ? s.split(',').map(t => t.trim()).filter(Boolean) : []),
@@ -37,7 +37,7 @@ export const financialNoteSchema = z.object({
     ctx.addIssue({
       code: 'custom',
       path: ['returnedDate'],
-      message: 'Returned date is required when status is returned',
+      message: 'স্ট্যাটাস ফেরত হলে ফেরতের তারিখ প্রয়োজন',
     });
   }
 });

@@ -16,6 +16,7 @@ model User {
   role          UserRole               @default(USER)
   status        UserStatus             @default(ACTIVE)
   currency      String                 @default("USD")
+  preferredLocale String               @default("bn-BD")
   lastLoginAt   DateTime?
   emailVerifiedAt DateTime?
   mustChangePassword Boolean              @default(false)
