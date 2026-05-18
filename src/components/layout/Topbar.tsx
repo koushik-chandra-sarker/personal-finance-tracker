@@ -350,18 +350,25 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
   return (
     <>
       <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-700/50 bg-slate-50/90 dark:bg-slate-900/80 backdrop-blur-xl">
-        <div className="flex items-center justify-between h-16 px-4 lg:px-6">
-          {/* Mobile menu button */}
-          <button
-            className="lg:hidden p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5"
-            onClick={() => setMobileOpen(true)}
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+        <div className="flex h-16 items-center justify-between gap-2 px-3 sm:px-4 lg:px-6">
+          <div className="flex min-w-0 items-center gap-2 lg:hidden">
+            <button
+              type="button"
+              aria-label="Open navigation menu"
+              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+              onClick={() => setMobileOpen(true)}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
 
-          {/* Mobile logo */}
-          <div className="lg:hidden">
-            <AppLogo size="sm" tagline={messages.brand.tagline} taglineClassName="hidden" />
+            <div className="min-w-0 flex-1">
+              <AppLogo
+                size="sm"
+                tagline={messages.brand.tagline}
+                textClassName="truncate text-base"
+                taglineClassName="hidden"
+              />
+            </div>
           </div>
 
           {/* Search (desktop) */}
@@ -376,9 +383,10 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
             </div>
           </div>
 
+          <WorkspaceSwitcher className="hidden lg:ml-auto lg:block" />
+
           {/* Right side */}
-          <div className="flex items-center gap-2">
-            <WorkspaceSwitcher />
+          <div className="flex shrink-0 items-center justify-end gap-1 lg:gap-2">
             {isAdmin && (
               <Link
                 href="/admin/payments"
@@ -392,7 +400,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                 <ReceiptText className="h-5 w-5" />
               </Link>
             )}
-            <LanguageSwitcher variant="topbar" />
+            <LanguageSwitcher variant="topbar" display="full" className="hidden w-32 lg:flex" />
             <ThemeToggle />
             <div className="relative" ref={notificationRef}>
               <button
@@ -522,7 +530,15 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                 <span className="hidden md:block text-sm text-slate-900 dark:text-white truncate max-w-[170px]">{session?.user?.name}</span>
               </button>
               {userMenuOpen && (
-                <div className="absolute right-0 mt-2 w-48 rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl py-2 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                <div className="fixed left-3 right-3 top-16 z-50 rounded-xl border border-slate-200 bg-white py-2 shadow-2xl dark:border-slate-700/50 dark:bg-slate-800 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-64 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                  <div className="border-b border-slate-100 px-3 pb-3 dark:border-slate-700/50 lg:hidden">
+                    <p className="px-1 pb-1 text-[11px] font-bold uppercase tracking-wide text-slate-400">Workspace</p>
+                    <WorkspaceSwitcher className="w-full" />
+                    <div className="mt-3 grid grid-cols-[auto_minmax(0,1fr)] items-center gap-3 rounded-xl bg-slate-50 px-3 py-2 dark:bg-slate-900/50">
+                      <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Language</span>
+                      <LanguageSwitcher variant="topbar" display="full" className="w-full justify-start" />
+                    </div>
+                  </div>
                   <Link href={navHref('/settings')} prefetch={!isSubscriptionLocked} className="flex items-center gap-2 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors">
                     <Settings className="h-4 w-4" /> {messages.navigation.Settings}
                   </Link>

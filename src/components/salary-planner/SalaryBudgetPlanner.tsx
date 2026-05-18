@@ -208,15 +208,15 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
   }, [grouped.savingsTotal, locale]);
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="min-w-0 space-y-4 overflow-x-hidden animate-fade-in">
       {/* Health Score + Rule Selector */}
-      <div className="grid sm:grid-cols-2 gap-4">
-        <div className={cn('rounded-2xl border border-slate-200 dark:border-slate-700/50 p-5', healthScore.bg)}>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className={cn('min-w-0 rounded-2xl border border-slate-200 p-4 dark:border-slate-700/50 sm:p-5', healthScore.bg)}>
           <div className="flex items-center gap-3">
-            <div className={cn('p-2 rounded-xl', healthScore.bg)}>
+            <div className={cn('shrink-0 rounded-xl p-2', healthScore.bg)}>
               <healthScore.icon className={cn('h-6 w-6', healthScore.color)} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{locale === 'bn-BD' ? 'সঞ্চয়ের স্বাস্থ্য' : 'Savings Health'}</p>
               <p className={cn('text-lg font-bold', healthScore.color)}>{healthScore.score}</p>
             </div>
@@ -227,12 +227,12 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
           </p>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+        <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
           <p className="text-xs font-semibold text-slate-900 dark:text-white mb-3">{copy.budgetPlanner}</p>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(RULES) as SalaryBudgetRule[]).map(r => (
               <button key={r} onClick={() => applyRule(r)}
-                className={cn('px-3 py-2 rounded-xl text-xs font-semibold transition-all border',
+                className={cn('rounded-xl border px-3 py-2 text-xs font-semibold transition-all',
                   rule === r
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/25'
                     : 'bg-white dark:bg-slate-700 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-indigo-400')}>
@@ -245,18 +245,18 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
       </div>
 
       {/* Allocation Summary */}
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid gap-3 min-[430px]:grid-cols-2 lg:grid-cols-3">
         {[
           { label: groupLabel('needs'), total: grouped.needsTotal, amount: (netMonthly * grouped.needsTotal) / 100, color: 'from-indigo-500 to-blue-600', textColor: 'text-indigo-600 dark:text-indigo-400' },
           { label: groupLabel('wants'), total: grouped.wantsTotal, amount: (netMonthly * grouped.wantsTotal) / 100, color: 'from-amber-500 to-orange-600', textColor: 'text-amber-600 dark:text-amber-400' },
           { label: groupLabel('savings'), total: grouped.savingsTotal, amount: (netMonthly * grouped.savingsTotal) / 100, color: 'from-emerald-500 to-green-600', textColor: 'text-emerald-600 dark:text-emerald-400' },
         ].map(g => (
-          <div key={g.label} className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-4">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">{g.label}</span>
+          <div key={g.label} className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
+          <div className="mb-2 grid gap-1 min-[430px]:flex min-[430px]:items-center min-[430px]:justify-between">
+            <span className="min-w-0 text-xs font-semibold text-slate-500 dark:text-slate-400">{g.label}</span>
               <span className={cn('text-xs font-bold', g.textColor)}>{g.total}%</span>
             </div>
-            <p className={cn('text-lg font-bold', g.textColor)}>{fmt(g.amount, currency, locale)}</p>
+            <p className={cn('break-words text-lg font-bold', g.textColor)}>{fmt(g.amount, currency, locale)}</p>
             <div className="mt-2 h-1.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
               <div className={cn('h-full rounded-full bg-gradient-to-r', g.color)} style={{ width: `${Math.min(g.total, 100)}%` }} />
             </div>
@@ -265,39 +265,43 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
       </div>
 
       {/* Charts + Categories */}
-      <div className="grid lg:grid-cols-5 gap-4">
+      <div className="grid gap-4 lg:grid-cols-5">
         {/* Pie Charts */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{locale === 'bn-BD' ? 'বরাদ্দ ওভারভিউ' : 'Allocation Overview'}</h3>
-            <ResponsiveContainer width="100%" height={200}>
-              <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" innerRadius={50} outerRadius={75} paddingAngle={4} dataKey="value">
-                  {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                </Pie>
-                <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} locale={locale} />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[200px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={pieData} cx="50%" cy="50%" innerRadius={46} outerRadius={72} paddingAngle={4} dataKey="value">
+                    {pieData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} locale={locale} />} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+          <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{copy.salaryBreakdown}</h3>
-            <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={detailPieData} cx="50%" cy="50%" outerRadius={80} paddingAngle={2} dataKey="value">
-                  {detailPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                </Pie>
-                <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} locale={locale} />} />
-              </PieChart>
-            </ResponsiveContainer>
+            <div className="h-[220px] min-w-0">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={detailPieData} cx="50%" cy="50%" outerRadius={76} paddingAngle={2} dataKey="value">
+                    {detailPieData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip content={<BudgetTooltip netMonthly={netMonthly} currency={currency} locale={locale} />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </div>
 
         {/* Category List */}
         <div className="lg:col-span-3 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
-          <div className="flex items-center justify-between p-5 border-b border-slate-100 dark:border-slate-700/50">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{locale === 'bn-BD' ? 'খরচের ক্যাটাগরি' : 'Spending Categories'}</h3>
-            <div className="flex items-center gap-2">
+          <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4 dark:border-slate-700/50 sm:items-center sm:p-5">
+            <h3 className="min-w-0 text-sm font-semibold text-slate-900 dark:text-white">{locale === 'bn-BD' ? 'খরচের ক্যাটাগরি' : 'Spending Categories'}</h3>
+            <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => applyRule('50-30-20')}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Reset">
                 <RotateCcw className="h-3.5 w-3.5" />
@@ -312,7 +316,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
             <div className="divide-y divide-slate-100 dark:divide-slate-700/50 max-h-[480px] overflow-y-auto">
               {(['needs', 'wants', 'savings'] as const).map(group => (
                 <div key={group}>
-                  <div className={cn('px-5 py-2 text-[11px] font-bold uppercase tracking-wider',
+                  <div className={cn('px-4 py-2 text-[11px] font-bold uppercase tracking-wider sm:px-5',
                     group === 'needs' ? 'bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400' :
                     group === 'wants' ? 'bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400' :
                     'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
@@ -320,13 +324,13 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
                     {groupLabel(group)} — {categories.filter(c => c.group === group).reduce((s, c) => s + c.percent, 0)}%
                   </div>
                   {categories.filter(c => c.group === group).map(cat => (
-                    <div key={cat.id} className="flex items-center gap-3 px-5 py-3 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                      <div className="p-1.5 rounded-lg" style={{ backgroundColor: cat.color + '15' }}>
+                    <div key={cat.id} className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3 transition-colors hover:bg-slate-50 dark:hover:bg-white/5 sm:px-5">
+                      <div className="rounded-lg p-1.5" style={{ backgroundColor: cat.color + '15' }}>
                         <cat.icon className="h-4 w-4" style={{ color: cat.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{categoryLabel(cat)}</p>
-                        <p className="text-xs text-slate-400 dark:text-slate-500">{fmt((netMonthly * cat.percent) / 100, currency, locale)}/mo</p>
+                        <p className="break-words text-sm font-medium text-slate-900 dark:text-white">{categoryLabel(cat)}</p>
+                        <p className="break-words text-xs text-slate-400 dark:text-slate-500">{fmt((netMonthly * cat.percent) / 100, currency, locale)}/mo</p>
                       </div>
                       {editingId === cat.id ? (
                         <div className="flex items-center gap-1">
@@ -339,7 +343,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
                         </div>
                       ) : (
                         <button onClick={() => setEditingId(cat.id)}
-                          className="flex items-center gap-1 text-xs font-semibold text-slate-500 dark:text-slate-400 hover:text-indigo-500 transition-colors">
+                          className="flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-indigo-500 dark:text-slate-400">
                           {cat.percent}% <Pencil className="h-3 w-3" />
                         </button>
                       )}
@@ -350,7 +354,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
             </div>
           )}
           {grouped.total !== 100 && (
-            <div className="px-5 py-3 bg-rose-50 dark:bg-rose-500/10 border-t border-rose-200 dark:border-rose-500/20">
+            <div className="border-t border-rose-200 bg-rose-50 px-4 py-3 dark:border-rose-500/20 dark:bg-rose-500/10 sm:px-5">
               <p className="text-xs font-medium text-rose-600 dark:text-rose-400">
                 <AlertTriangle className="h-3.5 w-3.5 inline mr-1" />
                 Total allocation is {grouped.total}% — {grouped.total > 100 ? 'over' : 'under'} 100%. Adjust categories to balance.
@@ -361,16 +365,16 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
       </div>
 
       {/* Smart Tips */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-amber-500" /> {locale === 'bn-BD' ? 'স্মার্ট টাকা টিপস' : 'Smart Money Tips'}
         </h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {TIPS.map((tip, i) => (
-            <div key={i} className="rounded-xl border border-slate-100 dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/80 p-4 hover:border-indigo-300 dark:hover:border-indigo-500/30 transition-colors">
+            <div key={i} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-4 transition-colors hover:border-indigo-300 dark:border-slate-700/50 dark:bg-slate-800/80 dark:hover:border-indigo-500/30">
               <div className="flex items-center gap-2 mb-2">
-                <tip.icon className="h-4 w-4 text-indigo-500" />
-                <span className="text-xs font-bold text-slate-900 dark:text-white">{locale === 'bn-BD' ? BN_TIPS[i].title : tip.title}</span>
+                <tip.icon className="h-4 w-4 shrink-0 text-indigo-500" />
+                <span className="min-w-0 text-xs font-bold leading-5 text-slate-900 dark:text-white">{locale === 'bn-BD' ? BN_TIPS[i].title : tip.title}</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{locale === 'bn-BD' ? BN_TIPS[i].text : tip.text}</p>
             </div>

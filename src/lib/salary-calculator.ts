@@ -19,6 +19,7 @@ export type SalaryBreakdown = {
   otherAllowanceMonthly: number;
   totalDeductionsAnnual: number;
   totalDeductionsMonthly: number;
+  employmentExemptionAnnual: number;
   taxableIncome: number;
   totalTax: number;
   monthlyTax: number;
@@ -127,6 +128,15 @@ export function calculateTax(taxableIncome: number, slabs: TaxSlab[]): { total: 
   return { total, breakdown };
 }
 
+export function calculateEmploymentTaxBase(grossEmploymentIncome: number) {
+  // FY 2025-26 employment income exemption: lower of one-third of employment income or BDT 500,000.
+  const employmentExemptionAnnual = Math.min(Math.max(0, grossEmploymentIncome) / 3, 500000);
+  return {
+    employmentExemptionAnnual,
+    taxableIncome: Math.max(0, grossEmploymentIncome - employmentExemptionAnnual),
+  };
+}
+
 export function calculateSalary(
   grossMonthly: number,
   structure: SalaryStructure,
@@ -160,7 +170,7 @@ export function calculateSalary(
   }
 
   const totalDeductionsAnnual = totalDeductionsMonthly * 12;
-  const taxableIncome = Math.max(0, grossAnnual - totalDeductionsAnnual);
+  const { employmentExemptionAnnual, taxableIncome } = calculateEmploymentTaxBase(grossAnnual);
   
   let slabs = taxCategory === 'female' ? BD_TAX_SLABS_FEMALE_2025_26 : BD_TAX_SLABS_2025_26;
   if (taxCategory === 'female' && customFemaleSlabs && customFemaleSlabs.length > 0) {
@@ -182,6 +192,7 @@ export function calculateSalary(
     conveyanceAnnual: conveyanceMonthly * 12, conveyanceMonthly,
     otherAllowanceAnnual: Math.max(0, otherAllowanceMonthly) * 12, otherAllowanceMonthly: Math.max(0, otherAllowanceMonthly),
     totalDeductionsAnnual, totalDeductionsMonthly,
+    employmentExemptionAnnual,
     taxableIncome, totalTax, monthlyTax,
     netAnnual, netMonthly,
     effectiveTaxRate,

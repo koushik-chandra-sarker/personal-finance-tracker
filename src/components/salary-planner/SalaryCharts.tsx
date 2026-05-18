@@ -50,54 +50,60 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
   }));
 
   return (
-    <div className="space-y-4">
-      <div className="grid sm:grid-cols-2 gap-4">
+    <div className="min-w-0 space-y-4 overflow-x-hidden">
+      <div className="grid gap-4 sm:grid-cols-2">
         {/* Salary Structure Pie */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryStructure}</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={structureData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                {structureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
-              </Pie>
-              <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="h-[220px] min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={structureData} cx="50%" cy="50%" innerRadius={46} outerRadius={76} paddingAngle={3} dataKey="value">
+                  {structureData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                </Pie>
+                <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
 
         {/* Income Distribution Pie */}
-        <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryBreakdown}</h3>
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={distributionData} cx="50%" cy="50%" innerRadius={50} outerRadius={80} paddingAngle={3} dataKey="value">
-                <Cell fill="#10b981" />
-                <Cell fill="#ef4444" />
-                <Cell fill="#f59e0b" />
-              </Pie>
-              <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
-              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="h-[220px] min-w-0">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={distributionData} cx="50%" cy="50%" innerRadius={46} outerRadius={76} paddingAngle={3} dataKey="value">
+                  <Cell fill="#10b981" />
+                  <Cell fill="#ef4444" />
+                  <Cell fill="#f59e0b" />
+                </Pie>
+                <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
         </div>
       </div>
 
       {/* Monthly Bar Chart */}
-      <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-5">
+      <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
         <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.overview}</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <BarChart data={monthlyData} barCategoryGap="20%">
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
-            <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
-            <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
-            <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
-            <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
-            <Bar dataKey="gross" name={copy.grossMonthly} fill="#6366f1" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="net" name={copy.netMonthly} fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="tax" name={copy.tax} fill="#ef4444" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="h-[280px] min-w-0">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={monthlyData} barCategoryGap="20%">
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(148,163,184,0.15)" />
+              <XAxis dataKey="month" tick={{ fontSize: 11 }} stroke="#94a3b8" />
+              <YAxis tick={{ fontSize: 11 }} stroke="#94a3b8" tickFormatter={v => `${(v / 1000).toFixed(0)}k`} />
+              <Tooltip content={<SalaryChartTooltip currency={currency} locale={locale} />} />
+              <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '11px' }} />
+              <Bar dataKey="gross" name={copy.grossMonthly} fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="net" name={copy.netMonthly} fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="tax" name={copy.tax} fill="#ef4444" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );

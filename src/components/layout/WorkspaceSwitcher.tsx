@@ -7,11 +7,24 @@ import { getAccessibleWorkspacesAction } from '@/actions/ui.actions';
 import { cn } from '@/lib/utils';
 import { useSession } from 'next-auth/react';
 
-export default function WorkspaceSwitcher() {
+type WorkspaceRow = {
+  id: string;
+  ownerId: string;
+  owner: {
+    name: string | null;
+    email: string | null;
+  };
+};
+
+type WorkspaceSwitcherProps = {
+  className?: string;
+};
+
+export default function WorkspaceSwitcher({ className }: WorkspaceSwitcherProps) {
   const { data: session } = useSession();
   const [isOpen, setIsOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const [workspaces, setWorkspaces] = useState<any[]>([]);
+  const [workspaces, setWorkspaces] = useState<WorkspaceRow[]>([]);
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   // We need to fetch the accessible workspaces when the component mounts.
@@ -34,28 +47,30 @@ export default function WorkspaceSwitcher() {
 
   if (!session?.user) return null;
   const isPersonal = !activeWorkspaceId || activeWorkspaceId === session.user.id;
-  const currentSpaceName = isPersonal ? 'Personal Workspace' : workspaces.find(w => w.ownerId === activeWorkspaceId)?.owner.name + "'s Tracker";
+  const activeWorkspace = workspaces.find((workspace) => workspace.ownerId === activeWorkspaceId);
+  const currentSpaceName = isPersonal ? 'Personal Workspace' : `${activeWorkspace?.owner.name || 'Shared'}'s Tracker`;
 
   if (workspaces.length === 0) return null;
 
   return (
-    <div className="relative">
+    <div className={cn('relative min-w-0', className)}>
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isPending}
+        aria-label={isPending ? 'Switching workspace' : `Current workspace: ${currentSpaceName}`}
         className={cn(
-          "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all border",
+          "flex h-9 w-full min-w-0 items-center gap-2 rounded-xl border px-3 text-xs font-semibold transition-all sm:w-auto sm:rounded-full sm:py-1.5",
           isPersonal 
             ? "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
             : "border-indigo-200 dark:border-indigo-900 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300"
         )}
       >
-        <Users className="h-3.5 w-3.5" />
-        <span className="hidden sm:inline">{isPending ? 'Switching...' : currentSpaceName}</span>
+        <Users className="h-3.5 w-3.5 shrink-0" />
+        <span className="truncate">{isPending ? 'Switching...' : currentSpaceName}</span>
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-56 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl overflow-hidden z-50">
+        <div className="absolute left-0 right-0 z-50 mt-2 w-full min-w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-800 sm:left-auto sm:w-56">
           <div className="p-2 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
             Switch Workspace
           </div>
@@ -82,9 +97,9 @@ export default function WorkspaceSwitcher() {
                 >
                   <div className="flex flex-col">
                     <span className={cn("text-sm", isActive ? "text-slate-900 dark:text-white font-medium" : "text-slate-600 dark:text-slate-400")}>
-                      {space.owner.name}&apos;s Tracker
+                      {space.owner.name || 'Shared'}&apos;s Tracker
                     </span>
-                    <span className="text-xs text-slate-500">{space.owner.email}</span>
+                    {space.owner.email && <span className="text-xs text-slate-500">{space.owner.email}</span>}
                   </div>
                   {isActive && <Check className="h-4 w-4 text-indigo-500" />}
                 </button>
