@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "seed:test": "node scripts/seed-test-data.cjs",
+    "seed:tax": "node scripts/seed-tax-config.mjs",
     "seed:tutorials": "node scripts/seed-demo-tutorials.mjs",
     "build": "prisma generate && prisma migrate deploy && next build",
     "start": "next start",

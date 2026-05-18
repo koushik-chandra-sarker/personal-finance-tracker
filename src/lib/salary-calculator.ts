@@ -30,22 +30,22 @@ export type SalaryBreakdown = {
 };
 
 export const BD_TAX_SLABS_2025_26: TaxSlab[] = [
-  { min: 0, max: 350000, rate: 0, label: 'Up to ৳3,50,000' },
-  { min: 350000, max: 450000, rate: 5, label: '৳3,50,001 – ৳4,50,000' },
-  { min: 450000, max: 750000, rate: 10, label: '৳4,50,001 – ৳7,50,000' },
-  { min: 750000, max: 1150000, rate: 15, label: '৳7,50,001 – ৳11,50,000' },
-  { min: 1150000, max: 1650000, rate: 20, label: '৳11,50,001 – ৳16,50,000' },
-  { min: 1650000, max: null, rate: 25, label: 'Above ৳16,50,000' },
+  { min: 0, max: 375000, rate: 0, label: 'Up to ৳3,75,000' },
+  { min: 375000, max: 675000, rate: 10, label: '৳3,75,001 – ৳6,75,000' },
+  { min: 675000, max: 1075000, rate: 15, label: '৳6,75,001 – ৳10,75,000' },
+  { min: 1075000, max: 1575000, rate: 20, label: '৳10,75,001 – ৳15,75,000' },
+  { min: 1575000, max: 3575000, rate: 25, label: '৳15,75,001 – ৳35,75,000' },
+  { min: 3575000, max: null, rate: 30, label: 'Above ৳35,75,000' },
 ];
 
 // Female / 65+ / disabled gets higher exemption
 export const BD_TAX_SLABS_FEMALE_2025_26: TaxSlab[] = [
-  { min: 0, max: 400000, rate: 0, label: 'Up to ৳4,00,000' },
-  { min: 400000, max: 500000, rate: 5, label: '৳4,00,001 – ৳5,00,000' },
-  { min: 500000, max: 800000, rate: 10, label: '৳5,00,001 – ৳8,00,000' },
-  { min: 800000, max: 1200000, rate: 15, label: '৳8,00,001 – ৳12,00,000' },
-  { min: 1200000, max: 1700000, rate: 20, label: '৳12,00,001 – ৳17,00,000' },
-  { min: 1700000, max: null, rate: 25, label: 'Above ৳17,00,000' },
+  { min: 0, max: 425000, rate: 0, label: 'Up to ৳4,25,000' },
+  { min: 425000, max: 725000, rate: 10, label: '৳4,25,001 – ৳7,25,000' },
+  { min: 725000, max: 1125000, rate: 15, label: '৳7,25,001 – ৳11,25,000' },
+  { min: 1125000, max: 1625000, rate: 20, label: '৳11,25,001 – ৳16,25,000' },
+  { min: 1625000, max: 3625000, rate: 25, label: '৳16,25,001 – ৳36,25,000' },
+  { min: 3625000, max: null, rate: 30, label: 'Above ৳36,25,000' },
 ];
 
 export const DEFAULT_DEDUCTIONS: DeductionItem[] = [
