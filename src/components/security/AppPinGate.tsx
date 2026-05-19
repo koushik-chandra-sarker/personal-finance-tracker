@@ -224,13 +224,13 @@ export default function AppPinGate({ state, children }: Props) {
             <div className="min-w-0 flex-1">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="font-bold text-slate-900 dark:text-white">Create an app PIN</p>
+                  <p className="font-bold text-slate-900 dark:text-slate-200">Create an app PIN</p>
                   <p className="mt-1 text-sm leading-5 text-slate-500 dark:text-slate-400">Add a tab-session PIN for private finance pages. Support and tutorials stay available.</p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setIsPromptDismissed(true)}
-                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-white"
+                  className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-white/10 dark:hover:text-slate-200"
                   aria-label="Dismiss PIN suggestion"
                 >
                   <X className="h-4 w-4" />

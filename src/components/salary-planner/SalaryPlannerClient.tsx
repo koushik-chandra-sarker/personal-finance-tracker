@@ -35,6 +35,8 @@ type PayrollVariationRow = {
   taxDeductedMonthly: number;
 };
 
+type SalaryPlannerTab = 'overview' | 'tax' | 'compare' | 'charts' | 'planner';
+
 function createPayrollRow(label: string, months: number, grossMonthly: number, pfMonthly = 0, taxDeductedMonthly = 0): PayrollVariationRow {
   return {
     id: `payroll-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -52,12 +54,16 @@ export default function SalaryPlannerClient({
   fiscalYears,
   taxConfigsByYear,
   initialScenarios,
+  initialActiveTab = 'overview',
+  variant = 'planner',
 }: { 
   currency: string;
   initialFiscalYear: string;
   fiscalYears: string[];
   taxConfigsByYear: Record<string, { male: TaxSlab[]; female: TaxSlab[] }>;
   initialScenarios: SalaryScenarioRow[];
+  initialActiveTab?: SalaryPlannerTab;
+  variant?: 'planner' | 'taxCalculator';
 }) {
   const { locale, messages } = useI18n();
   const copy = messages.pages.salaryPlanner;
@@ -91,7 +97,8 @@ export default function SalaryPlannerClient({
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isPending, startTransition] = useTransition();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'tax' | 'compare' | 'charts' | 'planner'>('overview');
+  const [activeTab, setActiveTab] = useState<SalaryPlannerTab>(initialActiveTab);
+  const isTaxCalculator = variant === 'taxCalculator';
 
   const getSlabs = useCallback((fiscalYear: string, category: SalaryTaxCategory) => {
     const yearConfig = taxConfigsByYear[fiscalYear];
@@ -385,14 +392,14 @@ export default function SalaryPlannerClient({
       {/* Header */}
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-3 text-xl font-bold text-slate-900 dark:text-white sm:text-3xl">
+          <h1 className="flex items-center gap-3 text-xl font-bold text-slate-900 dark:text-slate-200 sm:text-3xl">
             <div className="shrink-0 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 text-white shadow-lg shadow-emerald-500/25">
               <Calculator className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
-            <span className="min-w-0">{copy.title}</span>
+            <span className="min-w-0">{isTaxCalculator ? copy.taxCalculatorTitle : copy.title}</span>
           </h1>
           <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-            {copy.subtitle} {selectedFiscalYear} &middot; {copy.taxCalculation}
+            {isTaxCalculator ? copy.taxCalculatorSubtitle : `${copy.subtitle} ${selectedFiscalYear} - ${copy.taxCalculation}`}
           </p>
         </div>
         <div className="grid gap-3 sm:flex sm:items-center">
@@ -417,6 +424,7 @@ export default function SalaryPlannerClient({
         </div>
       </div>
 
+      {!isTaxCalculator && (
       <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(220px,0.7fr)_auto] lg:items-end">
           <div>
@@ -425,7 +433,7 @@ export default function SalaryPlannerClient({
               type="text"
               value={planName}
               onChange={(event) => setPlanName(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
             />
           </div>
           <div>
@@ -433,7 +441,7 @@ export default function SalaryPlannerClient({
             <select
               value={selectedScenarioId}
               onChange={(event) => setSelectedScenarioId(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
+              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500"
             >
               <option value="">{copy.noSavedPlan}</option>
               {scenarios.map(scenario => (
@@ -488,15 +496,27 @@ export default function SalaryPlannerClient({
           </div>
         )}
       </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-3 min-[430px]:grid-cols-2 lg:grid-cols-4 sm:gap-4">
-        {[
+        {(isTaxCalculator ? [
+          { label: copy.grossAnnualIncome, value: taxBase.grossAnnual, icon: DollarSign, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
+          { label: copy.taxableIncome, value: taxBase.taxableIncome, icon: PieChart, gradient: 'from-emerald-500 to-teal-600', shadow: 'shadow-emerald-500/20' },
+          { label: copy.estimatedAnnualTax, value: employeeTaxWorksheet.estimatedAnnualTax, icon: Landmark, gradient: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' },
+          {
+            label: employeeTaxWorksheet.balance >= 0 ? copy.balanceDue : copy.possibleRefund,
+            value: Math.abs(employeeTaxWorksheet.balance),
+            icon: FileText,
+            gradient: employeeTaxWorksheet.balance >= 0 ? 'from-amber-500 to-orange-600' : 'from-emerald-500 to-green-600',
+            shadow: employeeTaxWorksheet.balance >= 0 ? 'shadow-amber-500/20' : 'shadow-emerald-500/20',
+          },
+        ] : [
           { label: copy.grossMonthly, value: result.grossMonthly, icon: DollarSign, gradient: 'from-blue-500 to-indigo-600', shadow: 'shadow-blue-500/20' },
           { label: copy.netMonthly, value: result.netMonthly, icon: TrendingUp, gradient: 'from-emerald-500 to-green-600', shadow: 'shadow-emerald-500/20' },
           { label: copy.annualTax, value: result.totalTax, icon: Minus, gradient: 'from-rose-500 to-pink-600', shadow: 'shadow-rose-500/20' },
           { label: copy.effectiveTaxRate, value: null, icon: PieChart, gradient: 'from-amber-500 to-orange-600', shadow: 'shadow-amber-500/20', display: `${result.effectiveTaxRate.toFixed(1)}%` },
-        ].map((card, i) => (
+        ]).map((card, i) => (
           <div key={i} className={cn('min-w-0 rounded-2xl border border-slate-200 bg-white p-4 animate-slide-up dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5', `stagger-${i + 1}`)}>
             <div className="flex items-center gap-2 mb-3">
               <div className={cn('p-1.5 rounded-lg bg-gradient-to-br text-white shadow-lg', card.gradient, card.shadow)}>
@@ -504,41 +524,58 @@ export default function SalaryPlannerClient({
               </div>
               <span className="min-w-0 text-xs font-medium leading-5 text-slate-500 dark:text-slate-400">{card.label}</span>
             </div>
-            <p className="break-words text-lg font-bold leading-tight text-slate-900 dark:text-white sm:text-xl">
-              {card.display ?? fmt(card.value!, currency, locale)}
+            <p className="break-words text-lg font-bold leading-tight text-slate-900 dark:text-slate-200 sm:text-xl">
+              {'display' in card && card.display ? card.display : fmt(card.value!, currency, locale)}
             </p>
           </div>
         ))}
       </div>
 
       {/* Input & Results */}
-      <div className="grid min-w-0 gap-4 lg:grid-cols-5 lg:gap-6">
+      <div className={cn('min-w-0 gap-4', isTaxCalculator ? 'space-y-4' : 'grid lg:grid-cols-5 lg:gap-6')}>
         {/* Left: Inputs */}
-        <div className="min-w-0 space-y-4 lg:col-span-2">
+        <div className={cn('min-w-0 space-y-4', !isTaxCalculator && 'lg:col-span-2')}>
+          {isTaxCalculator && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{copy.taxInputs}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.taxInputsHelp}</p>
+                </div>
+                <div className="rounded-xl border border-indigo-100 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 dark:border-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300">
+                  {copy.fiscalYearShort} {selectedFiscalYear}
+                </div>
+              </div>
+            </div>
+          )}
           {/* Gross Salary */}
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+            <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-200">
               <DollarSign className="h-4 w-4 shrink-0 text-indigo-500" /> <span className="min-w-0">{copy.grossSalary}</span>
             </h2>
-            <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1.5">{copy.monthlyGross} ({currency})</label>
-            <input type="number" value={grossMonthly} onChange={e => updateGrossMonthly(Math.max(0, Number(e.target.value)))}
-              className="w-full rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-4 py-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500" />
-            <div className="mt-3 flex flex-wrap items-center gap-2">
-              <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.festivalBonus}:</label>
-              <input type="number" min={0} max={6} value={bonusMonths} onChange={e => setBonusMonths(Math.max(0, Math.min(6, Number(e.target.value))))}
-                className="w-16 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-2 py-1.5 text-sm text-center text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+            <div className={cn('grid gap-3', isTaxCalculator && 'sm:grid-cols-[minmax(0,20rem)_minmax(0,14rem)] sm:items-end')}>
+              <label className="min-w-0 space-y-1.5">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.monthlyGross} ({currency})</span>
+                <input type="number" value={grossMonthly} onChange={e => updateGrossMonthly(Math.max(0, Number(e.target.value)))}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
+              </label>
+              <label className="min-w-0 space-y-1.5">
+                <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.festivalBonus}</span>
+                <input type="number" min={0} max={6} value={bonusMonths} onChange={e => setBonusMonths(Math.max(0, Math.min(6, Number(e.target.value))))}
+                  className={cn('rounded-xl border border-slate-300 bg-white px-3 py-3 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200', isTaxCalculator ? 'w-full' : 'w-20 text-center')} />
+              </label>
             </div>
           </div>
 
           {/* Salary Structure */}
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
             <button onClick={() => setShowAdvanced(!showAdvanced)}
-              className="flex w-full items-start justify-between gap-3 text-left text-sm font-semibold text-slate-900 dark:text-white">
+              className="flex w-full items-start justify-between gap-3 text-left text-sm font-semibold text-slate-900 dark:text-slate-200">
               <span className="flex min-w-0 items-start gap-2"><BarChart3 className="mt-0.5 h-4 w-4 shrink-0 text-purple-500" /> <span className="min-w-0">{copy.salaryStructure}</span></span>
               {showAdvanced ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
             </button>
             {showAdvanced && (
-              <div className="mt-4 space-y-3">
+              <div className={cn('mt-4', isTaxCalculator ? 'grid gap-3 sm:grid-cols-2 xl:grid-cols-4' : 'space-y-3')}>
                 {[
                   { label: copy.basicPercent, key: 'basicPercent' as const, min: 30, max: 100 },
                   { label: copy.houseRentPercent, key: 'houseRentPercent' as const, min: 0, max: 100 },
@@ -548,14 +585,14 @@ export default function SalaryPlannerClient({
                     <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{f.label}</label>
                     <input type="number" min={f.min} max={f.max} value={structure[f.key]}
                       onChange={e => setStructure(prev => ({ ...prev, [f.key]: Math.max(f.min, Math.min(f.max, Number(e.target.value))) }))}
-                      className="w-full mt-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+                      className="w-full mt-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500" />
                   </div>
                 ))}
                 <div>
                   <label className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.conveyanceFlat} ({currency})</label>
                   <input type="number" min={0} value={structure.conveyanceFlat}
                     onChange={e => setStructure(prev => ({ ...prev, conveyanceFlat: Math.max(0, Number(e.target.value)) }))}
-                    className="w-full mt-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500" />
+                    className="w-full mt-1 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 px-3 py-2 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500" />
                 </div>
               </div>
             )}
@@ -564,7 +601,7 @@ export default function SalaryPlannerClient({
           {/* Deductions */}
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
             <div className="mb-4 flex items-start justify-between gap-3">
-              <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-900 dark:text-white">
+              <h2 className="flex min-w-0 items-center gap-2 text-sm font-semibold text-slate-900 dark:text-slate-200">
                 <Minus className="h-4 w-4 shrink-0 text-rose-500" /> <span className="min-w-0">{copy.monthlyDeductions}</span>
               </h2>
               <div className="shrink-0 rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-bold text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
@@ -578,17 +615,17 @@ export default function SalaryPlannerClient({
                     <label className="grid min-w-0 gap-1">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{copy.deductionName}</span>
                       <input type="text" value={d.label} onChange={e => updateDeduction(i, 'label', e.target.value)}
-                        className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                        className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                     </label>
                     <label className="grid min-w-0 gap-1">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{copy.deductionAmount}</span>
                       <input type="number" min={0} value={d.amount} onChange={e => updateDeduction(i, 'amount', Math.max(0, Number(e.target.value)))}
-                        className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                        className="min-w-0 rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-right text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                     </label>
                     <label className="grid min-w-0 gap-1">
                       <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">{copy.deductionMode}</span>
                       <select value={d.isPercentage ? 'pct' : 'flat'} onChange={e => updateDeduction(i, 'isPercentage', e.target.value === 'pct')}
-                        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white">
+                        className="rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200">
                         <option value="flat">{currency}</option>
                         <option value="pct">%</option>
                       </select>
@@ -614,11 +651,12 @@ export default function SalaryPlannerClient({
         </div>
 
         {/* Right: Results */}
-        <div className="min-w-0 space-y-4 lg:col-span-3">
+        <div className={cn('min-w-0 space-y-4', !isTaxCalculator && 'lg:col-span-3')}>
           {/* Tab Navigation */}
+          {!isTaxCalculator && (
           <div className="-mx-1 overflow-x-auto px-1">
             <div className="flex min-w-max overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700 sm:min-w-0">
-            {([['overview', copy.overview], ['tax', copy.taxBreakdown], ['compare', copy.compare], ['charts', copy.charts], ['planner', copy.budgetPlanner]] as const).map(([key, label]) => (
+            {([['overview', copy.overview], ['compare', copy.compare], ['charts', copy.charts], ['planner', copy.budgetPlanner]] as const).map(([key, label]) => (
               <button key={key} onClick={() => setActiveTab(key)}
                 className={cn('min-w-24 flex-1 px-3 py-2.5 text-xs font-semibold transition-all sm:min-w-0 sm:px-4', activeTab === key ? 'bg-indigo-600 text-white' : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700')}>
                 {label}
@@ -626,11 +664,12 @@ export default function SalaryPlannerClient({
             ))}
             </div>
           </div>
+          )}
 
           {activeTab === 'overview' && (
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
               <div className="border-b border-slate-100 p-4 dark:border-slate-700/50 sm:p-5">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.salaryBreakdown}</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.salaryBreakdown}</h3>
               </div>
               <div className="grid gap-3 p-4 sm:grid-cols-2 sm:p-5">
                 {[
@@ -645,11 +684,11 @@ export default function SalaryPlannerClient({
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <div className="min-w-0 rounded-xl bg-white p-2 dark:bg-slate-800/70">
                         <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{copy.monthlyLabel}</p>
-                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-white">{fmt(row.monthly, currency, locale)}</p>
+                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-slate-200">{fmt(row.monthly, currency, locale)}</p>
                       </div>
                       <div className="min-w-0 rounded-xl bg-white p-2 dark:bg-slate-800/70">
                         <p className="text-[11px] font-medium text-slate-400 dark:text-slate-500">{copy.annualLabel}</p>
-                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-white">{fmt(row.annual, currency, locale)}</p>
+                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-slate-200">{fmt(row.annual, currency, locale)}</p>
                       </div>
                     </div>
                   </div>
@@ -659,7 +698,7 @@ export default function SalaryPlannerClient({
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700/50 dark:bg-slate-800/80">
                     <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{copy.grossMonthly}</p>
-                    <p className="mt-1 break-words text-base font-bold text-slate-900 dark:text-white">{fmt(result.grossMonthly, currency, locale)}</p>
+                    <p className="mt-1 break-words text-base font-bold text-slate-900 dark:text-slate-200">{fmt(result.grossMonthly, currency, locale)}</p>
                   </div>
                   <div className="min-w-0 rounded-2xl border border-rose-100 bg-white p-3 dark:border-rose-500/20 dark:bg-slate-800/80">
                     <p className="text-xs font-semibold text-rose-500 dark:text-rose-300">(-) {copy.monthlyTax}</p>
@@ -698,9 +737,15 @@ export default function SalaryPlannerClient({
 
           {activeTab === 'tax' && (
             <div className="space-y-4">
+              {isTaxCalculator && (
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
+                  <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{copy.taxResults}</p>
+                  <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.taxResultsHelp}</p>
+                </div>
+              )}
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
                 <div className="border-b border-slate-100 p-4 dark:border-slate-700/50 sm:p-5">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.employeeTaxWorksheet} — {copy.fiscalYearShort} {selectedFiscalYear}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.employeeTaxWorksheet} — {copy.fiscalYearShort} {selectedFiscalYear}</h3>
                   <p className="mt-1 flex items-start gap-1.5 text-xs leading-5 text-slate-500 dark:text-slate-400">
                     <Info className="mt-0.5 h-3 w-3 shrink-0" /> <span>{taxCategory === 'female' ? copy.femaleSlabs : copy.maleSlabs} {copy.slabsFromAdmin} {usePayrollVariations ? copy.usingPayrollRows : copy.usingCurrentGross}</span>
                   </p>
@@ -712,7 +757,7 @@ export default function SalaryPlannerClient({
                     <select
                       value={minimumTaxArea}
                       onChange={(event) => setMinimumTaxArea(event.target.value as typeof minimumTaxArea)}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                     >
                       {MINIMUM_TAX_OPTIONS.map(option => <option key={option.key} value={option.key}>{copy.minimumTaxOptions[option.key]}</option>)}
                     </select>
@@ -720,7 +765,7 @@ export default function SalaryPlannerClient({
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.manualRebate}</span>
                     <input type="number" min={0} value={investmentRebate} onChange={event => setInvestmentRebate(Math.max(0, Number(event.target.value)))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                   </label>
                   <div className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.pfRebate}</span>
@@ -735,27 +780,27 @@ export default function SalaryPlannerClient({
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.pfRebateRate}</span>
                     <input type="number" min={0} max={100} value={pfRebateRate} disabled={!includePfInRebate} onChange={event => setPfRebateRate(Math.min(100, Math.max(0, Number(event.target.value))))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 disabled:opacity-60 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                   </label>
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.monthlyTaxDeducted}</span>
                     <input type="number" min={0} value={monthlyTaxDeducted} disabled={usePayrollVariations} onChange={event => setMonthlyTaxDeducted(Math.max(0, Number(event.target.value)))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                   </label>
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.otherTaxAdjustment}</span>
                     <input type="number" value={otherTaxAdjustment} onChange={event => setOtherTaxAdjustment(Number(event.target.value))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                   </label>
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.additionalTaxPaid}</span>
                     <input type="number" min={0} value={additionalTaxPaid} onChange={event => setAdditionalTaxPaid(Math.max(0, Number(event.target.value)))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                   </label>
                   <label className="min-w-0 space-y-1.5">
                     <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.actualFestivalBonusAnnual}</span>
                     <input type="number" min={0} value={actualFestivalBonusAnnual} onChange={event => setActualFestivalBonusAnnual(Math.max(0, Number(event.target.value)))}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                      className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                     <span className="block text-[11px] leading-4 text-slate-400 dark:text-slate-500">{copy.actualFestivalBonusHelp}</span>
                   </label>
                   <div className="flex items-end md:col-span-2">
@@ -774,7 +819,7 @@ export default function SalaryPlannerClient({
                 <div className="rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50 overflow-hidden">
                   <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                     <div>
-                      <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.payrollVariation}</h3>
+                      <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.payrollVariation}</h3>
                       <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.payrollVariationHelp}</p>
                     </div>
                     <div className="grid grid-cols-2 gap-2 sm:flex">
@@ -800,25 +845,25 @@ export default function SalaryPlannerClient({
                           <tr key={row.id}>
                             <td className="px-4 py-3">
                               <input value={row.label} onChange={event => updatePayrollRow(row.id, 'label', event.target.value)}
-                                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                             </td>
                             <td className="px-4 py-3 text-right">
                               <input type="number" min={0} max={12} value={row.months} onChange={event => updatePayrollRow(row.id, 'months', event.target.value)}
-                                className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                className="w-20 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                             </td>
                             <td className="px-4 py-3 text-right">
                               <input type="number" min={0} value={row.grossMonthly} onChange={event => updatePayrollRow(row.id, 'grossMonthly', event.target.value)}
-                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                             </td>
                             <td className="px-4 py-3 text-right">
                               <input type="number" min={0} value={row.pfMonthly} onChange={event => updatePayrollRow(row.id, 'pfMonthly', event.target.value)}
-                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                             </td>
                             <td className="px-4 py-3 text-right">
                               <input type="number" min={0} value={row.taxDeductedMonthly} onChange={event => updatePayrollRow(row.id, 'taxDeductedMonthly', event.target.value)}
-                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white" />
+                                className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200" />
                             </td>
-                            <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-white">{fmt(row.grossMonthly * row.months, currency)}</td>
+                            <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-slate-200">{fmt(row.grossMonthly * row.months, currency)}</td>
                             <td className="px-4 py-3 text-right">
                               <button onClick={() => removePayrollRow(row.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10">
                                 <Trash2 className="h-4 w-4" />
@@ -856,7 +901,7 @@ export default function SalaryPlannerClient({
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
                   <div className="border-b border-slate-100 p-4 dark:border-slate-700/50 sm:p-5">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.annualIncomeToTaxable}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.annualIncomeToTaxable}</h3>
                   </div>
                   <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {[
@@ -870,12 +915,12 @@ export default function SalaryPlannerClient({
                     ].map(([label, value]) => (
                       <div key={String(label)} className="grid gap-1 px-4 py-3 sm:flex sm:items-start sm:justify-between sm:gap-3 sm:px-5">
                         <span className="min-w-0 text-xs font-medium leading-5 text-slate-600 dark:text-slate-300">{label}</span>
-                        <span className="min-w-0 break-words text-xs font-semibold text-slate-900 dark:text-white sm:shrink-0 sm:text-right">{fmt(Number(value), currency, locale)}</span>
+                        <span className="min-w-0 break-words text-xs font-semibold text-slate-900 dark:text-slate-200 sm:shrink-0 sm:text-right">{fmt(Number(value), currency, locale)}</span>
                       </div>
                     ))}
                     <div className="grid gap-1 bg-slate-50 px-4 py-3 dark:bg-slate-700/30 sm:flex sm:items-start sm:justify-between sm:gap-3 sm:px-5">
-                      <span className="min-w-0 text-xs font-bold text-slate-900 dark:text-white">{copy.grossAnnualIncome}</span>
-                      <span className="min-w-0 break-words text-xs font-bold text-slate-900 dark:text-white sm:shrink-0 sm:text-right">{fmt(taxBase.grossAnnual, currency, locale)}</span>
+                      <span className="min-w-0 text-xs font-bold text-slate-900 dark:text-slate-200">{copy.grossAnnualIncome}</span>
+                      <span className="min-w-0 break-words text-xs font-bold text-slate-900 dark:text-slate-200 sm:shrink-0 sm:text-right">{fmt(taxBase.grossAnnual, currency, locale)}</span>
                     </div>
                     <div className="grid gap-1 px-4 py-3 sm:flex sm:items-start sm:justify-between sm:gap-3 sm:px-5">
                       <span className="min-w-0 text-xs font-medium leading-5 text-rose-600 dark:text-rose-400">{copy.employmentExemption}</span>
@@ -890,7 +935,7 @@ export default function SalaryPlannerClient({
 
                 <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-800/50">
                   <div className="border-b border-slate-100 p-4 dark:border-slate-700/50 sm:p-5">
-                    <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.filingSummary}</h3>
+                    <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.filingSummary}</h3>
                   </div>
                   <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
                     {[
@@ -905,7 +950,7 @@ export default function SalaryPlannerClient({
                     ].map(([label, value]) => (
                       <div key={String(label)} className="grid gap-1 px-4 py-3 sm:flex sm:items-start sm:justify-between sm:gap-3 sm:px-5">
                         <span className="min-w-0 text-xs font-medium leading-5 text-slate-600 dark:text-slate-300">{label}</span>
-                        <span className={cn('min-w-0 break-words text-xs font-semibold sm:shrink-0 sm:text-right', Number(value) < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-white')}>
+                        <span className={cn('min-w-0 break-words text-xs font-semibold sm:shrink-0 sm:text-right', Number(value) < 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-900 dark:text-slate-200')}>
                           {Number(value) < 0 ? fmtSigned(Number(value), currency, locale) : fmt(Number(value), currency, locale)}
                         </span>
                       </div>
@@ -924,7 +969,7 @@ export default function SalaryPlannerClient({
 
               <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
                 <div className="border-b border-slate-100 p-4 dark:border-slate-700/50 sm:p-5">
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.slabCalculation}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.slabCalculation}</h3>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full min-w-[620px] text-sm">
@@ -940,7 +985,7 @@ export default function SalaryPlannerClient({
                       {taxBase.taxSlabBreakdown.map((row, i) => (
                         <tr key={`${row.slab.label}-${i}`} className={cn(row.taxableAmount > 0 ? '' : 'opacity-40')}>
                           <td className="px-5 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">{row.slab.label}</td>
-                          <td className="px-5 py-3 text-xs text-right font-semibold text-slate-900 dark:text-white">{row.slab.rate}%</td>
+                          <td className="px-5 py-3 text-xs text-right font-semibold text-slate-900 dark:text-slate-200">{row.slab.rate}%</td>
                           <td className="px-5 py-3 text-xs text-right text-slate-600 dark:text-slate-400">{fmt(row.taxableAmount, currency, locale)}</td>
                           <td className="px-5 py-3 text-xs text-right font-semibold text-rose-600 dark:text-rose-400">{fmt(row.tax, currency, locale)}</td>
                         </tr>
@@ -951,7 +996,7 @@ export default function SalaryPlannerClient({
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.employeeTaxDocuments}</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.employeeTaxDocuments}</h3>
                 <div className="mt-4 grid gap-3 sm:grid-cols-2">
                   {[
                     locale === 'bn-BD' ? 'TIN / ই-রিটার্ন অ্যাকাউন্ট তথ্য' : 'TIN / e-return account information',
@@ -978,7 +1023,7 @@ export default function SalaryPlannerClient({
             <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
               <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between sm:p-5">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 flex items-center gap-2">
                     <ArrowLeftRight className="h-4 w-4 text-indigo-500" /> {copy.compareWithSavedPlan}
                   </h3>
                   <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{copy.compareHelp}</p>
@@ -986,7 +1031,7 @@ export default function SalaryPlannerClient({
                 <select
                   value={compareScenarioId}
                   onChange={(event) => setCompareScenarioId(event.target.value)}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-white sm:w-auto sm:min-w-56"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none focus:border-indigo-500 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200 sm:w-auto sm:min-w-56"
                 >
                   <option value="">{copy.chooseSavedPlan}</option>
                   {scenarios.map(scenario => <option key={scenario.id} value={scenario.id}>{scenario.name}</option>)}
@@ -1001,7 +1046,7 @@ export default function SalaryPlannerClient({
                     ].map(item => (
                       <div key={item.label} className="min-w-0 rounded-xl border border-slate-200 p-4 dark:border-slate-700/50">
                         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">{item.label}</p>
-                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-white">{item.name}</p>
+                        <p className="mt-1 break-words text-sm font-bold text-slate-900 dark:text-slate-200">{item.name}</p>
                         <p className="mt-1 text-xs text-slate-400 dark:text-slate-500">FY {item.fiscalYear}</p>
                         <div className="mt-3 grid grid-cols-1 gap-2 min-[430px]:grid-cols-2">
                           <div className="min-w-0">
@@ -1038,7 +1083,7 @@ export default function SalaryPlannerClient({
                           return (
                             <tr key={label}>
                               <td className="px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-300">{label}</td>
-                              <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-white">{fmt(Number(current), currency, locale)}</td>
+                              <td className="px-4 py-3 text-right text-xs font-semibold text-slate-900 dark:text-slate-200">{fmt(Number(current), currency, locale)}</td>
                               <td className="px-4 py-3 text-right text-xs text-slate-600 dark:text-slate-400">{fmt(Number(saved), currency, locale)}</td>
                               <td className={cn('px-4 py-3 text-right text-xs font-bold', diff >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400')}>
                                 {diff >= 0 ? '+' : ''}{fmt(diff, currency, locale)}

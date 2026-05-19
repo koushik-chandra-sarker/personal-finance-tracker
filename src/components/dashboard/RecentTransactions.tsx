@@ -28,7 +28,7 @@ export default function RecentTransactions({ transactions, currency = 'USD', loc
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{copy.recentTransactions}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{copy.recentTransactions}</h3>
         <Link href="/transactions" className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300">
           {copy.viewAll} →
         </Link>
@@ -50,7 +50,7 @@ export default function RecentTransactions({ transactions, currency = 'USD', loc
                 }
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate">{tx.description}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {tx.category.name} · {tx.account.name} · {formatRelativeDate(tx.date, locale)}
                   {tx.createdByName && <span className="ml-1 opacity-60">· {tx.createdByName}</span>}

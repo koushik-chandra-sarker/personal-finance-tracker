@@ -123,14 +123,14 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
     tooltipText: isDark ? '#ffffff' : '#0f172a',
   };
 
-  const selectClass = "rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-2.5 py-2 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50";
+  const selectClass = "rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-2.5 py-2 text-sm font-medium text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50";
   const selectStyle = { backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center', paddingRight: '24px' };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <Button variant="outline" onClick={handleExportCSV}>
@@ -151,18 +151,18 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
             <span>{copy.from}</span>
           </div>
           <select value={localFromMonth} disabled={isPending} onChange={(e) => setLocalFromMonth(Number(e.target.value))} className={selectClass} style={selectStyle}>
-            {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>))}
+            {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{m.label}</option>))}
           </select>
           <select value={localFromYear} disabled={isPending} onChange={(e) => setLocalFromYear(Number(e.target.value))} className={selectClass} style={selectStyle}>
-            {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>))}
+            {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{y}</option>))}
           </select>
           <span className="text-slate-400 dark:text-slate-600">→</span>
           <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.to}</span>
           <select value={localToMonth} disabled={isPending} onChange={(e) => setLocalToMonth(Number(e.target.value))} className={selectClass} style={selectStyle}>
-            {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>))}
+            {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{m.label}</option>))}
           </select>
           <select value={localToYear} disabled={isPending} onChange={(e) => setLocalToYear(Number(e.target.value))} className={selectClass} style={selectStyle}>
-            {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>))}
+            {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{y}</option>))}
           </select>
           <button onClick={applyRange} disabled={isPending} className="px-4 py-2 rounded-xl text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-500 transition-colors shadow-lg shadow-indigo-500/20 disabled:opacity-50">
             {copy.apply}
@@ -188,10 +188,10 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
             <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 block">{copy.from}</span>
             <div className="grid grid-cols-2 gap-2">
               <select value={localFromMonth} disabled={isPending} onChange={(e) => setLocalFromMonth(Number(e.target.value))} className={selectClass + " w-full"} style={selectStyle}>
-                {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>))}
+                {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{m.label}</option>))}
               </select>
               <select value={localFromYear} disabled={isPending} onChange={(e) => setLocalFromYear(Number(e.target.value))} className={selectClass + " w-full"} style={selectStyle}>
-                {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>))}
+                {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{y}</option>))}
               </select>
             </div>
           </div>
@@ -199,10 +199,10 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
             <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1.5 block">{copy.to}</span>
             <div className="grid grid-cols-2 gap-2">
               <select value={localToMonth} disabled={isPending} onChange={(e) => setLocalToMonth(Number(e.target.value))} className={selectClass + " w-full"} style={selectStyle}>
-                {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{m.label}</option>))}
+                {months.map((m) => (<option key={m.value} value={m.value} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{m.label}</option>))}
               </select>
               <select value={localToYear} disabled={isPending} onChange={(e) => setLocalToYear(Number(e.target.value))} className={selectClass + " w-full"} style={selectStyle}>
-                {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>))}
+                {years.map((y) => (<option key={y} value={y} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{y}</option>))}
               </select>
             </div>
           </div>
@@ -221,7 +221,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
 
       {/* Trend Chart */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">{copy.monthlyTrend}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-1">{copy.monthlyTrend}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{rangeLabel}</p>
         <div className="h-[350px]">
           {mounted && (
@@ -251,7 +251,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
 
       {/* Category Breakdown Table */}
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-1">{copy.categoryBreakdown}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-1">{copy.categoryBreakdown}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mb-4">{rangeLabel}</p>
         {breakdown.length === 0 ? (
           <p className="text-sm text-slate-500 text-center py-8">{copy.noData}</p>
@@ -271,10 +271,10 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
                     <td className="py-3">
                       <div className="flex items-center gap-2">
                         <div className="w-3 h-3 rounded-full" style={{ backgroundColor: cat.categoryColor }} />
-                        <span className="text-slate-900 dark:text-white">{cat.categoryName}</span>
+                        <span className="text-slate-900 dark:text-slate-200">{cat.categoryName}</span>
                       </div>
                     </td>
-                    <td className="py-3 text-right text-slate-900 dark:text-white font-medium">{formatCurrency(cat.total, userCurrency, locale)}</td>
+                    <td className="py-3 text-right text-slate-900 dark:text-slate-200 font-medium">{formatCurrency(cat.total, userCurrency, locale)}</td>
                     <td className="py-3 text-right text-slate-500 dark:text-slate-400">{cat.percentage}%</td>
                   </tr>
                 ))}
@@ -289,7 +289,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
         <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6">
           <div className="flex items-center justify-between mb-6">
             <div>
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{copy.investmentReturns}</h3>
+              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{copy.investmentReturns}</h3>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{copy.investmentReturnsHelp}</p>
             </div>
             <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10">
@@ -312,7 +312,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
                   Object.entries(investmentReport.returnsByType).map(([type, amount]) => (
                     <div key={type} className="flex items-center justify-between p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
                       <span className="text-xs text-slate-600 dark:text-slate-400 capitalize">{type.toLowerCase().replace('_', ' ')}</span>
-                      <span className="text-xs font-bold text-slate-900 dark:text-white">{formatCurrency(amount, userCurrency, locale)}</span>
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-200">{formatCurrency(amount, userCurrency, locale)}</span>
                     </div>
                   ))
                 )}
@@ -329,7 +329,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
                     <div key={type} className="space-y-1.5">
                       <div className="flex items-center justify-between text-[10px]">
                         <span className="text-slate-500 dark:text-slate-400">{type}</span>
-                        <span className="font-bold text-slate-900 dark:text-white">{formatCurrency(amount, userCurrency, locale)}</span>
+                        <span className="font-bold text-slate-900 dark:text-slate-200">{formatCurrency(amount, userCurrency, locale)}</span>
                       </div>
                       <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
                         <div 
@@ -346,24 +346,24 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
         </div>
 
         <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 p-6 flex flex-col">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 mb-4 flex items-center gap-2">
             <Wallet className="h-4 w-4 text-indigo-500" />
             {copy.portfolioHealth}
           </h3>
           
           <div className="flex-1 flex flex-col justify-center space-y-6">
             <div className="text-center">
-              <p className="text-3xl font-black text-slate-900 dark:text-white">{investmentReport.activeInvestmentCount}</p>
+              <p className="text-3xl font-black text-slate-900 dark:text-slate-200">{investmentReport.activeInvestmentCount}</p>
               <p className="text-[10px] text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">{copy.activeInvestments}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-center">
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{investmentReport.investmentCount}</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{investmentReport.investmentCount}</p>
                 <p className="text-[10px] text-slate-400 uppercase">{copy.total}</p>
               </div>
               <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 text-center">
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{investmentReport.investmentCount - investmentReport.activeInvestmentCount}</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{investmentReport.investmentCount - investmentReport.activeInvestmentCount}</p>
                 <p className="text-[10px] text-slate-400 uppercase">{copy.matured}</p>
               </div>
             </div>
@@ -374,7 +374,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
                   <ArrowUpRight className="h-4 w-4 text-indigo-500" />
                 </div>
                 <div>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{copy.taxSummary}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{copy.taxSummary}</p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                     {copy.estimatedTax}: {formatCurrency(investmentReport.totalReturnAmount * 0.05, userCurrency, locale)} (5%)
                   </p>

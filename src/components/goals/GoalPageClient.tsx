@@ -146,7 +146,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
       <Loader show={isPending} message={common.processing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{goals.length} {copy.activeGoals}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.newGoal}</Button>
@@ -177,7 +177,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                     <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{goal.name}</h3>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{goal.name}</h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{daysLeft} {copy.left}</p>
 
                 {/* Progress circle */}
@@ -192,13 +192,13 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                       />
                     </svg>
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <span className="text-xl font-bold text-slate-900 dark:text-white">{pct}%</span>
+                      <span className="text-xl font-bold text-slate-900 dark:text-slate-200">{pct}%</span>
                     </div>
                   </div>
                 </div>
 
                 <div className="text-center space-y-1">
-                  <p className="text-sm text-slate-900 dark:text-white font-medium">{formatCurrency(current, userCurrency, locale)} <span className="text-slate-500 dark:text-slate-400">{copy.of}</span> {formatCurrency(target, userCurrency, locale)}</p>
+                  <p className="text-sm text-slate-900 dark:text-slate-200 font-medium">{formatCurrency(current, userCurrency, locale)} <span className="text-slate-500 dark:text-slate-400">{copy.of}</span> {formatCurrency(target, userCurrency, locale)}</p>
                   
                   <div className="flex flex-wrap justify-center gap-2 pt-2">
                     {!goal.isCompleted && (
@@ -309,7 +309,7 @@ export default function GoalPageClient({ goals, accounts }: { goals: Goal[]; acc
                       {p.type === 'CONTRIBUTION' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownLeft className="h-4 w-4" />}
                     </div>
                     <div>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white capitalize">{p.type === 'CONTRIBUTION' ? copy.contribution : copy.deduction}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-200 capitalize">{p.type === 'CONTRIBUTION' ? copy.contribution : copy.deduction}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400">{p.description || formatDate(p.createdAt, undefined, locale)}</p>
                       {p.description && <p className="text-[10px] text-slate-400 dark:text-slate-500">{formatDate(p.createdAt, undefined, locale)}</p>}
                     </div>

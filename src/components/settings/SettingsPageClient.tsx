@@ -202,7 +202,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
           {initial}
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{userName}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{userName}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{userEmail}</p>
         </div>
       </div>
@@ -220,7 +220,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                   className={`flex-1 lg:flex-none flex items-center gap-3 px-4 py-3.5 rounded-xl text-sm font-medium transition-all ${
                     currentTab === tab.id
                       ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm lg:shadow-none lg:bg-indigo-500 lg:dark:bg-indigo-500/10 lg:text-white lg:dark:text-indigo-400'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/50 dark:hover:bg-slate-800/50'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-white/50 dark:hover:bg-slate-800/50'
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -237,7 +237,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
             <Card className="max-w-3xl">
               <div className="flex flex-col items-center text-center py-12">
                 <Shield className="h-16 w-16 text-slate-300 dark:text-slate-700 mb-6" />
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Collaborator View</h2>
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-200 mb-2">Collaborator View</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm">
                   Personal settings and security options are disabled while you are viewing someone&apos;s workspace.
                 </p>
@@ -249,16 +249,16 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                 <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center gap-3 mb-8">
                     <User className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Profile Information</h2>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Profile Information</h2>
                   </div>
                   <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Full Name</label>
-                      <p className="text-lg text-slate-900 dark:text-white font-semibold">{userName}</p>
+                      <p className="text-lg text-slate-900 dark:text-slate-200 font-semibold">{userName}</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Email Address</label>
-                      <p className="text-lg text-slate-900 dark:text-white font-semibold">{userEmail}</p>
+                      <p className="text-lg text-slate-900 dark:text-slate-200 font-semibold">{userEmail}</p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Account ID</label>
@@ -273,11 +273,11 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                   <Card>
                     <div className="flex items-center gap-3 mb-8">
                       <Palette className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">Appearance Settings</h2>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Appearance Settings</h2>
                     </div>
                     <div className="flex items-center justify-between p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
                       <div>
-                        <p className="text-base font-semibold text-slate-900 dark:text-white">Theme Mode</p>
+                        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">Theme Mode</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">Personalize your viewing experience</p>
                       </div>
                       <ThemeToggle />
@@ -287,7 +287,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                   <Card>
                     <div className="flex items-center gap-3 mb-8">
                       <Globe className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                      <h2 className="text-xl font-bold text-slate-900 dark:text-white">Regional Preferences</h2>
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Regional Preferences</h2>
                     </div>
                     <div className="space-y-4">
                       <LanguageSwitcher
@@ -297,7 +297,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                       />
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
                         <div>
-                          <p className="text-base font-semibold text-slate-900 dark:text-white">Base Currency</p>
+                          <p className="text-base font-semibold text-slate-900 dark:text-slate-200">Base Currency</p>
                           <p className="text-sm text-slate-500 dark:text-slate-400">The primary currency for tracking your wealth</p>
                         </div>
                         <div className="w-full sm:w-56">
@@ -335,7 +335,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                           <CreditCard className="h-6 w-6" />
                         </div>
                         <div className="min-w-0">
-                          <h2 className="text-xl font-bold text-slate-900 dark:text-white">Billing</h2>
+                          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Billing</h2>
                           <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
                             Manage your access, review package options, and submit manual payment when renewal is needed.
                           </p>
@@ -350,19 +350,19 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                     <div className="grid border-t border-slate-200 dark:border-slate-800 md:grid-cols-3">
                       <div className="p-5">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Current access</p>
-                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{planLabel()}</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">{planLabel()}</p>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{accessSourceLabel}</p>
                       </div>
                       <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Valid until</p>
-                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{subscriptionPeriodEnd || (subscriptionPlan === 'PRO' ? 'Unlimited' : '-')}</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">{subscriptionPeriodEnd || (subscriptionPlan === 'PRO' ? 'Unlimited' : '-')}</p>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                           {daysRemaining !== null && hasActiveSubscription ? `${daysRemaining} day${daysRemaining === 1 ? '' : 's'} remaining` : 'Renewal opens after expiry'}
                         </p>
                       </div>
                       <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">Payment flow</p>
-                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">Manual review</p>
+                        <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">Manual review</p>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">bKash/Nagad details are verified by admin.</p>
                       </div>
                     </div>
@@ -380,7 +380,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                         <div className="flex items-start gap-3">
                           <CheckCircle2 className="mt-1 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-300" />
                           <div>
-                            <p className="font-bold text-slate-900 dark:text-white">Your payment is already approved</p>
+                            <p className="font-bold text-slate-900 dark:text-slate-200">Your payment is already approved</p>
                             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
                               The payment form stays hidden while your current access is active. You can renew or upgrade after the current period expires.
                             </p>
@@ -396,7 +396,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                   <div>
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                       <div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">Available packages</h3>
+                        <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Available packages</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
                           {hasActiveSubscription && !isAdmin ? 'Package changes are available when your current access expires.' : 'Choose a package and submit payment details for admin approval.'}
                         </p>
@@ -422,7 +422,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                             <div className="mb-4 flex items-start justify-between gap-3">
                               <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
-                                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{pkg.name}</h3>
+                                  <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">{pkg.name}</h3>
                                   {pkg.isFeatured && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">Recommended</span>}
                                   {pkg.discountLabel && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">{pkg.discountLabel}</span>}
                                 </div>
@@ -430,7 +430,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                               </div>
                               {currentPlan && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
                             </div>
-                            <p className="text-3xl font-black text-slate-900 dark:text-white">{formatCurrency(pkg.price, pkg.currency, userLocale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
+                            <p className="text-3xl font-black text-slate-900 dark:text-slate-200">{formatCurrency(pkg.price, pkg.currency, userLocale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
                             <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <CalendarClock className="h-4 w-4" />
                               {pkg.interval === 'YEARLY' ? 'Yearly access' : 'Monthly access'}
@@ -471,12 +471,12 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                 <Card className="animate-in fade-in slide-in-from-bottom-2 duration-300">
                   <div className="flex items-center gap-3 mb-8">
                     <Shield className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-                    <h2 className="text-xl font-bold text-slate-900 dark:text-white">Security & Privacy</h2>
+                    <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Security & Privacy</h2>
                   </div>
                   <div className="space-y-4">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
                       <div>
-                        <p className="text-base font-semibold text-slate-900 dark:text-white">Account Password</p>
+                        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">Account Password</p>
                         <p className="text-sm text-slate-500 dark:text-slate-400">Regularly update your password to maintain high security</p>
                       </div>
                       <Button variant="secondary" size="md" onClick={() => setIsModalOpen(true)}>
@@ -492,7 +492,7 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                           </div>
                           <div>
                             <div className="flex flex-wrap items-center gap-2">
-                              <p className="text-base font-semibold text-slate-900 dark:text-white">App PIN</p>
+                              <p className="text-base font-semibold text-slate-900 dark:text-slate-200">App PIN</p>
                               <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${appPinStatus?.hasPin ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'}`}>
                                 {appPinStatus?.hasPin ? 'Enabled' : 'Not set'}
                               </span>

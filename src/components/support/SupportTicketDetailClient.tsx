@@ -282,7 +282,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
             {isAdmin ? copy.backToQueue : copy.backToSupport}
           </Link>
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{currentTicket.subject}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{currentTicket.subject}</h1>
             <Badge variant={statusBadge(currentTicket.status)}>{getSupportStatusLabel(currentTicket.status, locale)}</Badge>
             <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-xs font-semibold ${isLiveConnected ? 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300' : 'border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400'}`}>
               <span className={`h-1.5 w-1.5 rounded-full ${isLiveConnected ? 'bg-emerald-500' : 'bg-slate-400'}`} />
@@ -311,7 +311,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
         <Card className="overflow-hidden p-0">
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/60">
             <div>
-              <h2 className="font-bold text-slate-900 dark:text-white">{copy.conversation}</h2>
+              <h2 className="font-bold text-slate-900 dark:text-slate-200">{copy.conversation}</h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">{currentTicket.messages.length} {copy.messagesInTicket}</p>
             </div>
             <Radio className={`h-5 w-5 ${isLiveConnected ? 'text-emerald-500' : 'text-slate-400'}`} />
@@ -366,7 +366,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
               required
               rows={4}
               disabled={currentTicket.status === 'CLOSED'}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 disabled:opacity-60 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200"
               placeholder={currentTicket.status === 'CLOSED' ? copy.closedNoReply : copy.typeReply}
             />
             <div className="mt-3 flex justify-end">
@@ -380,7 +380,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
 
         <div className="space-y-4 xl:sticky xl:top-4 xl:self-start">
           <Card className="space-y-3">
-            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-white">
+            <h2 className="flex items-center gap-2 text-lg font-bold text-slate-900 dark:text-slate-200">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               {copy.ticketInfo}
             </h2>
@@ -394,7 +394,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
 
           {isAdmin && (
             <Card>
-              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{copy.adminControls}</h2>
+              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-slate-200">{copy.adminControls}</h2>
               <form onSubmit={handleStatus} className="space-y-3">
                 <Select key={currentTicket.status} label={copy.status} name="status" defaultValue={currentTicket.status} options={statusOptions} />
                 <Button type="submit" isLoading={isStatusPending}>{copy.updateStatus}</Button>
@@ -412,7 +412,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
 
           {isAdmin && (
             <Card>
-              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">{copy.supportAudit}</h2>
+              <h2 className="mb-3 text-lg font-bold text-slate-900 dark:text-slate-200">{copy.supportAudit}</h2>
               {currentTicket.auditLogs.length === 0 ? (
                 <p className="text-sm text-slate-500 dark:text-slate-400">{copy.noAudit}</p>
               ) : (
@@ -436,7 +436,7 @@ export default function SupportTicketDetailClient({ ticket, isAdmin = false }: P
             <KeyRound className="mx-auto h-8 w-8 text-emerald-500" />
             <div>
               <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.shareReadOnlyPin}</p>
-              <p className="mt-2 font-mono text-4xl font-black text-slate-950 dark:text-white">{generatedPin.pin}</p>
+              <p className="mt-2 font-mono text-4xl font-black text-slate-950 dark:text-slate-200">{generatedPin.pin}</p>
               <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">{copy.expires} {formatDate(generatedPin.expiresAt, 'MMM dd, h:mm a', locale)}</p>
             </div>
             <Button type="button" onClick={copyPin}>{copy.copyPin}</Button>

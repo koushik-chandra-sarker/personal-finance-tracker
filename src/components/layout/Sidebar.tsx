@@ -22,11 +22,12 @@ type NavItem = {
 
 const primaryNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/accounts', label: 'Accounts', icon: Wallet },
+  { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
+  { href: '/reports', label: 'Reports', icon: FileBarChart },
 ];
 
 const investmentNavItems: NavItem[] = [
@@ -36,14 +37,14 @@ const investmentNavItems: NavItem[] = [
 ];
 
 const secondaryNavItems: NavItem[] = [
-  { href: '/notes', label: 'Notes', icon: FileText },
-  { href: '/support', label: 'Support', icon: LifeBuoy },
-  { href: '/categories', label: 'Categories', icon: Tags },
-  { href: '/recurring', label: 'Recurring', icon: RefreshCw },
-  { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/salary-planner', label: 'Salary Planner', icon: Calculator },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/tax-calculator', label: 'Tax Calculator', icon: ReceiptText },
+  { href: '/recurring', label: 'Recurring', icon: RefreshCw },
+  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
+  { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
+  { href: '/support', label: 'Support', icon: LifeBuoy },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -95,8 +96,8 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
         className={cn(
           'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
           isActive
-            ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+            ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
         )}
       >
         <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
@@ -127,8 +128,8 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
             className={cn(
               'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
               isInvestmentsRoute
-                ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                ? 'text-indigo-700 dark:text-slate-200 bg-indigo-500/10 dark:bg-indigo-500/20'
+                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
             )}
             aria-expanded={investmentsOpen}
           >
@@ -154,8 +155,8 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                     )}
                   >
                     <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
@@ -177,8 +178,8 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
               className={cn(
                 'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                 isAdminRoute
-                  ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                  ? 'text-indigo-700 dark:text-slate-200 bg-indigo-500/10 dark:bg-indigo-500/20'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
               )}
               aria-expanded={adminOpen}
             >
@@ -204,8 +205,8 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
                       className={cn(
                         'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200',
                         isActive
-                          ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                          ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                          : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                       )}
                     >
                       <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
@@ -223,7 +224,7 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
       <div className="p-4 border-t border-slate-200 dark:border-slate-700/50">
         <button
           onClick={() => setCollapsed(!collapsed)}
-          className="flex items-center justify-center w-full p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
+          className="flex items-center justify-center w-full p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
         >
           {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
         </button>

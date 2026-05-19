@@ -21,7 +21,7 @@ export default function BudgetOverview({ budgets, currency = 'USD', locale = DEF
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">{copy.budgetProgress}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200">{copy.budgetProgress}</h3>
         <Link href="/budgets" className="text-sm text-indigo-500 dark:text-indigo-400 hover:text-indigo-600 dark:hover:text-indigo-300">
           {copy.manage} →
         </Link>
@@ -49,15 +49,15 @@ export default function BudgetOverview({ budgets, currency = 'USD', locale = DEF
             </div>
             <div className="mt-3 grid grid-cols-3 gap-2 text-center">
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{rolloverEnabledCount}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{rolloverEnabledCount}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400">{copy.on}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(totalRollover, currency, locale)}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(totalRollover, currency, locale)}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400">{copy.in}</p>
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(totalProjectedRollover, currency, locale)}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(totalProjectedRollover, currency, locale)}</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400">{copy.next}</p>
               </div>
             </div>
@@ -68,7 +68,7 @@ export default function BudgetOverview({ budgets, currency = 'USD', locale = DEF
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.categoryColor }} />
-                  <span className="text-sm text-slate-900 dark:text-white">{budget.categoryName}</span>
+                  <span className="text-sm text-slate-900 dark:text-slate-200">{budget.categoryName}</span>
                 </div>
                 <span className="text-xs text-slate-500 dark:text-slate-400">
                   {formatCurrency(budget.spent, currency, locale)} / {formatCurrency(budget.effectiveAmount, currency, locale)}

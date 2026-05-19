@@ -22,7 +22,7 @@ export default function Loader({ show, message = 'Processing...', backdrop = tru
           <div className="absolute inset-0 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin" />
         </div>
         {message && (
-          <p className="text-sm font-medium text-slate-900 dark:text-white animate-pulse">
+          <p className="text-sm font-medium text-slate-900 dark:text-slate-200 animate-pulse">
             {message}
           </p>
         )}

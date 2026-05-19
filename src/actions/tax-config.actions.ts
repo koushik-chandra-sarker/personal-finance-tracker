@@ -58,6 +58,7 @@ export async function createTaxConfigAction(formData: FormData) {
     const config = await createTaxConfig(data);
     revalidatePath('/admin/tax-config');
     revalidatePath('/salary-planner');
+    revalidatePath('/tax-calculator');
     return { success: true, data: serializeTaxConfig(config) };
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };
@@ -78,6 +79,8 @@ export async function updateTaxConfigAction(id: string, formData: FormData) {
 
     await updateTaxConfig(id, data);
     revalidatePath('/admin/tax-config');
+    revalidatePath('/salary-planner');
+    revalidatePath('/tax-calculator');
     return { success: true };
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };
@@ -89,6 +92,8 @@ export async function deleteTaxConfigAction(id: string) {
     await validateAccess('SETTINGS', 'EDIT');
     await deleteTaxConfig(id);
     revalidatePath('/admin/tax-config');
+    revalidatePath('/salary-planner');
+    revalidatePath('/tax-calculator');
     return { success: true };
   } catch (error) {
     return { success: false, message: getErrorMessage(error) };
@@ -136,6 +141,7 @@ export async function saveManualTaxYearConfigsAction(fiscalYear: string, rows: M
     const configs = await getTaxConfigs();
     revalidatePath('/admin/tax-config');
     revalidatePath('/salary-planner');
+    revalidatePath('/tax-calculator');
     
     return {
       success: true,

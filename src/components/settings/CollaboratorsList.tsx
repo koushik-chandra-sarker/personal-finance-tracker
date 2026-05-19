@@ -81,7 +81,7 @@ export default function CollaboratorsList() {
     <Card>
       <div className="flex items-center gap-3 mb-6">
         <Users className="h-5 w-5 text-indigo-500 dark:text-indigo-400" />
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Sharing & Collaboration</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-200">Sharing & Collaboration</h2>
       </div>
 
       <form onSubmit={handleInvite} className="flex items-end gap-3 mb-8">
@@ -117,7 +117,7 @@ export default function CollaboratorsList() {
             <div key={collab.id} className="border border-slate-200 dark:border-slate-700/50 rounded-xl overflow-hidden bg-slate-50/50 dark:bg-slate-800/30">
               <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800">
                 <div>
-                  <h3 className="font-medium text-slate-900 dark:text-white">{collab.collaborator.name}</h3>
+                  <h3 className="font-medium text-slate-900 dark:text-slate-200">{collab.collaborator.name}</h3>
                   <p className="text-xs text-slate-500 dark:text-slate-400">{collab.collaborator.email}</p>
                 </div>
                 <button 

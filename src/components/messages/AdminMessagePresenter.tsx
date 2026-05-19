@@ -130,7 +130,7 @@ export default function AdminMessagePresenter({ initialMessages }: Props) {
                   <div className={cn('mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl', style.iconBox)}>
                     <Icon className="h-8 w-8" />
                   </div>
-                  <h2 className="text-2xl font-black text-slate-950 dark:text-white">{activeModal.title}</h2>
+                  <h2 className="text-2xl font-black text-slate-950 dark:text-slate-200">{activeModal.title}</h2>
                   <p className="mt-3 whitespace-pre-line text-sm leading-7 text-slate-600 dark:text-slate-300">{activeModal.message}</p>
                   <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                     <button

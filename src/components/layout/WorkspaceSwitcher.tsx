@@ -78,7 +78,7 @@ export default function WorkspaceSwitcher({ className }: WorkspaceSwitcherProps)
             onClick={() => handleSwitch(null)}
             className="w-full text-left px-4 py-2 text-sm flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50"
           >
-            <span className={cn(isPersonal ? "text-slate-900 dark:text-white font-medium" : "text-slate-600 dark:text-slate-400")}>
+            <span className={cn(isPersonal ? "text-slate-900 dark:text-slate-200 font-medium" : "text-slate-600 dark:text-slate-400")}>
               Personal Workspace
             </span>
             {isPersonal && <Check className="h-4 w-4 text-indigo-500" />}
@@ -96,7 +96,7 @@ export default function WorkspaceSwitcher({ className }: WorkspaceSwitcherProps)
                   className="w-full text-left px-4 py-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700/50"
                 >
                   <div className="flex flex-col">
-                    <span className={cn("text-sm", isActive ? "text-slate-900 dark:text-white font-medium" : "text-slate-600 dark:text-slate-400")}>
+                    <span className={cn("text-sm", isActive ? "text-slate-900 dark:text-slate-200 font-medium" : "text-slate-600 dark:text-slate-400")}>
                       {space.owner.name || 'Shared'}&apos;s Tracker
                     </span>
                     {space.owner.email && <span className="text-xs text-slate-500">{space.owner.email}</span>}

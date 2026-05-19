@@ -70,7 +70,7 @@ export default function LanguageSwitcher({
       : LOCALE_OPTIONS.map((item) => ({ value: item.value, label: item.shortLabel }));
 
     return (
-      <label className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:text-white sm:gap-2 sm:px-2.5", className)}>
+      <label className={cn("flex h-9 shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-2 text-slate-500 transition-colors hover:text-slate-900 dark:border-slate-700/50 dark:bg-slate-800/50 dark:text-slate-400 dark:hover:text-slate-200 sm:gap-2 sm:px-2.5", className)}>
         <Globe className="h-4 w-4 shrink-0" />
         <span className="sr-only">Language</span>
         <select
@@ -94,7 +94,7 @@ export default function LanguageSwitcher({
   return (
     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
       <div>
-        <p className="text-base font-semibold text-slate-900 dark:text-white">{label}</p>
+        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">{label}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400">{description}</p>
       </div>
       <div className="w-full sm:w-56">

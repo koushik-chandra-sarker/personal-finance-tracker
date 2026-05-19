@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, label, currency, locale }: {
   if (!active || !payload) return null;
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3 shadow-2xl">
-      <p className="text-sm font-medium text-slate-900 dark:text-white mb-2">{label}</p>
+      <p className="text-sm font-medium text-slate-900 dark:text-slate-200 mb-2">{label}</p>
       {payload.map((entry, i) => (
         <p key={i} className="text-xs" style={{ color: entry.color }}>
           {entry.name}: {formatCurrency(entry.value, currency, locale)}
@@ -37,7 +37,7 @@ export default function IncomeExpenseChart({ data, currency = 'USD', locale = DE
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{copy.incomeVsExpenses}</h3>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.incomeVsExpenses}</h3>
       <div className="h-[300px]">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data} barGap={8}>

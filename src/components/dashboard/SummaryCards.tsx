@@ -155,7 +155,7 @@ export default function SummaryCards({ summary, totalBalance, upcomingBills, bud
               </div>
             </div>
             <div className="min-w-0">
-              <p className="whitespace-nowrap text-[clamp(1rem,1.05vw,1.25rem)] font-bold tabular-nums text-slate-900 dark:text-white">
+              <p className="whitespace-nowrap text-[clamp(1rem,1.05vw,1.25rem)] font-bold tabular-nums text-slate-900 dark:text-slate-200">
                 {card.value}
               </p>
               {card.helperText && (

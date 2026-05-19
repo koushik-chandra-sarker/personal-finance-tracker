@@ -30,9 +30,20 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   );
 }
 
+const cachedPrisma = globalForPrisma.prisma;
+const canReuseCachedPrisma = hasCurrentPrismaDelegates(cachedPrisma);
+
 // During next dev, Prisma can be regenerated while the old client instance is
-// still cached on globalThis. Replace that stale instance after schema changes.
-export const prisma = hasCurrentPrismaDelegates(globalForPrisma.prisma) ? globalForPrisma.prisma! : new PrismaClient({
+// still cached on globalThis. Replace that stale instance after schema changes,
+// but disconnect it first so its connection pool is not left behind.
+if (cachedPrisma && !canReuseCachedPrisma) {
+  void cachedPrisma.$disconnect().catch(() => {
+    // Best-effort cleanup for stale dev clients. The replacement client below
+    // should still be created even if the old pool is already gone.
+  });
+}
+
+export const prisma = canReuseCachedPrisma ? cachedPrisma! : new PrismaClient({
   transactionOptions: {
     maxWait: 10000,
     timeout: 20000,

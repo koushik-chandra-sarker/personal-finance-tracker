@@ -22,7 +22,7 @@ const CustomTooltip = ({ active, payload, currency, locale }: {
   const d = payload[0].payload;
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 p-3 shadow-2xl">
-      <p className="text-sm font-medium text-slate-900 dark:text-white">{d.categoryName}</p>
+      <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{d.categoryName}</p>
       <p className="text-xs text-slate-500 dark:text-slate-400">{formatCurrency(d.total, currency, locale)} ({d.percentage}%)</p>
     </div>
   );
@@ -34,7 +34,7 @@ export default function CategoryPieChart({ data, currency = 'USD', locale = DEFA
   if (data.length === 0) {
     return (
       <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{copy.expenseBreakdown}</h3>
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.expenseBreakdown}</h3>
         <div className="flex items-center justify-center h-[250px] text-slate-500 text-sm">
           {copy.noExpenseData}
         </div>
@@ -44,7 +44,7 @@ export default function CategoryPieChart({ data, currency = 'USD', locale = DEFA
 
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 backdrop-blur-xl p-6">
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-4">{copy.expenseBreakdown}</h3>
+      <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.expenseBreakdown}</h3>
       <div className="h-[250px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

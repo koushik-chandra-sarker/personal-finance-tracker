@@ -93,7 +93,7 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
       <Loader show={isPending} message={editingAccount ? copy.updating : copy.creating} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.totalBalance}: {formatCurrency(totalBalance, userCurrency, userLocale)}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}>
@@ -135,8 +135,8 @@ export default function AccountPageClient({ accounts }: { accounts: Account[] })
                 </div>
                 <div className="mt-4">
                   <p className="text-sm text-slate-500 dark:text-slate-400">{getAccountTypeLabel(account.type, userLocale)}</p>
-                  <p className="text-lg font-semibold text-slate-900 dark:text-white mt-1">{account.name}</p>
-                  <p className="text-2xl font-bold text-slate-900 dark:text-white mt-2">
+                  <p className="text-lg font-semibold text-slate-900 dark:text-slate-200 mt-1">{account.name}</p>
+                  <p className="text-2xl font-bold text-slate-900 dark:text-slate-200 mt-2">
                     {formatCurrency(Number(account.balance), userCurrency, userLocale)}
                   </p>
                 </div>

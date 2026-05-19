@@ -28,7 +28,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
             <CheckCircle2 className="h-7 w-7" />
           </div>
           <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{copy.active}</p>
-          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-white">{copy.accessActive}</h1>
+          <h1 className="mt-2 text-3xl font-bold text-slate-900 dark:text-slate-200">{copy.accessActive}</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-500 dark:text-slate-400">
             {copy.activeHelp}
           </p>
@@ -53,7 +53,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
             <ShieldAlert className="h-6 w-6" />
           </div>
           <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-indigo-600 dark:text-indigo-400">{copy.choosePackage}</p>
-          <h1 className="max-w-2xl text-3xl font-bold text-slate-900 dark:text-white sm:text-4xl">
+          <h1 className="max-w-2xl text-3xl font-bold text-slate-900 dark:text-slate-200 sm:text-4xl">
             {copy.selectPackage}
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{reasonMessage}</p>
@@ -61,17 +61,17 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
           <div className="mt-8 grid gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <CreditCard className="mb-3 h-5 w-5 text-indigo-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.pickPackage}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.pickPackage}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.pickPackageHelp}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <Smartphone className="mb-3 h-5 w-5 text-pink-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.payManually}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.payManually}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.payManuallyHelp}</p>
             </div>
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <ReceiptText className="mb-3 h-5 w-5 text-sky-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-white">{copy.submitDetails}</p>
+              <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.submitDetails}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.submitDetailsHelp}</p>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 dark:border-emerald-500/30 dark:bg-emerald-500/10">
           <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.recommended}</p>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-white">
+          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-slate-200">
             {featuredPackage ? formatCurrency(featuredPackage.price, featuredPackage.currency, locale) : 'BDT'}
           </p>
           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
@@ -97,7 +97,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="text-xl font-bold text-slate-900 dark:text-white">{plan.name}</h2>
+                  <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">{plan.name}</h2>
                   {plan.discountLabel && (
                     <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                       {plan.discountLabel}
@@ -108,7 +108,7 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
               </div>
               <CreditCard className="h-5 w-5 shrink-0 text-emerald-500" />
             </div>
-            <p className="mb-5 text-4xl font-bold text-slate-900 dark:text-white">
+            <p className="mb-5 text-4xl font-bold text-slate-900 dark:text-slate-200">
               {formatCurrency(plan.price, plan.currency, locale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{plan.interval === 'YEARLY' ? copy.perYear : copy.perMonth}</span>
             </p>
             <div className="mb-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">

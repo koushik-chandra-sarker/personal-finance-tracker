@@ -64,7 +64,7 @@ export default function AppLogo({
       </div>
       {showText && (
         <div className="min-w-0">
-          <h1 className={cn('font-bold leading-tight text-slate-900 dark:text-white', classes.text, textClassName)}>
+          <h1 className={cn('font-bold leading-tight text-slate-900 dark:text-slate-200', classes.text, textClassName)}>
             {APP_NAME}
           </h1>
           <p className={cn('leading-tight text-slate-500 dark:text-slate-400', classes.tagline, taglineClassName)}>

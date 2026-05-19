@@ -248,7 +248,7 @@ export default function SubscriptionManagementClient({
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <Button onClick={openCreatePackage} disabled={isPending}>
@@ -257,11 +257,11 @@ export default function SubscriptionManagementClient({
       </div>
 
       <div className="grid gap-4 md:grid-cols-5">
-        <Card><CreditCard className="mb-3 h-5 w-5 text-indigo-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.activeAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.active}</p></Card>
-        <Card><Timer className="mb-3 h-5 w-5 text-emerald-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.adminGrants}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.adminGranted}</p></Card>
-        <Card><Infinity className="mb-3 h-5 w-5 text-sky-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.unlimited}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.unlimited}</p></Card>
-        <Card><UserX className="mb-3 h-5 w-5 text-rose-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.noAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.missing}</p></Card>
-        <Card><ReceiptText className="mb-3 h-5 w-5 text-amber-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.pendingPayments}</p><p className="text-2xl font-bold text-slate-900 dark:text-white">{stats.pendingPayments}</p></Card>
+        <Card><CreditCard className="mb-3 h-5 w-5 text-indigo-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.activeAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.active}</p></Card>
+        <Card><Timer className="mb-3 h-5 w-5 text-emerald-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.adminGrants}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.adminGranted}</p></Card>
+        <Card><Infinity className="mb-3 h-5 w-5 text-sky-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.unlimited}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.unlimited}</p></Card>
+        <Card><UserX className="mb-3 h-5 w-5 text-rose-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.noAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.missing}</p></Card>
+        <Card><ReceiptText className="mb-3 h-5 w-5 text-amber-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.pendingPayments}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.pendingPayments}</p></Card>
       </div>
 
       {message && (
@@ -273,7 +273,7 @@ export default function SubscriptionManagementClient({
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.manualPaymentReview}</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.manualPaymentReview}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">{copy.manualPaymentHelp}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -293,7 +293,7 @@ export default function SubscriptionManagementClient({
             <div key={request.id} className="grid gap-4 p-4 xl:grid-cols-[1.2fr_180px_170px_190px] xl:items-center">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-slate-900 dark:text-white">{request.user.name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{request.user.name}</p>
                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${paymentStatusClass(request.status)}`}>
                     {request.status === 'PENDING' ? <Clock3 className="h-3.5 w-3.5" /> : request.status === 'APPROVED' ? <CheckCircle2 className="h-3.5 w-3.5" /> : <XCircle className="h-3.5 w-3.5" />}
                     {paymentStatusLabel(request.status)}
@@ -304,14 +304,14 @@ export default function SubscriptionManagementClient({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.wallet}</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{providerLabel(request.provider)}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{providerLabel(request.provider)}</p>
                 <button type="button" onClick={() => copyValue(request.senderAccount)} className="mt-1 inline-flex items-center gap-1 text-xs text-slate-500 hover:text-indigo-600 dark:text-slate-400">
                   {request.senderAccount} <Copy className="h-3 w-3" />
                 </button>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">TrxID</p>
-                <button type="button" onClick={() => copyValue(request.transactionId)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 hover:text-indigo-600 dark:text-white">
+                <button type="button" onClick={() => copyValue(request.transactionId)} className="inline-flex items-center gap-1 text-sm font-semibold text-slate-900 hover:text-indigo-600 dark:text-slate-200">
                   {request.transactionId} <Copy className="h-3.5 w-3.5" />
                 </button>
                 <p className="mt-1 text-xs text-slate-400">{common.reference} {request.reference}</p>
@@ -338,7 +338,7 @@ export default function SubscriptionManagementClient({
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.paymentAccounts}</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.paymentAccounts}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">{copy.paymentAccountsHelp}</p>
           </div>
           <Button size="sm" onClick={openCreatePaymentMethod} disabled={isPending}>
@@ -352,7 +352,7 @@ export default function SubscriptionManagementClient({
             <div key={method.id} className="grid gap-4 p-4 xl:grid-cols-[1fr_180px_120px_180px] xl:items-center">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-slate-900 dark:text-white">{providerLabel(method.provider)} · {method.label}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{providerLabel(method.provider)} · {method.label}</p>
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${method.isActive ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
                     {method.isActive ? common.active : common.inactive}
                   </span>
@@ -362,7 +362,7 @@ export default function SubscriptionManagementClient({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.requests}</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{method.requestCount}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{method.requestCount}</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.sort}</p>
@@ -384,7 +384,7 @@ export default function SubscriptionManagementClient({
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
-            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.packages}</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.packages}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">{copy.packagesHelp}</p>
           </div>
           <Button size="sm" onClick={openCreatePackage} disabled={isPending}>{common.add}</Button>
@@ -396,7 +396,7 @@ export default function SubscriptionManagementClient({
             <div key={pkg.id} className="grid gap-4 p-4 xl:grid-cols-[1fr_160px_120px_180px] xl:items-center">
               <div>
                 <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-semibold text-slate-900 dark:text-white">{pkg.name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{pkg.name}</p>
                   {pkg.isFeatured && <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">{common.featured}</span>}
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${pkg.isActive ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-400'}`}>
                     {pkg.isActive ? common.active : common.inactive}
@@ -407,7 +407,7 @@ export default function SubscriptionManagementClient({
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.price}</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(pkg.price, pkg.currency)}{localPeriodLabel(pkg.interval)}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(pkg.price, pkg.currency)}{localPeriodLabel(pkg.interval)}</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.trial}</p>
@@ -427,7 +427,7 @@ export default function SubscriptionManagementClient({
       </Card>
 
       <Card>
-        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-white">{copy.grantFullAccess}</h2>
+        <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-200">{copy.grantFullAccess}</h2>
         <form action={grantAccess} className="grid gap-3 lg:grid-cols-[1fr_180px_220px_auto]">
           <Input id="grantEmail" name="email" type="email" label={copy.userEmail} placeholder="user@example.com" required />
           <div>
@@ -436,7 +436,7 @@ export default function SubscriptionManagementClient({
               id="grantDuration"
               name="duration"
               defaultValue="MONTHLY"
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200"
             >
               <option value="MONTHLY">{common.month}</option>
               <option value="YEARLY">{common.year}</option>
@@ -449,7 +449,7 @@ export default function SubscriptionManagementClient({
               id="grantPackage"
               name="packageId"
               defaultValue=""
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200"
             >
               <option value="">{copy.useDurationOnly}</option>
               {activePackages.map((pkg) => (
@@ -465,13 +465,13 @@ export default function SubscriptionManagementClient({
 
       <Card className="overflow-hidden p-0">
         <div className="border-b border-slate-200 p-4 dark:border-slate-700/50">
-          <h2 className="font-semibold text-slate-900 dark:text-white">{copy.subscriptions}</h2>
+          <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.subscriptions}</h2>
         </div>
         <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
           {users.map((user) => (
             <div key={user.id} className="grid gap-4 p-4 xl:grid-cols-[1fr_170px_180px_180px_120px] xl:items-center">
               <div>
-                <p className="font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                <p className="font-semibold text-slate-900 dark:text-slate-200">{user.name}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
               </div>
               <div>
@@ -519,7 +519,7 @@ export default function SubscriptionManagementClient({
                 id="packageInterval"
                 name="interval"
                 defaultValue={packageForm?.interval || 'MONTHLY'}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200"
               >
                 <option value="MONTHLY">{common.monthly}</option>
                 <option value="YEARLY">{common.yearly}</option>
@@ -539,7 +539,7 @@ export default function SubscriptionManagementClient({
               rows={4}
               defaultValue={packageForm?.featureBullets.join('\n') || ''}
               placeholder={copy.oneFeaturePerLine}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400"
             />
           </div>
           <div className="flex flex-wrap gap-4">
@@ -572,7 +572,7 @@ export default function SubscriptionManagementClient({
                 id="manualProvider"
                 name="provider"
                 defaultValue={paymentMethodForm?.provider || 'BKASH'}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200"
               >
                 <option value="BKASH">bKash</option>
                 <option value="NAGAD">Nagad</option>
@@ -593,7 +593,7 @@ export default function SubscriptionManagementClient({
               rows={4}
               defaultValue={paymentMethodForm?.instructions || ''}
               placeholder={copy.paymentInstructionPlaceholder}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400"
             />
           </div>
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -618,22 +618,22 @@ export default function SubscriptionManagementClient({
               <div className="grid gap-3 sm:grid-cols-2">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.user}</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.user.name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{reviewRequest.user.name}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{reviewRequest.user.email}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.package}</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.package.name}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{reviewRequest.package.name}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{formatCurrency(reviewRequest.amount, reviewRequest.currency)}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.wallet}</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">{providerLabel(reviewRequest.provider)}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{providerLabel(reviewRequest.provider)}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{reviewRequest.senderAccount}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.transactionId}</p>
-                  <p className="font-semibold text-slate-900 dark:text-white">{reviewRequest.transactionId}</p>
+                  <p className="font-semibold text-slate-900 dark:text-slate-200">{reviewRequest.transactionId}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{common.reference} {reviewRequest.reference}</p>
                 </div>
               </div>
@@ -651,7 +651,7 @@ export default function SubscriptionManagementClient({
                 name="adminNote"
                 rows={3}
                 placeholder={reviewMode === 'approve' ? copy.optionalConfirmationNote : copy.reasonShownToUser}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
+                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400"
               />
             </div>
             <Button type="submit" variant={reviewMode === 'approve' ? 'primary' : 'danger'} className="w-full" isLoading={isPending}>

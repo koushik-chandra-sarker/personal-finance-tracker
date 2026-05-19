@@ -164,7 +164,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
             {copy.subtitle}
           </p>
@@ -179,17 +179,17 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
         <Card className="p-5">
           <Megaphone className="mb-3 h-5 w-5 text-indigo-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.totalMessages}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{messages.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{messages.length}</p>
         </Card>
         <Card className="p-5">
           <PlayCircle className="mb-3 h-5 w-5 text-emerald-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.active}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeCount}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{activeCount}</p>
         </Card>
         <Card className="p-5">
           <Users className="mb-3 h-5 w-5 text-amber-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.availableRecipients}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{users.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{users.length}</p>
         </Card>
       </div>
 
@@ -203,7 +203,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
         {messages.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <Bell className="mx-auto mb-4 h-10 w-10 text-slate-300 dark:text-slate-700" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.noMessages}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.noMessages}</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{copy.noMessagesHelp}</p>
           </div>
         ) : (
@@ -228,7 +228,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                           <Badge variant={badgeForSeverity(message.severity)}>{message.severity}</Badge>
                           <Badge variant={message.isActive ? 'success' : 'default'}>{message.isActive ? copy.active : copy.paused}</Badge>
                         </div>
-                        <p className="font-bold text-slate-900 dark:text-white">{message.title}</p>
+                        <p className="font-bold text-slate-900 dark:text-slate-200">{message.title}</p>
                         <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{message.message}</p>
                       </div>
                     </td>
@@ -298,7 +298,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
               rows={5}
               placeholder={copy.bodyPlaceholder}
               defaultValue={editingMessage?.message || ''}
-              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white"
+              className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200"
             />
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -315,7 +315,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
             <Input label={copy.endDate} name="endsAt" type="datetime-local" defaultValue={toDatetimeLocal(editingMessage?.endsAt || null)} />
           </div>
           <div className="rounded-2xl border border-slate-200 p-4 dark:border-slate-800">
-            <p className="text-sm font-bold text-slate-900 dark:text-white">{copy.audience}</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-200">{copy.audience}</p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
                 <input type="radio" name="audience" value="ALL" checked={audience === 'ALL'} onChange={() => setAudience('ALL')} className="mt-1" />
@@ -342,7 +342,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                       value={recipientSearch}
                       onChange={(event) => setRecipientSearch(event.target.value)}
                       placeholder={copy.searchRecipients}
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                     />
                   </div>
                   <div className="flex items-center justify-between gap-2 text-xs font-semibold text-slate-500 dark:text-slate-400 sm:justify-end">

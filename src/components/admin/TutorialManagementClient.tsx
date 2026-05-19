@@ -110,7 +110,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
     <div className="space-y-8 animate-in fade-in duration-500">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{copy.title}</h1>
+          <h1 className="text-3xl font-black text-slate-900 dark:text-slate-200 tracking-tight">{copy.title}</h1>
           <p className="text-slate-500 dark:text-slate-400 font-medium">{copy.subtitle}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
       {tutorials.length === 0 ? (
         <div className="py-20 text-center border-4 border-dashed border-slate-100 dark:border-slate-800 rounded-[2.5rem]">
           <Video size={64} className="mx-auto mb-6 text-slate-200 dark:text-slate-700" />
-          <h3 className="text-xl font-bold text-slate-900 dark:text-white">{copy.noContent}</h3>
+          <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200">{copy.noContent}</h3>
           <p className="text-slate-500 mt-2 max-w-xs mx-auto">{copy.noContentHelp}</p>
           <Button variant="outline" onClick={handleAdd} className="mt-8 rounded-xl">
             {copy.getStarted}
@@ -190,7 +190,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
               </div>
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start gap-4 mb-3">
-                  <h3 className="font-bold text-slate-900 dark:text-white line-clamp-1 text-lg leading-tight">{getLocalizedTutorial(tutorial).title}</h3>
+                  <h3 className="font-bold text-slate-900 dark:text-slate-200 line-clamp-1 text-lg leading-tight">{getLocalizedTutorial(tutorial).title}</h3>
                   <Badge variant="outline" className="shrink-0 bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700">{displayCategory(tutorial.category)}</Badge>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-6 leading-relaxed">
@@ -262,7 +262,7 @@ export default function TutorialManagementClient({ tutorials: initialTutorials }
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 dark:text-white truncate">{getLocalizedTutorial(tutorial).title}</p>
+                          <p className="font-bold text-slate-900 dark:text-slate-200 truncate">{getLocalizedTutorial(tutorial).title}</p>
                           <p className="text-xs text-slate-400 truncate">{tutorial.youtubeUrl}</p>
                         </div>
                       </div>

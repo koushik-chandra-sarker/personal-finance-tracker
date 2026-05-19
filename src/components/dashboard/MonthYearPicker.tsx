@@ -47,11 +47,11 @@ export default function MonthYearPicker({ month, year, route = '/dashboard' }: M
         value={month}
         disabled={isPending}
         onChange={(e) => navigate(Number(e.target.value), year)}
-        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
+        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
       >
         {MONTHS.map((m) => (
-          <option key={m} value={m} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{getMonthName(m)}</option>
+          <option key={m} value={m} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{getMonthName(m)}</option>
         ))}
       </select>
 
@@ -59,11 +59,11 @@ export default function MonthYearPicker({ month, year, route = '/dashboard' }: M
         value={year}
         disabled={isPending}
         onChange={(e) => navigate(month, Number(e.target.value))}
-        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
+        className="rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/60 px-3 py-2 text-sm font-medium text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none disabled:opacity-50"
         style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
       >
         {years.map((y) => (
-          <option key={y} value={y} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{y}</option>
+          <option key={y} value={y} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{y}</option>
         ))}
       </select>
 

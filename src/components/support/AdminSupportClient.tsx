@@ -87,7 +87,7 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.adminQueueTitle}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.adminQueueTitle}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.adminQueueSubtitle}</p>
         </div>
         <Button type="button" onClick={() => setIsPinOpen(true)}>
@@ -106,17 +106,17 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
         <Card className="p-5">
           <LifeBuoy className="mb-3 h-5 w-5 text-indigo-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.tickets}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{tickets.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{tickets.length}</p>
         </Card>
         <Card className="p-5">
           <Filter className="mb-3 h-5 w-5 text-emerald-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.openWork}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{openCount}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{openCount}</p>
         </Card>
         <Card className="p-5">
           <KeyRound className="mb-3 h-5 w-5 text-amber-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.highPriority}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{urgentCount}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{urgentCount}</p>
         </Card>
       </div>
 
@@ -136,7 +136,7 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
         {tickets.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <LifeBuoy className="mx-auto mb-4 h-10 w-10 text-slate-300 dark:text-slate-700" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.noMatch}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.noMatch}</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{copy.noAdminMatchHelp}</p>
           </div>
         ) : (
@@ -157,11 +157,11 @@ export default function AdminSupportClient({ tickets, filters }: Props) {
                 {tickets.map((ticket) => (
                   <tr key={ticket.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5">
                     <td className="px-5 py-4">
-                      <p className="font-semibold text-slate-900 dark:text-white">{ticket.user.name}</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-200">{ticket.user.name}</p>
                       <p className="text-xs text-slate-500">{ticket.user.email}</p>
                     </td>
                     <td className="px-5 py-4">
-                      <Link href={`/admin/support/${ticket.id}`} className="font-bold text-slate-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-300">{ticket.subject}</Link>
+                      <Link href={`/admin/support/${ticket.id}`} className="font-bold text-slate-900 hover:text-indigo-600 dark:text-slate-200 dark:hover:text-indigo-300">{ticket.subject}</Link>
                       <p className="mt-1 flex items-center gap-1.5 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">
                         <MessageSquare className="h-3.5 w-3.5 shrink-0" />
                         {ticket.messageCount} {copy.messages}

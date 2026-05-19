@@ -25,7 +25,7 @@ export default function MaturityTimeline({ investments, currency }: { investment
         <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700/50 flex items-center justify-center mb-4">
           <Calendar className="h-6 w-6 text-slate-400" />
         </div>
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.noUpcomingMaturities}</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.noUpcomingMaturities}</h3>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-[200px]">
           {copy.noUpcomingMaturitiesHelp}
         </p>
@@ -36,7 +36,7 @@ export default function MaturityTimeline({ investments, currency }: { investment
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/50 flex flex-col overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
           <Clock className="h-4 w-4 text-indigo-500" />
           {copy.maturityTimeline}
         </h3>
@@ -63,7 +63,7 @@ export default function MaturityTimeline({ investments, currency }: { investment
                     <Calendar className="h-5 w-5" />
                   </div>
                   <div>
-                    <h4 className="text-sm font-semibold text-slate-900 dark:text-white line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                    <h4 className="text-sm font-semibold text-slate-900 dark:text-slate-200 line-clamp-1 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {inv.name}
                     </h4>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -77,7 +77,7 @@ export default function MaturityTimeline({ investments, currency }: { investment
                 <div className="text-right shrink-0">
                   <div className={cn(
                     "text-xs font-bold",
-                    isUrgent ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-white"
+                    isUrgent ? "text-rose-600 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"
                   )}>
                     {inv.maturityDate ? formatDistanceToNow(new Date(inv.maturityDate), { addSuffix: true, locale: dateLocale }) : 'N/A'}
                   </div>

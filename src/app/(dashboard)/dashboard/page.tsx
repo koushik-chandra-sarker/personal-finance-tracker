@@ -58,7 +58,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     <div className="space-y-6">
       {/* Header with Month/Year Picker */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{messages.dashboard.title}</h1>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{messages.dashboard.title}</h1>
         <MonthYearPicker month={month} year={year} />
       </div>
 

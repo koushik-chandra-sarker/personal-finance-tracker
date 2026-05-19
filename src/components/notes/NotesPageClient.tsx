@@ -374,7 +374,7 @@ export default function NotesPageClient({
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {notes.length} {notes.length === 1 ? copy.savedRecord : copy.savedRecords}
           </p>
@@ -492,7 +492,7 @@ export default function NotesPageClient({
                     >
                       <td className="px-4 py-3 align-top">
                         <div className="max-w-[24rem]">
-                          <p className="font-medium text-slate-900 dark:text-white truncate">{note.title}</p>
+                          <p className="font-medium text-slate-900 dark:text-slate-200 truncate">{note.title}</p>
                           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{note.description}</p>
                           {note.tags.length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1">
@@ -514,7 +514,7 @@ export default function NotesPageClient({
                           {note.assetName && <p className="truncate text-xs text-slate-500 dark:text-slate-400">{note.assetName}</p>}
                         </div>
                       </td>
-                      <td className="px-4 py-3 align-top font-medium text-slate-900 dark:text-white">
+                      <td className="px-4 py-3 align-top font-medium text-slate-900 dark:text-slate-200">
                         {note.amount !== null ? formatCurrency(Number(note.amount), userCurrency, locale) : '-'}
                       </td>
                       <td className="px-4 py-3 align-top">
@@ -612,7 +612,7 @@ export default function NotesPageClient({
                   </div>
                 )}
                 {detailsNote.amount !== null && (
-                  <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-white">
+                  <div className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-200">
                     <Banknote className="h-4 w-4 text-emerald-500" />
                     <span>{formatCurrency(Number(detailsNote.amount), userCurrency, locale)}</span>
                   </div>
@@ -646,7 +646,7 @@ export default function NotesPageClient({
 
             {detailsNote.assetDetails && (
               <div className="rounded-xl bg-slate-50 p-3 text-sm text-slate-700 dark:bg-slate-900/50 dark:text-slate-300">
-                <p className="mb-1 font-medium text-slate-900 dark:text-white">{copy.assetDetails}</p>
+                <p className="mb-1 font-medium text-slate-900 dark:text-slate-200">{copy.assetDetails}</p>
                 <p className="whitespace-pre-wrap break-words">{detailsNote.assetDetails}</p>
               </div>
             )}
@@ -706,7 +706,7 @@ export default function NotesPageClient({
               className={cn(
                 'w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 transition-all',
                 'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
-                'dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400',
+                'dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400',
                 errors.description && 'border-red-500'
               )}
               {...register('description')}
@@ -738,7 +738,7 @@ export default function NotesPageClient({
                 <textarea
                   id="assetDetails"
                   rows={3}
-                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
+                  className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 transition-all focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400"
                   {...register('assetDetails')}
                 />
               </div>

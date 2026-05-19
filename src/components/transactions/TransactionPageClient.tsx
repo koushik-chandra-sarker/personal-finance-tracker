@@ -60,7 +60,7 @@ function TransactionListLoading({ message, subMessage }: { message: string; subM
               <Loader2 className="h-4 w-4 animate-spin" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{message}</p>
+              <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-200">{message}</p>
               <p className="text-xs text-slate-500 dark:text-slate-400">{subMessage}</p>
             </div>
           </div>
@@ -192,7 +192,7 @@ export default function TransactionPageClient({
       <Loader show={isPending} message={editingTransaction ? copy.updating : common.processing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
             <span>
               {total > 0
@@ -229,7 +229,7 @@ export default function TransactionPageClient({
               <TrendingUp className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">+{formatCurrency(totalIncome, userCurrency, userLocale)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">+{formatCurrency(totalIncome, userCurrency, userLocale)}</p>
         </div>
         
         <div className="relative overflow-hidden p-5 rounded-2xl bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/50 shadow-sm">
@@ -239,7 +239,7 @@ export default function TransactionPageClient({
               <TrendingDown className="h-4 w-4" />
             </div>
           </div>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">-{formatCurrency(totalExpense, userCurrency, userLocale)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">-{formatCurrency(totalExpense, userCurrency, userLocale)}</p>
         </div>
 
         <div className="relative overflow-hidden p-5 rounded-2xl bg-indigo-600 dark:bg-indigo-500 shadow-lg shadow-indigo-500/20">
@@ -284,7 +284,7 @@ export default function TransactionPageClient({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900 dark:text-white truncate">{tx.description}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate">{tx.description}</p>
                     {/* Mobile Amount */}
                     <p className={`sm:hidden text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                       {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency, userLocale)}

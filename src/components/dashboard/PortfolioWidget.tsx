@@ -33,7 +33,7 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency,
   return (
     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700/50 flex flex-col overflow-hidden">
       <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
-        <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <h3 className="text-sm font-bold text-slate-900 dark:text-slate-200 flex items-center gap-2">
           <TrendingUp className="h-4 w-4 text-indigo-500" />
           {copy.investmentPortfolio}
         </h3>
@@ -50,7 +50,7 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency,
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
             <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{copy.value}</p>
-            <p className="text-sm font-bold text-slate-900 dark:text-white mt-0.5">{formatCurrency(summary.totalCurrentValue, currency, locale)}</p>
+            <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-0.5">{formatCurrency(summary.totalCurrentValue, currency, locale)}</p>
           </div>
           <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-700/50">
             <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium">{copy.gainLoss}</p>
@@ -77,7 +77,7 @@ export default function PortfolioWidget({ summary, upcomingMaturities, currency,
                   <div className="flex items-center gap-2.5">
                     <div className="w-1.5 h-6 rounded-full" style={{ backgroundColor: m.typeConfig.color }} />
                     <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-900 dark:text-white truncate">{m.name}</p>
+                      <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 truncate">{m.name}</p>
                       <p className="text-[9px] text-slate-400">{m.typeConfig.name}</p>
                     </div>
                   </div>

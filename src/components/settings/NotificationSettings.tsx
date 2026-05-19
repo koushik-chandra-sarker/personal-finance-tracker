@@ -55,7 +55,7 @@ function SettingToggle({
   return (
     <label className="flex items-start justify-between gap-4">
       <span>
-        <span className="block text-sm font-semibold text-slate-900 dark:text-white">{title}</span>
+        <span className="block text-sm font-semibold text-slate-900 dark:text-slate-200">{title}</span>
         <span className="block text-xs text-slate-500 dark:text-slate-400 mt-0.5">{description}</span>
       </span>
       <input
@@ -103,7 +103,7 @@ export default function NotificationSettings() {
       <Loader show={isPending} message="Updating notifications..." />
       <div className="flex items-center gap-3 mb-8">
         <Bell className="h-6 w-6 text-indigo-500 dark:text-indigo-400" />
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white">Notification Settings</h2>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Notification Settings</h2>
       </div>
 
       {isLoading ? (

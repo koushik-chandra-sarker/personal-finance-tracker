@@ -87,7 +87,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
                   className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 cursor-pointer transition-colors group"
                 >
                   <td className="px-6 py-4">
-                    <div className="font-bold text-slate-900 dark:text-white">{config.name}</div>
+                    <div className="font-bold text-slate-900 dark:text-slate-200">{config.name}</div>
                     <div className="text-[10px] text-slate-500 font-mono uppercase">{config.type}</div>
                   </td>
                   <td className="px-6 py-4">
@@ -128,7 +128,7 @@ export default function SanchayapatraAdminClient({ initialConfigs }: { initialCo
           <div className="bg-white dark:bg-slate-800 rounded-3xl w-full max-w-2xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200 dark:border-slate-700">
               <div>
-                <h2 className="text-xl font-bold text-slate-900 dark:text-white">
+                <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">
                   {selectedConfig ? copy.editConfiguration : copy.addNewConfiguration}
                 </h2>
                 <p className="text-xs text-slate-500 mt-1">{copy.modalHelp}</p>

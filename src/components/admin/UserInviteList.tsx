@@ -33,7 +33,7 @@ function InviteMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-700/50 dark:bg-slate-900/40">
       <p className="truncate text-xs font-medium uppercase text-slate-400">{label}</p>
-      <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{value}</p>
+      <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-200">{value}</p>
     </div>
   );
 }
@@ -81,7 +81,7 @@ export default function UserInviteList({ invites }: UserInviteListProps) {
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
                       <Mail className="h-4 w-4 shrink-0 text-slate-400" />
-                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 dark:text-white">{invite.email}</p>
+                      <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900 dark:text-slate-200">{invite.email}</p>
                       <Badge variant={getInviteBadgeVariant(invite.status)}>{formatInviteStatus(invite.status, copy)}</Badge>
                     </div>
                     <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">

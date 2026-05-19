@@ -230,7 +230,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <Button type="button" onClick={openCreate}>
@@ -249,20 +249,20 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
         <Card className="p-5">
           <CreditCard className="mb-3 h-5 w-5 text-indigo-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.active}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{activeItems.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{activeItems.length}</p>
         </Card>
         <Card className="p-5">
           <CalendarClock className="mb-3 h-5 w-5 text-emerald-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.dueSoon}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{upcomingItems.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{upcomingItems.length}</p>
         </Card>
         <Card className="p-5">
           <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.monthlyCost}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(monthlyTotal, primaryCurrency, locale)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{formatCurrency(monthlyTotal, primaryCurrency, locale)}</p>
         </Card>
         <Card className="p-5">
           <p className="mb-3 text-sm font-semibold text-slate-500 dark:text-slate-400">{copy.yearlyCost}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{formatCurrency(annualTotal, primaryCurrency, locale)}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{formatCurrency(annualTotal, primaryCurrency, locale)}</p>
         </Card>
       </div>
 
@@ -287,7 +287,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={copy.searchPlaceholder}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             />
           </div>
           <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-950/40">
@@ -301,7 +301,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
                 key={option.value}
                 type="button"
                 onClick={() => setStatusFilter(option.value as typeof statusFilter)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === option.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === option.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-200' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}`}
               >
                 {option.label}
               </button>
@@ -340,17 +340,17 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
                         <div className="flex items-center gap-3">
                           <span className="h-10 w-10 rounded-xl" style={{ backgroundColor: item.color }} />
                           <div className="min-w-0">
-                            <p className="font-bold text-slate-900 dark:text-white">{item.name}</p>
+                            <p className="font-bold text-slate-900 dark:text-slate-200">{item.name}</p>
                             <p className="text-sm text-slate-500 dark:text-slate-400">{item.provider}{item.planName ? ` · ${item.planName}` : ''}</p>
                           </div>
                         </div>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(item.amount), item.currency, locale)}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(Number(item.amount), item.currency, locale)}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">{copy.cycles[item.billingCycle]}</p>
                       </td>
                       <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-900 dark:text-white">{formatDate(item.nextBillingDate, undefined, locale)}</p>
+                        <p className="font-semibold text-slate-900 dark:text-slate-200">{formatDate(item.nextBillingDate, undefined, locale)}</p>
                         <p className={`text-xs ${dueIn <= item.reminderDays && item.status === 'ACTIVE' ? 'text-amber-600 dark:text-amber-300' : 'text-slate-500 dark:text-slate-400'}`}>
                           {formatDueLabel(dueIn)}
                         </p>
@@ -441,7 +441,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
           </p>
           <div className="space-y-1.5">
             <label htmlFor="notes" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.notes}</label>
-            <textarea id="notes" name="notes" rows={3} defaultValue={editing?.notes || ''} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white" />
+            <textarea id="notes" name="notes" rows={3} defaultValue={editing?.notes || ''} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200" />
           </div>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={() => setIsModalOpen(false)}>{copy.cancel}</Button>

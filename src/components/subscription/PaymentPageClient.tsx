@@ -171,7 +171,7 @@ export default function PaymentPageClient({
               </div>
               <div className="min-w-0">
                 <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{copy.paymentApproved}</p>
-                <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-white">{copy.subscriptionActive}</h1>
+                <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-200">{copy.subscriptionActive}</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
                   {copy.activeFormHidden}
                 </p>
@@ -192,7 +192,7 @@ export default function PaymentPageClient({
                 <CreditCard className="h-5 w-5" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.currentPlan}</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(activeSubscription?.source || session?.user?.subscriptionSource) === 'ADMIN_GRANT' ? 'Admin granted' : messages.subscription.payManually}</p>
             </div>
             <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
@@ -200,7 +200,7 @@ export default function PaymentPageClient({
                 <CalendarClock className="h-5 w-5" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.validUntil}</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">{accessEndLabel}</p>
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">{accessEndLabel}</p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
                 {daysRemaining !== null ? `${daysRemaining} ${copy.remainingSuffix}` : copy.noExpiry}
               </p>
@@ -210,7 +210,7 @@ export default function PaymentPageClient({
                 <ReceiptText className="h-5 w-5" />
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.lastApproved}</p>
-              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-white">
+              <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">
                 {latestApprovedRequest ? formatCurrency(latestApprovedRequest.amount, latestApprovedRequest.currency, locale) : copy.approved}
               </p>
               <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
@@ -224,7 +224,7 @@ export default function PaymentPageClient({
           <Card className="p-0">
             <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50">
               <History className="h-5 w-5 text-indigo-500" />
-              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.history}</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.history}</h2>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {requests.length === 0 ? (
@@ -233,7 +233,7 @@ export default function PaymentPageClient({
                 <div key={request.id} className="grid gap-3 p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold text-slate-900 dark:text-white">{request.package.name}</p>
+                      <p className="font-semibold text-slate-900 dark:text-slate-200">{request.package.name}</p>
                       <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[request.status]}`}>
                         {statusIcon(request.status)} {request.status.toLowerCase()}
                       </span>
@@ -252,7 +252,7 @@ export default function PaymentPageClient({
 
           <Card>
             <ShieldCheck className="mb-3 h-5 w-5 text-emerald-500" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.renewalRules}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.renewalRules}</h2>
             <div className="mt-4 space-y-3 text-sm leading-6 text-slate-600 dark:text-slate-300">
               <p>{copy.renewalRule1}</p>
               <p>{copy.renewalRule2}</p>
@@ -271,7 +271,7 @@ export default function PaymentPageClient({
           <Link href="/subscription" className="mb-2 inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-indigo-300">
             <ArrowLeft className="h-4 w-4" /> {copy.backToPackages}
           </Link>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.completePayment}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.completePayment}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.completePaymentHelp}</p>
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
@@ -294,7 +294,7 @@ export default function PaymentPageClient({
                 <div>
                   <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{copy.selectedPlan}</p>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <h2 className="text-xl font-bold text-slate-950 dark:text-white">{selectedIntervalLabel}</h2>
+                    <h2 className="text-xl font-bold text-slate-950 dark:text-slate-200">{selectedIntervalLabel}</h2>
                     <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{selectedPackage.name}</span>
                     {selectedPackage.discountLabel && (
                       <span className="rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">{selectedPackage.discountLabel}</span>
@@ -321,7 +321,7 @@ export default function PaymentPageClient({
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-bold text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300">1</span>
                     <div>
-                      <h2 className="font-bold text-slate-950 dark:text-white">{copy.sendPayment}</h2>
+                      <h2 className="font-bold text-slate-950 dark:text-slate-200">{copy.sendPayment}</h2>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{copy.sendPaymentHelp}</p>
                     </div>
                   </div>
@@ -364,7 +364,7 @@ export default function PaymentPageClient({
                           setSelectedMethodId(event.target.value);
                           if (method) setSelectedProvider(method.provider);
                         }}
-                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-white"
+                        className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none dark:border-slate-700/50 dark:bg-slate-800/60 dark:text-slate-200"
                       >
                         {providerMethods.map((method) => (
                           <option key={method.id} value={method.id}>{paymentMethodLabel(method)}</option>
@@ -380,13 +380,13 @@ export default function PaymentPageClient({
                           <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                             {formatCurrency(selectedPackage.price, selectedPackage.currency, locale)} {providerLabel(selectedMethod.provider)} {copy.sendAmountTo}
                           </p>
-                          <p className="mt-2 break-all text-2xl font-black text-slate-950 dark:text-white">{selectedMethod.accountNumber}</p>
+                          <p className="mt-2 break-all text-2xl font-black text-slate-950 dark:text-slate-200">{selectedMethod.accountNumber}</p>
                           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{selectedMethod.accountName} - {selectedMethod.label}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => copyValue(selectedMethod.accountNumber)}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-white dark:ring-slate-700 dark:hover:bg-slate-700"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2 text-sm font-bold text-slate-800 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:ring-slate-700 dark:hover:bg-slate-700"
                         >
                           <Copy className="h-4 w-4" />
                           {copiedValue === selectedMethod.accountNumber ? copy.copied : copy.copy}
@@ -409,7 +409,7 @@ export default function PaymentPageClient({
                   <div className="flex items-center gap-3">
                     <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-300">2</span>
                     <div>
-                      <h2 className="font-bold text-slate-950 dark:text-white">{copy.enterDetails}</h2>
+                      <h2 className="font-bold text-slate-950 dark:text-slate-200">{copy.enterDetails}</h2>
                       <p className="text-sm text-slate-500 dark:text-slate-400">{copy.enterDetailsHelp}</p>
                     </div>
                   </div>
@@ -420,7 +420,7 @@ export default function PaymentPageClient({
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div>
                         <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{copy.reference}</p>
-                        <p className="mt-1 break-all text-sm font-bold text-slate-900 dark:text-white">{userReference}</p>
+                        <p className="mt-1 break-all text-sm font-bold text-slate-900 dark:text-slate-200">{userReference}</p>
                       </div>
                       <button type="button" onClick={() => copyValue(userReference)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">
                         <Copy className="h-4 w-4" />
@@ -440,7 +440,7 @@ export default function PaymentPageClient({
                       name="note"
                       rows={3}
                       placeholder={copy.notePlaceholder}
-                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white dark:placeholder-slate-400"
+                      className="w-full rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm text-slate-900 placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200 dark:placeholder-slate-400"
                     />
                   </div>
                 </div>
@@ -450,7 +450,7 @@ export default function PaymentPageClient({
                 <div className="flex items-start gap-3">
                   <ShieldCheck className="mt-0.5 h-5 w-5 text-emerald-500" />
                   <div>
-                    <h2 className="font-bold text-slate-950 dark:text-white">{copy.termsTitle}</h2>
+                    <h2 className="font-bold text-slate-950 dark:text-slate-200">{copy.termsTitle}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
                       {copy.termsText}
                     </p>
@@ -477,7 +477,7 @@ export default function PaymentPageClient({
               <div className="flex items-start gap-3">
                 <Clock3 className="mt-1 h-5 w-5 text-amber-500" />
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.alreadySubmitted}</h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.alreadySubmitted}</h2>
                   <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
                     {copy.alreadySubmittedHelp}
                   </p>
@@ -500,7 +500,7 @@ export default function PaymentPageClient({
                 <ReceiptText className="h-5 w-5" />
               </div>
               <div>
-                <h2 className="font-bold text-slate-950 dark:text-white">{copy.beforeSubmit}</h2>
+                <h2 className="font-bold text-slate-950 dark:text-slate-200">{copy.beforeSubmit}</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{copy.quickChecklist}</p>
               </div>
             </div>
@@ -513,7 +513,7 @@ export default function PaymentPageClient({
 
           <Card>
             <MessageCircle className="mb-3 h-5 w-5 text-emerald-500" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.fasterActivation}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.fasterActivation}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
               {copy.whatsappHelp}
             </p>
@@ -542,7 +542,7 @@ export default function PaymentPageClient({
           <Card className="p-0">
             <div className="flex items-center gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50">
               <History className="h-5 w-5 text-indigo-500" />
-              <h2 className="font-semibold text-slate-900 dark:text-white">{copy.history}</h2>
+              <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.history}</h2>
             </div>
             <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
               {requests.length === 0 ? (
@@ -550,7 +550,7 @@ export default function PaymentPageClient({
               ) : requests.map((request) => (
                 <div key={request.id} className="p-4">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-semibold text-slate-900 dark:text-white">{request.package.name}</p>
+                    <p className="font-semibold text-slate-900 dark:text-slate-200">{request.package.name}</p>
                     <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLES[request.status]}`}>
                       {statusIcon(request.status)} {request.status.toLowerCase()}
                     </span>

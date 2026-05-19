@@ -166,7 +166,7 @@ function SummaryCard({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm text-slate-500 dark:text-slate-400">{label}</p>
-          <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-white">{value}</p>
+          <p className="mt-1 text-2xl font-bold text-slate-900 dark:text-slate-200">{value}</p>
           <p className="mt-1 truncate text-xs text-slate-400 dark:text-slate-500">{detail}</p>
         </div>
         <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${toneClasses[tone]}`}>
@@ -316,7 +316,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-white sm:text-2xl">{copy.title}</h1>
+          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-200 sm:text-2xl">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -399,7 +399,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
       <Card className="overflow-visible p-0">
         <div className="flex flex-col gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
-            <h2 className="font-semibold text-slate-900 dark:text-white">{copy.users}</h2>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.users}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400">
               {copy.showing} {start}-{end} {copy.of} {usersPage.total}
             </p>
@@ -488,7 +488,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                           {user.name.slice(0, 1).toUpperCase()}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate font-semibold text-slate-900 dark:text-white">{user.name}</p>
+                          <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{user.name}</p>
                           <p className="truncate text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
                           <div className="mt-2 flex flex-wrap gap-2">
                             <Badge variant={getAccountBadgeVariant(user.status)} className="capitalize">

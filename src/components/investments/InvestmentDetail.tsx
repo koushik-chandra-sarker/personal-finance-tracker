@@ -150,7 +150,7 @@ export default function InvestmentDetail({
       <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-2xl border border-slate-200 dark:border-slate-700/50 shadow-2xl flex flex-col max-h-[90vh]">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 flex-shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{investment.name}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{investment.name}</h2>
             <p className="text-xs text-slate-500 dark:text-slate-400">{investment.typeConfig.name}</p>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400"><X className="h-5 w-5" /></button>
@@ -160,11 +160,11 @@ export default function InvestmentDetail({
           <div className="grid grid-cols-3 gap-3">
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.invested}</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(invested, currency, locale)}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-1">{formatCurrency(invested, currency, locale)}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.current}</p>
-              <p className="text-sm font-bold text-slate-900 dark:text-white mt-1">{formatCurrency(current, currency, locale)}</p>
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-200 mt-1">{formatCurrency(current, currency, locale)}</p>
             </div>
             <div className="rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-3 text-center">
               <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.gainLoss}</p>
@@ -196,7 +196,7 @@ export default function InvestmentDetail({
                     <Building2 className="h-5 w-5 text-indigo-500" />
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.institution}</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{investment.institutionName}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{investment.institutionName}</p>
                     </div>
                   </div>
                 )}
@@ -205,7 +205,7 @@ export default function InvestmentDetail({
                     <Hash className="h-5 w-5 text-indigo-500" />
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.accountNo}</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{investment.accountNumber}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{investment.accountNumber}</p>
                     </div>
                   </div>
                 )}
@@ -213,7 +213,7 @@ export default function InvestmentDetail({
                   <Calendar className="h-5 w-5 text-indigo-500" />
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.purchased}</p>
-                    <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.purchaseDate, locale)}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{formatDate(investment.purchaseDate, locale)}</p>
                   </div>
                 </div>
                 {investment.maturityDate && (
@@ -221,7 +221,7 @@ export default function InvestmentDetail({
                     <Calendar className="h-5 w-5 text-indigo-500" />
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider">{copy.maturityDate}</p>
-                      <p className="text-sm font-medium text-slate-900 dark:text-white">{formatDate(investment.maturityDate, locale)}</p>
+                      <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{formatDate(investment.maturityDate, locale)}</p>
                     </div>
                   </div>
                 )}
@@ -231,33 +231,33 @@ export default function InvestmentDetail({
                 {investment.interestRate && (
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                     <span className="text-sm text-slate-500 dark:text-slate-400">{copy.interestRate}</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.interestRate)}% {investment.returnFrequency && <span className="text-xs font-normal text-slate-400">({getFrequencyLabel(investment.returnFrequency, locale)})</span>}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{Number(investment.interestRate)}% {investment.returnFrequency && <span className="text-xs font-normal text-slate-400">({getFrequencyLabel(investment.returnFrequency, locale)})</span>}</span>
                   </div>
                 )}
                 {investment.quantity && (
                   <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                     <span className="text-sm text-slate-500 dark:text-slate-400">{copy.quantity}</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{Number(investment.quantity)} <span className="text-xs font-normal text-slate-400">@ {formatCurrency(Number(investment.avgBuyPrice || 0), currency, locale)}</span></span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{Number(investment.quantity)} <span className="text-xs font-normal text-slate-400">@ {formatCurrency(Number(investment.avgBuyPrice || 0), currency, locale)}</span></span>
                   </div>
                 )}
                 {investment.monthlyInstallment && (
                   <>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">{copy.monthlyInstallment}</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(Number(investment.monthlyInstallment), currency, locale)}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(Number(investment.monthlyInstallment), currency, locale)}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">{copy.dueDay}</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{copy.day} {investment.installmentDueDay || 5}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.day} {investment.installmentDueDay || 5}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">{copy.missedPayments}</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.missedInstallmentCount || 0}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{investment.missedInstallmentCount || 0}</span>
                     </div>
                     {investment.lastInstallmentPaidOn && (
                       <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                         <span className="text-sm text-slate-500 dark:text-slate-400">Last Paid</span>
-                        <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatDate(investment.lastInstallmentPaidOn, locale)}</span>
+                        <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatDate(investment.lastInstallmentPaidOn, locale)}</span>
                       </div>
                     )}
                   </>
@@ -266,11 +266,11 @@ export default function InvestmentDetail({
                   <>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">{copy.sanchayapatraScheme}</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">{investment.sanchayapatraConfig.name}</span>
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{investment.sanchayapatraConfig.name}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700/50">
                       <span className="text-sm text-slate-500 dark:text-slate-400">Payout Rule</span>
-                      <span className="text-sm font-semibold text-slate-900 dark:text-white">
+                      <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">
                         {Number(investment.sanchayapatraConfig.rate)}% / {getFrequencyLabel(investment.sanchayapatraConfig.payoutFrequency, locale)}
                       </span>
                     </div>
@@ -283,7 +283,7 @@ export default function InvestmentDetail({
                   {projection.dpsInstallments && projection.dpsInstallments.length > 0 && (
                     <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
                       <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Installment Schedule</h3>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Installment Schedule</h3>
                         <span className="text-xs text-slate-400">Unpaid + upcoming</span>
                       </div>
                       <div className="space-y-2">
@@ -305,7 +305,7 @@ export default function InvestmentDetail({
                   {projection.sanchayapatraPayouts && projection.sanchayapatraPayouts.length > 0 && (
                     <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
                       <div className="mb-3 flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Projected Payouts</h3>
+                        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Projected Payouts</h3>
                         <span className="text-xs text-slate-400">After tax</span>
                       </div>
                       <div className="space-y-2">
@@ -333,7 +333,7 @@ export default function InvestmentDetail({
                           <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{formatDate(projection.maturity.date, locale)}</p>
                         </div>
                         <div className="text-right">
-                          <p className="text-base font-bold text-slate-900 dark:text-white">{formatCurrency(projection.maturity.projectedValue, currency, locale)}</p>
+                          <p className="text-base font-bold text-slate-900 dark:text-slate-200">{formatCurrency(projection.maturity.projectedValue, currency, locale)}</p>
                           <p className="text-xs text-emerald-700 dark:text-emerald-300">{copy.gainLoss} {formatCurrency(projection.maturity.projectedReturn, currency, locale)}</p>
                         </div>
                       </div>
@@ -432,7 +432,7 @@ export default function InvestmentDetail({
           {activeTab === 'VALUATIONS' && (
             <div className="space-y-6">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white">Growth Chart</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">Growth Chart</h3>
                 <button onClick={() => setShowValuationForm(!showValuationForm)}
                   className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors">
                   <TrendingUp className="h-3.5 w-3.5" /> {copy.recordValuation}
@@ -477,11 +477,11 @@ export default function InvestmentDetail({
               )}
 
               <div className="space-y-2 mt-6">
-                <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">History</h3>
+                <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">History</h3>
                 {chartData.slice().reverse().map((v, i) => (
                   <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30">
                     <span className="text-sm text-slate-600 dark:text-slate-300">{v.date}</span>
-                    <span className="text-sm font-semibold text-slate-900 dark:text-white">{formatCurrency(v.value, currency, locale)}</span>
+                    <span className="text-sm font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(v.value, currency, locale)}</span>
                   </div>
                 ))}
               </div>
@@ -492,7 +492,7 @@ export default function InvestmentDetail({
             <div className="space-y-4">
               <div className="flex items-center justify-between mb-2">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-900 dark:text-white">{copy.returns}</h3>
+                  <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.returns}</h3>
                   {totalReturns > 0 && <p className="text-xs text-emerald-600 dark:text-emerald-400">{copy.totalReturns}: {formatCurrency(totalReturns, currency, locale)}</p>}
                 </div>
                 <button onClick={() => setShowReturnForm(!showReturnForm)}
@@ -544,7 +544,7 @@ export default function InvestmentDetail({
                   {(investment.returns || []).map((r) => (
                     <div key={r.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-700/30">
                       <div>
-                        <p className="text-sm font-medium text-slate-900 dark:text-white">{r.type.replace(/_/g, ' ')}</p>
+                        <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{r.type.replace(/_/g, ' ')}</p>
                         <p className="text-xs text-slate-400">{formatDate(r.date, locale)}{r.description && ` — ${r.description}`}</p>
                       </div>
                       <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">+{formatCurrency(Number(r.amount), currency, locale)}</span>

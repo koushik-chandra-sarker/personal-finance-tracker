@@ -25,7 +25,7 @@ export default function Error({
         <div className="w-16 h-16 bg-rose-100 dark:bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto mb-4">
           <ShieldAlert className="h-8 w-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">{messages.error.accessDenied}</h2>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200 mb-2">{messages.error.accessDenied}</h2>
         <p className="text-slate-500 dark:text-slate-400 mb-6">
           {error.message || messages.error.noPermission}
         </p>

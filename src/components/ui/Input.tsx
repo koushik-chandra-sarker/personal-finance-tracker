@@ -26,7 +26,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
             ref={ref}
             id={id}
             className={cn(
-              'w-full max-w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400',
+              'w-full max-w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-500 dark:placeholder-slate-400',
               'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
               'transition-all duration-200',
               props.type === 'date' 

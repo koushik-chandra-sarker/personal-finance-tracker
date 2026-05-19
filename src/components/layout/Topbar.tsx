@@ -32,11 +32,12 @@ type NavItem = {
 
 const primaryNavItems: NavItem[] = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
   { href: '/accounts', label: 'Accounts', icon: Wallet },
+  { href: '/transactions', label: 'Transactions', icon: ArrowLeftRight },
+  { href: '/categories', label: 'Categories', icon: Tags },
   { href: '/budgets', label: 'Budgets', icon: PieChart },
   { href: '/goals', label: 'Goals', icon: Target },
-  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
+  { href: '/reports', label: 'Reports', icon: FileBarChart },
 ];
 
 const investmentNavItems: NavItem[] = [
@@ -46,14 +47,14 @@ const investmentNavItems: NavItem[] = [
 ];
 
 const secondaryNavItems: NavItem[] = [
-  { href: '/notes', label: 'Notes', icon: FileText },
-  { href: '/support', label: 'Support', icon: LifeBuoy },
-  { href: '/categories', label: 'Categories', icon: Tags },
-  { href: '/recurring', label: 'Recurring', icon: RefreshCw },
-  { href: '/reports', label: 'Reports', icon: FileBarChart },
   { href: '/salary-planner', label: 'Salary Planner', icon: Calculator },
-  { href: '/settings', label: 'Settings', icon: Settings },
+  { href: '/tax-calculator', label: 'Tax Calculator', icon: ReceiptText },
+  { href: '/recurring', label: 'Recurring', icon: RefreshCw },
+  { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
+  { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
+  { href: '/support', label: 'Support', icon: LifeBuoy },
+  { href: '/settings', label: 'Settings', icon: Settings },
 ];
 
 const adminNavItems: NavItem[] = [
@@ -355,7 +356,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
             <button
               type="button"
               aria-label="Open navigation menu"
-              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white"
+              className="shrink-0 rounded-xl p-2 text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200"
               onClick={() => setMobileOpen(true)}
             >
               <Menu className="h-5 w-5" />
@@ -378,7 +379,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
               <input
                 type="text"
                 placeholder={messages.navigation.SearchTransactions}
-                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500"
+                className="w-full pl-10 pr-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 text-sm text-slate-900 dark:text-slate-200 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500"
               />
             </div>
           </div>
@@ -393,7 +394,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                 title={messages.navigation.ManualPaymentReview}
                 aria-label={messages.navigation.ManualPaymentReview}
                 className={cn(
-                  'hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-white sm:inline-flex',
+                  'hidden rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200 sm:inline-flex',
                   isActiveRoute(pathname, '/admin/payments') && 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300'
                 )}
               >
@@ -411,7 +412,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                     void fetchNotifications();
                   }
                 }}
-                className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
+                className="relative p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
                 aria-label={messages.navigation.Notifications}
                 aria-expanded={notificationOpen}
               >
@@ -425,7 +426,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
               {notificationOpen && (
                 <div className="absolute right-0 mt-2 w-[min(calc(100vw-2rem),24rem)] rounded-xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800 shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 origin-top-right">
                   <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700/50">
-                    <p className="text-sm font-semibold text-slate-900 dark:text-white">{messages.navigation.Notifications}</p>
+                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{messages.navigation.Notifications}</p>
                     <button
                       onClick={handleMarkAllRead}
                       disabled={unreadCount === 0}
@@ -454,7 +455,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                               <SeverityIcon severity={notification.severity} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{notification.title}</p>
+                              <p className="text-sm font-semibold text-slate-900 dark:text-slate-200 truncate">{notification.title}</p>
                               <p className="mt-0.5 text-xs text-slate-500 dark:text-slate-400 line-clamp-2">{notification.message}</p>
                               <p className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">{formatRelativeDate(notification.createdAt, userLocale)}</p>
                               {isDpsReminder && (
@@ -521,13 +522,13 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
-                className="flex items-center gap-2 p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
+                className="flex items-center gap-2 p-2 rounded-xl text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5 transition-colors"
                 aria-expanded={userMenuOpen}
               >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
                   <User className="h-4 w-4 text-white" />
                 </div>
-                <span className="hidden md:block text-sm text-slate-900 dark:text-white truncate max-w-[170px]">{session?.user?.name}</span>
+                <span className="hidden md:block text-sm text-slate-900 dark:text-slate-200 truncate max-w-[170px]">{session?.user?.name}</span>
               </button>
               {userMenuOpen && (
                 <div className="fixed left-3 right-3 top-16 z-50 rounded-xl border border-slate-200 bg-white py-2 shadow-2xl dark:border-slate-700/50 dark:bg-slate-800 sm:absolute sm:left-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-64 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
@@ -562,7 +563,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
               <SeverityIcon severity={notificationToast.severity} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{notificationToast.title}</p>
+              <p className="truncate text-sm font-bold text-slate-900 dark:text-slate-200">{notificationToast.title}</p>
               <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-300">{notificationToast.message}</p>
               <div className="mt-3 flex items-center gap-2">
                 {notificationToast.actionUrl && (
@@ -604,7 +605,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
               <div className="flex items-center gap-2">
               <AppLogo size="sm" tagline={messages.brand.tagline} taglineClassName="hidden" />
               </div>
-              <button onClick={() => setMobileOpen(false)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              <button onClick={() => setMobileOpen(false)} className="p-2 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -620,8 +621,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                     )}
                   >
                     <item.icon className="h-5 w-5" />
@@ -637,8 +638,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                   className={cn(
                     'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                     isInvestmentsRoute
-                      ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                      ? 'text-indigo-700 dark:text-slate-200 bg-indigo-500/10 dark:bg-indigo-500/20'
+                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                   )}
                   aria-expanded={mobileInvestmentsOpen}
                 >
@@ -660,8 +661,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                           className={cn(
                             'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                             isActive
-                              ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                              ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                              : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                           )}
                         >
                           <item.icon className="h-5 w-5" />
@@ -684,8 +685,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                     className={cn(
                       'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                       isActive
-                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                        ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                     )}
                   >
                     <item.icon className="h-5 w-5" />
@@ -702,8 +703,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                     className={cn(
                       'flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                       isAdminRoute
-                        ? 'text-indigo-700 dark:text-white bg-indigo-500/10 dark:bg-indigo-500/20'
-                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                        ? 'text-indigo-700 dark:text-slate-200 bg-indigo-500/10 dark:bg-indigo-500/20'
+                        : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                     )}
                     aria-expanded={mobileAdminOpen}
                   >
@@ -725,8 +726,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                             className={cn(
                               'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all',
                               isActive
-                                ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-white border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
-                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200/50 dark:hover:bg-white/5'
+                                ? 'bg-gradient-to-r from-indigo-500/10 dark:from-indigo-500/20 to-purple-500/10 dark:to-purple-500/20 text-indigo-700 dark:text-slate-200 border border-indigo-500/20 dark:border-indigo-500/30 shadow-sm'
+                                : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-200/50 dark:hover:bg-white/5'
                             )}
                           >
                             <item.icon className="h-5 w-5" />

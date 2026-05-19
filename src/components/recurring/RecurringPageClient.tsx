@@ -77,7 +77,7 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
       <Loader show={isPending} message={common.processing} />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{recurring.filter(r => r.isActive).length} {copy.activeCount}</p>
         </div>
         <Button onClick={() => setIsModalOpen(true)}><Plus className="h-4 w-4" /> {copy.addRecurring}</Button>
@@ -98,7 +98,7 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
                 {rec.type === 'INCOME' ? <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" /> : <TrendingDown className="h-5 w-5 text-rose-600 dark:text-rose-400" />}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-900 dark:text-white">{rec.description}</p>
+                <p className="text-sm font-medium text-slate-900 dark:text-slate-200">{rec.description}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
                   {getFrequencyLabel(rec.frequency, userLocale)} · {copy.next}: {formatDate(rec.nextRunDate, undefined, userLocale)}
                 </p>

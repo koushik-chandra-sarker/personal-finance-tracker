@@ -148,7 +148,7 @@ export default function MultiSelectFilter({
           {selected.length === 0 ? (
             <span className="text-slate-500 dark:text-slate-400 text-sm">{placeholder || `All ${label}`}</span>
           ) : (
-            <span className="text-sm text-slate-900 dark:text-white">
+            <span className="text-sm text-slate-900 dark:text-slate-200">
               <span className={`text-xs font-semibold uppercase tracking-wider mr-1 ${mode === 'exclude' ? 'text-rose-500 dark:text-rose-400' : 'text-indigo-500 dark:text-indigo-400'}`}>
                 {mode === 'exclude' ? labels.not : ''}
               </span>
@@ -213,7 +213,7 @@ export default function MultiSelectFilter({
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder={`${labels.search} ${label.toLowerCase()}...`}
-                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+                  className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
                 />
               </div>
             </div>
@@ -251,7 +251,7 @@ export default function MultiSelectFilter({
                     onClick={() => toggleOption(option.value)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors
                       ${isChecked
-                        ? 'bg-indigo-50 dark:bg-indigo-500/5 text-slate-900 dark:text-white'
+                        ? 'bg-indigo-50 dark:bg-indigo-500/5 text-slate-900 dark:text-slate-200'
                         : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/50'
                       }
                     `}

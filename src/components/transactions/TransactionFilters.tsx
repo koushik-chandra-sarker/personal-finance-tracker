@@ -164,7 +164,7 @@ export default function TransactionFilters({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
-            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-white placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
+            className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 text-slate-900 dark:text-slate-200 placeholder-slate-500 dark:placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-colors"
           />
           {isPending && (
             <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-indigo-500 dark:text-indigo-400 animate-spin" />
@@ -216,7 +216,7 @@ export default function TransactionFilters({
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             title={common.startDate}
-            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
+            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
 
@@ -227,7 +227,7 @@ export default function TransactionFilters({
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             title={common.endDate}
-            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
+            className="block w-full min-w-0 max-w-full min-h-[44px] rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 [color-scheme:light] dark:[color-scheme:dark] box-border"
           />
         </div>
 
@@ -235,15 +235,15 @@ export default function TransactionFilters({
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
+          className="w-full min-w-0 rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-900/50 px-3 py-2 text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 cursor-pointer appearance-none truncate"
           style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 10px center', paddingRight: '28px' }}
         >
-          <option value="createdAt_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.latestAdded}</option>
-          <option value="createdAt_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.oldestAdded}</option>
-          <option value="date_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.newestDate}</option>
-          <option value="date_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.oldestDate}</option>
-          <option value="amount_desc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.highestAmount}</option>
-          <option value="amount_asc" className="text-slate-900 dark:text-white bg-white dark:bg-slate-900">{copy.lowestAmount}</option>
+          <option value="createdAt_desc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.latestAdded}</option>
+          <option value="createdAt_asc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.oldestAdded}</option>
+          <option value="date_desc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.newestDate}</option>
+          <option value="date_asc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.oldestDate}</option>
+          <option value="amount_desc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.highestAmount}</option>
+          <option value="amount_asc" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-900">{copy.lowestAmount}</option>
         </select>
       </div>
 
@@ -253,7 +253,7 @@ export default function TransactionFilters({
           <button
             onClick={clearFilters}
             disabled={isPending}
-            className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-200 dark:bg-slate-700/30 hover:bg-slate-300 dark:hover:bg-slate-700/50 rounded-xl transition-colors border border-transparent hover:border-slate-400 dark:hover:border-slate-600 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-200 dark:bg-slate-700/30 hover:bg-slate-300 dark:hover:bg-slate-700/50 rounded-xl transition-colors border border-transparent hover:border-slate-400 dark:hover:border-slate-600 disabled:opacity-50"
           >
             <X className="h-4 w-4" /> {copy.clear}
           </button>

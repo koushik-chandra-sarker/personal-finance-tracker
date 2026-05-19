@@ -90,7 +90,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="flex items-center gap-4 mb-1">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
             <MonthYearPicker month={currentMonth} year={currentYear} route="/budgets" />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">
@@ -106,7 +106,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
           <div className="lg:col-span-2 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-800/50 p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-3">
               <div>
-                <span className="text-sm text-slate-900 dark:text-white font-medium">{copy.overallUsage}</span>
+                <span className="text-sm text-slate-900 dark:text-slate-200 font-medium">{copy.overallUsage}</span>
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400">
                   <span>{copy.base} {formatCurrency(totalBaseBudget, userCurrency, locale)}</span>
                   {totalRollover > 0 && (
@@ -135,15 +135,15 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
             </div>
             <div className="mt-4 grid grid-cols-3 gap-3 text-center">
               <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{rolloverEnabledCount}</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{rolloverEnabledCount}</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.enabled}</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalRollover, userCurrency, locale)}</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{formatCurrency(totalRollover, userCurrency, locale)}</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.rolledIn}</p>
               </div>
               <div>
-                <p className="text-lg font-bold text-slate-900 dark:text-white">{formatCurrency(totalProjectedRollover, userCurrency, locale)}</p>
+                <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{formatCurrency(totalProjectedRollover, userCurrency, locale)}</p>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.next}</p>
               </div>
             </div>
@@ -179,7 +179,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-full" style={{ backgroundColor: budget.categoryColor }} />
-                  <span className="text-sm font-medium text-slate-900 dark:text-white">{budget.categoryName}</span>
+                  <span className="text-sm font-medium text-slate-900 dark:text-slate-200">{budget.categoryName}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400">
@@ -205,15 +205,15 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
               <div className="mb-3 grid grid-cols-3 gap-2 rounded-xl bg-slate-50 dark:bg-slate-900/40 p-3 text-center">
                 <div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.base}</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.amount, userCurrency, locale)}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(budget.amount, userCurrency, locale)}</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.rolledIn}</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.rolloverAmount, userCurrency, locale)}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(budget.rolloverAmount, userCurrency, locale)}</p>
                 </div>
                 <div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400">{copy.effective}</p>
-                  <p className="text-xs font-semibold text-slate-900 dark:text-white">{formatCurrency(budget.effectiveAmount, userCurrency, locale)}</p>
+                  <p className="text-xs font-semibold text-slate-900 dark:text-slate-200">{formatCurrency(budget.effectiveAmount, userCurrency, locale)}</p>
                 </div>
               </div>
               <div className="flex justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
@@ -264,7 +264,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
               {...register('rolloverEnabled')}
             />
             <span>
-              <span className="block text-sm font-medium text-slate-900 dark:text-white">{copy.rolloverToggle}</span>
+              <span className="block text-sm font-medium text-slate-900 dark:text-slate-200">{copy.rolloverToggle}</span>
               <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1">
                 {copy.rolloverToggleHelp}
               </span>

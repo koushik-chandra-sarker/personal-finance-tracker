@@ -15,7 +15,7 @@ function SalaryChartTooltip({ active, payload, label, currency, locale }: { acti
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
-      {label && <p className="font-semibold text-slate-900 dark:text-white mb-1">{label}</p>}
+      {label && <p className="font-semibold text-slate-900 dark:text-slate-200 mb-1">{label}</p>}
       {payload.map((p, i) => (
         <p key={i} className="text-slate-600 dark:text-slate-300">
           <span style={{ color: p.color }}>●</span> {p.name}: {fmt(p.value, currency, locale)}
@@ -54,7 +54,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
       <div className="grid gap-4 sm:grid-cols-2">
         {/* Salary Structure Pie */}
         <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryStructure}</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.salaryStructure}</h3>
           <div className="h-[220px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -70,7 +70,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
 
         {/* Income Distribution Pie */}
         <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.salaryBreakdown}</h3>
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.salaryBreakdown}</h3>
           <div className="h-[220px] min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -89,7 +89,7 @@ export default function SalaryCharts({ result, currency }: { result: SalaryBreak
 
       {/* Monthly Bar Chart */}
       <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">{copy.overview}</h3>
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-4">{copy.overview}</h3>
         <div className="h-[280px] min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={monthlyData} barCategoryGap="20%">

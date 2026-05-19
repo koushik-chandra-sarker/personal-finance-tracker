@@ -179,7 +179,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
   const renderTable = (data: TaxConfigClientRow[], title: string) => (
     <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-700/50">
       <div className="border-b border-slate-100 p-3 dark:border-slate-700/50">
-        <h3 className="text-xs font-semibold text-slate-900 dark:text-white">{title}</h3>
+        <h3 className="text-xs font-semibold text-slate-900 dark:text-slate-200">{title}</h3>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -222,7 +222,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
     <div className="mx-auto max-w-6xl space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <div className="grid gap-2 sm:grid-cols-[160px_auto]">
@@ -232,7 +232,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
               list="taxFiscalYears"
               value={fiscalYear}
               onChange={(event) => setFiscalYear(event.target.value)}
-              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
               placeholder="2025-26"
             />
             <datalist id="taxFiscalYears">
@@ -265,15 +265,15 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.visibleTaxYears}</p>
-          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{groupedByYear.length}</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-200">{groupedByYear.length}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.totalSlabs}</p>
-          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{configs.length}</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-200">{configs.length}</p>
         </div>
         <div className="rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
           <p className="text-xs font-medium text-slate-500 dark:text-slate-400">{copy.currentEditorFy}</p>
-          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-white">{fiscalYear}</p>
+          <p className="mt-1 text-xl font-bold text-slate-900 dark:text-slate-200">{fiscalYear}</p>
         </div>
       </div>
 
@@ -291,7 +291,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
               <section key={year} className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50">
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div>
-                    <h2 className="text-lg font-bold text-slate-900 dark:text-white">{copy.fiscalYearTitle} {year}</h2>
+                    <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.fiscalYearTitle} {year}</h2>
                     <p className="text-xs text-slate-500 dark:text-slate-400">{rows.length} {copy.manualSlabsSaved}</p>
                   </div>
                   <button
@@ -319,7 +319,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
               <input
                 value={fiscalYear}
                 onChange={(event) => setFiscalYear(event.target.value)}
-                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 focus:outline-none dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                 placeholder="2025-26"
               />
             </div>
@@ -352,7 +352,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
                       <select
                         value={row.category}
                         onChange={(event) => updateDraftRow(row.id, 'category', event.target.value)}
-                        className="w-36 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        className="w-36 rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                       >
                         <option value="MALE">{copy.male}</option>
                         <option value="FEMALE">{copy.femaleSenior}</option>
@@ -362,7 +362,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
                       <input
                         value={row.label}
                         onChange={(event) => updateDraftRow(row.id, 'label', event.target.value)}
-                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        className="w-full rounded-lg border border-slate-300 bg-white px-2 py-2 text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                         placeholder="Up to BDT 375,000"
                       />
                     </td>
@@ -371,7 +371,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
                         type="number"
                         value={row.minAmount}
                         onChange={(event) => updateDraftRow(row.id, 'minAmount', event.target.value)}
-                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                       />
                     </td>
                     <td className="px-3 py-2">
@@ -379,7 +379,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
                         type="number"
                         value={row.maxAmount}
                         onChange={(event) => updateDraftRow(row.id, 'maxAmount', event.target.value)}
-                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        className="w-28 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                         placeholder={copy.noMax}
                       />
                     </td>
@@ -389,7 +389,7 @@ export default function TaxConfigClient({ initialConfigs }: { initialConfigs: Ta
                         step="0.01"
                         value={row.rate}
                         onChange={(event) => updateDraftRow(row.id, 'rate', event.target.value)}
-                        className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-white"
+                        className="w-24 rounded-lg border border-slate-300 bg-white px-2 py-2 text-right text-xs text-slate-900 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
                       />
                     </td>
                     <td className="px-3 py-2 text-right">

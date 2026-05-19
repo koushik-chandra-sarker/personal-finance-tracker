@@ -20,7 +20,7 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           ref={ref}
           id={id}
           className={cn(
-            'w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-white',
+            'w-full rounded-xl border border-slate-300 dark:border-slate-600/50 bg-white dark:bg-slate-800/50 px-4 py-2.5 text-sm text-slate-900 dark:text-slate-200',
             'focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20',
             'transition-all duration-200 cursor-pointer',
             error && 'border-red-500',
@@ -28,9 +28,9 @@ const Select = forwardRef<HTMLSelectElement, SelectProps>(
           )}
           {...props}
         >
-          <option value="" className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">Select...</option>
+          <option value="" className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">Select...</option>
           {options.map((opt) => (
-            <option key={opt.value} value={opt.value} className="text-slate-900 dark:text-white bg-white dark:bg-slate-800">{opt.label}</option>
+            <option key={opt.value} value={opt.value} className="text-slate-900 dark:text-slate-200 bg-white dark:bg-slate-800">{opt.label}</option>
           ))}
         </select>
         {error && <p className="text-xs text-red-500 dark:text-red-400">{error}</p>}

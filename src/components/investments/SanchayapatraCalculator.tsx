@@ -97,7 +97,7 @@ export default function SanchayapatraCalculator({
       <div className="px-5 py-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/30 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-2">
           <Calculator className="h-4 w-4 text-indigo-500" />
-          <span className="text-sm font-bold text-slate-900 dark:text-white uppercase tracking-tight">{copy.calculator}</span>
+          <span className="text-sm font-bold text-slate-900 dark:text-slate-200 uppercase tracking-tight">{copy.calculator}</span>
         </div>
         <div className="flex items-center gap-2">
           <span className="text-[10px] font-bold text-slate-500 uppercase">{copy.customRate}</span>
@@ -119,7 +119,7 @@ export default function SanchayapatraCalculator({
               value={amount} 
               onChange={(e) => setAmount(e.target.value === '' ? '' : Number(e.target.value))}
               placeholder={copy.enterAmount}
-              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-white rounded-lg focus:border-indigo-500 outline-none"
+              className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-slate-200 rounded-lg focus:border-indigo-500 outline-none"
             />
           </div>
 
@@ -129,7 +129,7 @@ export default function SanchayapatraCalculator({
               <select
                 value={selectedTypeId}
                 onChange={(e) => setSelectedTypeId(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-white rounded-lg appearance-none focus:border-indigo-500 outline-none"
+                className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 text-sm font-bold text-slate-900 dark:text-slate-200 rounded-lg appearance-none focus:border-indigo-500 outline-none"
               >
                 {systemConfigs.map(t => (
                   <option key={t.id} value={t.id}>{t.name}</option>

@@ -158,7 +158,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                     )}
                   </div>
                   <div className="flex items-center gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => openEditModal(c)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">
+                    <button onClick={() => openEditModal(c)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg">
                       <Edit2 className="h-3.5 w-3.5" />
                     </button>
                     <button onClick={() => handleDelete(c)} className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-rose-400 bg-slate-100 dark:bg-slate-700/50 hover:bg-red-50 dark:hover:bg-rose-500/20 rounded-lg">
@@ -168,7 +168,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                 </div>
 
                 {/* Row 2: Full-width title */}
-                <p className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{c.name}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">{c.name}</p>
 
                 {/* Row 3: Full-width budget / spending info */}
                 {c.type === 'EXPENSE' ? (
@@ -204,7 +204,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex flex-col gap-1">
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
             <MonthYearPicker month={currentMonth} year={currentYear} route="/categories" />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
@@ -250,7 +250,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
                     type="button"
                     key={icon}
                     onClick={() => setValue('icon', icon)}
-                    className={`flex items-center justify-center p-2 rounded-lg transition-colors ${selectedIcon === icon ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'}`}
+                    className={`flex items-center justify-center p-2 rounded-lg transition-colors ${selectedIcon === icon ? 'bg-indigo-600 dark:bg-indigo-500 text-white shadow-md' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200'}`}
                   >
                     <IconCmp className="h-5 w-5" />
                   </button>

@@ -128,7 +128,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
     <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
           <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -153,17 +153,17 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
         <Card className="p-5">
           <LifeBuoy className="mb-3 h-5 w-5 text-indigo-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.totalTickets}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{tickets.length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{tickets.length}</p>
         </Card>
         <Card className="p-5">
           <MessageSquarePlus className="mb-3 h-5 w-5 text-emerald-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.open}</p>
-          <p className="text-2xl font-bold text-slate-900 dark:text-white">{tickets.filter((ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS').length}</p>
+          <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{tickets.filter((ticket) => ticket.status === 'OPEN' || ticket.status === 'IN_PROGRESS').length}</p>
         </Card>
         <Card className="p-5">
           <ShieldCheck className="mb-3 h-5 w-5 text-amber-500" />
           <p className="text-sm text-slate-500 dark:text-slate-400">{copy.activePin}</p>
-          <p className="text-lg font-bold text-slate-900 dark:text-white">{activePinState ? `${copy.until} ${formatDate(activePinState.pinExpiresAt, 'h:mm a', locale)}` : copy.none}</p>
+          <p className="text-lg font-bold text-slate-900 dark:text-slate-200">{activePinState ? `${copy.until} ${formatDate(activePinState.pinExpiresAt, 'h:mm a', locale)}` : copy.none}</p>
         </Card>
       </div>
 
@@ -176,7 +176,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={copy.searchTickets}
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
             />
           </div>
           <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 dark:border-slate-700 dark:bg-slate-950/40">
@@ -189,7 +189,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
                 key={option.value}
                 type="button"
                 onClick={() => setStatusFilter(option.value as typeof statusFilter)}
-                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === option.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'}`}
+                className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition-colors ${statusFilter === option.value ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-200' : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-200'}`}
               >
                 {option.label}
               </button>
@@ -202,7 +202,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
         {filteredTickets.length === 0 ? (
           <div className="px-6 py-16 text-center">
             <LifeBuoy className="mx-auto mb-4 h-10 w-10 text-slate-300 dark:text-slate-700" />
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{tickets.length === 0 ? copy.noTickets : copy.noMatch}</h2>
+            <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{tickets.length === 0 ? copy.noTickets : copy.noMatch}</h2>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{tickets.length === 0 ? copy.noTicketsHelp : copy.noMatchHelp}</p>
           </div>
         ) : (
@@ -221,7 +221,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
                 {filteredTickets.map((ticket) => (
                   <tr key={ticket.id} className="hover:bg-slate-50/70 dark:hover:bg-white/5">
                     <td className="px-5 py-4">
-                      <Link href={`/support/${ticket.id}`} className="font-bold text-slate-900 hover:text-indigo-600 dark:text-white dark:hover:text-indigo-300">{ticket.subject}</Link>
+                      <Link href={`/support/${ticket.id}`} className="font-bold text-slate-900 hover:text-indigo-600 dark:text-slate-200 dark:hover:text-indigo-300">{ticket.subject}</Link>
                       <p className="mt-1 line-clamp-1 text-sm text-slate-500 dark:text-slate-400">{ticket.description}</p>
                     </td>
                     <td className="px-5 py-4">
@@ -254,7 +254,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
           <Input label={copy.phoneNumber} name="phoneNumber" placeholder={copy.optional} />
           <div className="space-y-1.5">
             <label htmlFor="support-description" className="block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.description}</label>
-            <textarea id="support-description" name="description" required rows={6} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-white" />
+            <textarea id="support-description" name="description" required rows={6} className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition-all focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-600/50 dark:bg-slate-800/50 dark:text-slate-200" />
           </div>
           <div className="flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={() => setIsCreateOpen(false)}>{copy.cancel}</Button>
@@ -272,7 +272,7 @@ export default function SupportPageClient({ tickets, activePin }: Props) {
           {generatedPin ? (
             <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-center dark:border-emerald-500/30 dark:bg-emerald-500/10">
               <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.sharePin}</p>
-              <p className="mt-2 font-mono text-4xl font-black text-emerald-950 dark:text-white">{generatedPin.pin}</p>
+              <p className="mt-2 font-mono text-4xl font-black text-emerald-950 dark:text-slate-200">{generatedPin.pin}</p>
               <p className="mt-2 text-xs text-emerald-700 dark:text-emerald-300">{copy.expires} {formatDate(generatedPin.expiresAt, 'MMM dd, h:mm a', locale)}</p>
               <Button type="button" className="mt-4" onClick={copyPin}>
                 <Copy className="h-4 w-4" />

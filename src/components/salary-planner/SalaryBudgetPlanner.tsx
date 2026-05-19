@@ -79,7 +79,7 @@ function BudgetTooltip({ active, payload, netMonthly, currency, locale }: { acti
   const p = payload[0];
   return (
     <div className="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 shadow-xl text-xs">
-      <p className="font-semibold text-slate-900 dark:text-white">{p.name}</p>
+      <p className="font-semibold text-slate-900 dark:text-slate-200">{p.name}</p>
       <p className="text-slate-600 dark:text-slate-300">{p.value}% — {fmt((netMonthly * p.value) / 100, currency, locale)}/mo</p>
     </div>
   );
@@ -228,7 +228,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
         </div>
 
         <div className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-          <p className="text-xs font-semibold text-slate-900 dark:text-white mb-3">{copy.budgetPlanner}</p>
+          <p className="text-xs font-semibold text-slate-900 dark:text-slate-200 mb-3">{copy.budgetPlanner}</p>
           <div className="grid grid-cols-2 gap-2">
             {(Object.keys(RULES) as SalaryBudgetRule[]).map(r => (
               <button key={r} onClick={() => applyRule(r)}
@@ -269,7 +269,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
         {/* Pie Charts */}
         <div className="lg:col-span-2 space-y-4">
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{locale === 'bn-BD' ? 'বরাদ্দ ওভারভিউ' : 'Allocation Overview'}</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">{locale === 'bn-BD' ? 'বরাদ্দ ওভারভিউ' : 'Allocation Overview'}</h3>
             <div className="h-[200px] min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -283,7 +283,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
             </div>
           </div>
           <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">{copy.salaryBreakdown}</h3>
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-3">{copy.salaryBreakdown}</h3>
             <div className="h-[220px] min-w-0">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
@@ -300,7 +300,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
         {/* Category List */}
         <div className="lg:col-span-3 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-white dark:bg-slate-800/50 overflow-hidden">
           <div className="flex items-start justify-between gap-3 border-b border-slate-100 p-4 dark:border-slate-700/50 sm:items-center sm:p-5">
-            <h3 className="min-w-0 text-sm font-semibold text-slate-900 dark:text-white">{locale === 'bn-BD' ? 'খরচের ক্যাটাগরি' : 'Spending Categories'}</h3>
+            <h3 className="min-w-0 text-sm font-semibold text-slate-900 dark:text-slate-200">{locale === 'bn-BD' ? 'খরচের ক্যাটাগরি' : 'Spending Categories'}</h3>
             <div className="flex shrink-0 items-center gap-2">
               <button onClick={() => applyRule('50-30-20')}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors" title="Reset">
@@ -329,7 +329,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
                         <cat.icon className="h-4 w-4" style={{ color: cat.color }} />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="break-words text-sm font-medium text-slate-900 dark:text-white">{categoryLabel(cat)}</p>
+                        <p className="break-words text-sm font-medium text-slate-900 dark:text-slate-200">{categoryLabel(cat)}</p>
                         <p className="break-words text-xs text-slate-400 dark:text-slate-500">{fmt((netMonthly * cat.percent) / 100, currency, locale)}/mo</p>
                       </div>
                       {editingId === cat.id ? (
@@ -338,7 +338,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
                             onChange={e => updatePercent(cat.id, Number(e.target.value))}
                             onBlur={() => setEditingId(null)}
                             onKeyDown={e => e.key === 'Enter' && setEditingId(null)}
-                            className="w-14 rounded-lg border border-indigo-400 bg-white dark:bg-slate-700 px-2 py-1 text-xs text-center text-slate-900 dark:text-white focus:outline-none" />
+                            className="w-14 rounded-lg border border-indigo-400 bg-white dark:bg-slate-700 px-2 py-1 text-xs text-center text-slate-900 dark:text-slate-200 focus:outline-none" />
                           <span className="text-xs text-slate-400">%</span>
                         </div>
                       ) : (
@@ -366,7 +366,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
 
       {/* Smart Tips */}
       <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-700/50 dark:bg-slate-800/50 sm:p-5">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-200 mb-4 flex items-center gap-2">
           <Lightbulb className="h-4 w-4 text-amber-500" /> {locale === 'bn-BD' ? 'স্মার্ট টাকা টিপস' : 'Smart Money Tips'}
         </h3>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -374,7 +374,7 @@ export default function SalaryBudgetPlanner({ netMonthly, currency, budgetRule =
             <div key={i} className="min-w-0 rounded-xl border border-slate-100 bg-slate-50 p-4 transition-colors hover:border-indigo-300 dark:border-slate-700/50 dark:bg-slate-800/80 dark:hover:border-indigo-500/30">
               <div className="flex items-center gap-2 mb-2">
                 <tip.icon className="h-4 w-4 shrink-0 text-indigo-500" />
-                <span className="min-w-0 text-xs font-bold leading-5 text-slate-900 dark:text-white">{locale === 'bn-BD' ? BN_TIPS[i].title : tip.title}</span>
+                <span className="min-w-0 text-xs font-bold leading-5 text-slate-900 dark:text-slate-200">{locale === 'bn-BD' ? BN_TIPS[i].title : tip.title}</span>
               </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">{locale === 'bn-BD' ? BN_TIPS[i].text : tip.text}</p>
             </div>

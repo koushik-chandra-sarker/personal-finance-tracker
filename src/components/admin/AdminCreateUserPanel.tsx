@@ -151,7 +151,7 @@ export default function AdminCreateUserPanel({ packages }: AdminCreateUserPanelP
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-medium uppercase text-slate-400">{copy.detailsTitle}</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-white">{createdUser.name}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{createdUser.name}</p>
               </div>
               <Button type="button" variant="outline" className="h-[42px] w-full sm:w-40" onClick={copyUserDetails}>
                 <ClipboardCopy className="h-4 w-4" />
@@ -177,7 +177,7 @@ export default function AdminCreateUserPanel({ packages }: AdminCreateUserPanelP
               </div>
               <div className="min-w-0 sm:col-span-2">
                 <p className="text-xs font-medium uppercase text-slate-400">{copy.temporaryPassword}</p>
-                <p className="break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm font-semibold text-slate-900 dark:bg-slate-800 dark:text-white">
+                <p className="break-all rounded-lg bg-slate-100 px-3 py-2 font-mono text-sm font-semibold text-slate-900 dark:bg-slate-800 dark:text-slate-200">
                   {createdUser.temporaryPassword}
                 </p>
               </div>

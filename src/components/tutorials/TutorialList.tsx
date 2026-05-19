@@ -130,7 +130,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               </Badge>
             </div>
             <div className="max-w-3xl space-y-4">
-              <h1 className="max-w-2xl text-3xl font-black tracking-tight text-slate-950 dark:text-white sm:text-4xl">
+              <h1 className="max-w-2xl text-3xl font-black tracking-tight text-slate-950 dark:text-slate-200 sm:text-4xl">
                 {copy.title}
               </h1>
               <p className="max-w-2xl text-base leading-7 text-slate-600 dark:text-slate-300">
@@ -195,7 +195,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                   <div className={cn('mb-3 flex h-9 w-9 items-center justify-center rounded-lg', item.background)}>
                     <item.icon className={cn('h-4 w-4', item.color)} />
                   </div>
-                  <h3 className="text-sm font-black text-slate-950 dark:text-white">{item.title}</h3>
+                  <h3 className="text-sm font-black text-slate-950 dark:text-slate-200">{item.title}</h3>
                   <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{item.description}</p>
                 </div>
               ))}
@@ -225,7 +225,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <p className="text-xs font-bold uppercase text-slate-400">{copy.learningPath}</p>
-                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-white">{copy.startSmall}</h2>
+                  <h2 className="mt-1 text-lg font-black text-slate-950 dark:text-slate-200">{copy.startSmall}</h2>
                 </div>
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-300">
                   <BookOpen className="h-5 w-5" />
@@ -253,7 +253,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                 ].map((item) => (
                   <div key={item.label} className="border-r border-slate-200 bg-slate-50 p-3 last:border-r-0 dark:border-slate-800 dark:bg-slate-950/40">
                     <item.icon className={cn('mb-2 h-4 w-4', item.color)} />
-                    <p className="text-xl font-black text-slate-950 dark:text-white">{item.value}</p>
+                    <p className="text-xl font-black text-slate-950 dark:text-slate-200">{item.value}</p>
                     <p className="text-[10px] font-bold uppercase text-slate-500 dark:text-slate-400">{item.label}</p>
                   </div>
                 ))}
@@ -309,7 +309,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
             <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-slate-100 dark:bg-slate-800">
               <Video size={32} className="text-slate-400" />
             </div>
-            <h3 className="text-xl font-bold text-slate-900 dark:text-white">{copy.noGuides}</h3>
+            <h3 className="text-xl font-bold text-slate-900 dark:text-slate-200">{copy.noGuides}</h3>
             <p className="mx-auto mt-2 max-w-xs text-sm text-slate-500">{copy.noGuidesHelp}</p>
           </div>
         ) : (
@@ -380,7 +380,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                   <Clock size={14} className="text-indigo-500" />
                   {copy.stepByStep}
                 </div>
-                <h3 className="line-clamp-2 text-lg font-bold leading-snug text-slate-950 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
+                <h3 className="line-clamp-2 text-lg font-bold leading-snug text-slate-950 transition-colors group-hover:text-indigo-600 dark:text-slate-200 dark:group-hover:text-indigo-400">
                   {getLocalizedTutorial(tutorial).title}
                 </h3>
                 <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
@@ -429,14 +429,14 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                       <Badge variant="info" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">{categoryLabel(playingVideo)}</Badge>
                       <Badge variant="success" className="rounded-lg px-3 py-1 text-[10px] font-bold uppercase">{copy.verified}</Badge>
                     </div>
-                    <h2 className="text-2xl font-black leading-tight text-slate-950 dark:text-white">{getLocalizedTutorial(playingVideo).title}</h2>
+                    <h2 className="text-2xl font-black leading-tight text-slate-950 dark:text-slate-200">{getLocalizedTutorial(playingVideo).title}</h2>
                   </div>
                   <div className="flex w-full gap-2 sm:w-auto">
                     <button 
                       type="button"
                       onClick={(e) => handleShare(e, playingVideo)}
                       aria-label={`${copy.share}: ${getLocalizedTutorial(playingVideo).title}`}
-                      className="flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-900 transition-colors hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-white dark:hover:bg-slate-700 sm:flex-none sm:px-3"
+                      className="flex h-11 flex-1 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 text-slate-900 transition-colors hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700 sm:flex-none sm:px-3"
                     >
                       <Share2 size={20} />
                     </button>
@@ -499,7 +499,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
                         )}
                       </div>
                       <div className="flex min-w-0 flex-col justify-center">
-                        <h5 className="line-clamp-2 text-sm font-bold leading-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">
+                        <h5 className="line-clamp-2 text-sm font-bold leading-tight text-slate-900 transition-colors group-hover:text-indigo-600 dark:text-slate-200 dark:group-hover:text-indigo-400">
                           {getLocalizedTutorial(tutorial).title}
                         </h5>
                         <p className="mt-1 text-[10px] font-medium text-slate-500">{categoryLabel(tutorial)}</p>
@@ -545,7 +545,7 @@ export default function TutorialList({ tutorials, isPro }: Props) {
             </div>
             <div>
               <Badge variant="warning" className="mb-3 px-3 py-1 text-xs font-bold">{copy.proRequired}</Badge>
-              <h3 className="text-xl font-black text-slate-950 dark:text-white">{getLocalizedTutorial(lockedVideo).title}</h3>
+              <h3 className="text-xl font-black text-slate-950 dark:text-slate-200">{getLocalizedTutorial(lockedVideo).title}</h3>
               <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
                 {copy.proRequiredHelp}
               </p>

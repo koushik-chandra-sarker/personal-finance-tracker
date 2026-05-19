@@ -100,7 +100,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
             {loading ? <RefreshCw className="h-5 w-5 animate-spin" /> : <ArrowLeft className="h-5 w-5" />}
           </button>
           <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-white">{copy.investmentTypes}</h1>
+            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.investmentTypes}</h1>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{copy.investmentTypesHelp}</p>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
                     <Icon className="h-5 w-5" />
                   </div>
                   <div>
-                    <h3 className="font-semibold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-200 text-sm flex items-center gap-2">
                       {config.name}
                       {config.isSystem && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-indigo-50 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400">{copy.system}</span>}
                       {!config.isActive && <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">{copy.hidden}</span>}
@@ -171,7 +171,7 @@ export default function TypeConfigListClient({ typeConfigs: initialConfigs }: { 
       {deleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60">
           <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-sm border border-slate-200 dark:border-slate-700/50 shadow-2xl">
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white">{copy.deleteType}</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.deleteType}</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{copy.deleteTypeHelp}</p>
             <div className="flex gap-3 mt-6">
               <button onClick={() => setDeleteId(null)} className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 text-sm font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">{copy.cancel}</button>
