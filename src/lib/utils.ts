@@ -66,8 +66,9 @@ export function formatCurrency(amount: number | string, currency: string = 'BDT'
 }
 
 export function formatDate(date: Date | string, pattern: string = 'MMM dd, yyyy', locale?: string | null): string {
-  const activeLocale = getActiveLocale(locale);
-  return format(new Date(date), pattern, { locale: DATE_LOCALE_MAP[activeLocale] });
+  const patternOrLocale = isAppLocale(pattern) && !locale ? 'MMM dd, yyyy' : pattern;
+  const activeLocale = getActiveLocale(isAppLocale(pattern) && !locale ? pattern : locale);
+  return format(new Date(date), patternOrLocale, { locale: DATE_LOCALE_MAP[activeLocale] });
 }
 
 export function formatRelativeDate(date: Date | string, locale?: string | null): string {

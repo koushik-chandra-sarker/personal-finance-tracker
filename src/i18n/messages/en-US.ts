@@ -1039,6 +1039,7 @@ const enUSMessages = {
       manualRebate: 'Manual Rebate / Credit',
       pfRebate: 'PF Rebate',
       calculateOnPf: 'Calculate on PF',
+      pfRebateBase: 'PF rebate base',
       pfRebateRate: 'PF Rebate Rate (%)',
       monthlyTaxDeducted: 'Monthly Tax Deducted',
       otherTaxAdjustment: 'Other Tax Adjustment',

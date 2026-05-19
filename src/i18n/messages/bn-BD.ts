@@ -1039,6 +1039,7 @@ const bnBDMessages = {
       manualRebate: 'ম্যানুয়াল রিবেট / ক্রেডিট',
       pfRebate: 'PF রিবেট',
       calculateOnPf: 'PF-এর উপর হিসাব',
+      pfRebateBase: 'PF রিবেট বেস',
       pfRebateRate: 'PF রিবেট হার (%)',
       monthlyTaxDeducted: 'মাসিক কর কর্তন',
       otherTaxAdjustment: 'অন্যান্য কর সমন্বয়',

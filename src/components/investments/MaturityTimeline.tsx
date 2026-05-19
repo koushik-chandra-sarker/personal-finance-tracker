@@ -1,7 +1,7 @@
 'use client';
 
 import { formatCurrency, formatDate, cn } from '@/lib/utils';
-import { Calendar, Clock, ChevronRight, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, AlertCircle } from 'lucide-react';
 import { differenceInDays, formatDistanceToNow } from 'date-fns';
 import { bn, enUS } from 'date-fns/locale';
 import { useI18n } from '@/i18n/client';
