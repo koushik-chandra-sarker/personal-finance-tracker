@@ -11,6 +11,23 @@ import { getPendingPaymentAccessHours } from '@/lib/pending-payment-access';
 import { normalizeLocale, type AppLocale } from '@/i18n/config';
 import { setLocaleCookie } from '@/i18n/server';
 
+const STARTER_CATEGORIES = [
+  { name: 'Salary', type: 'INCOME' as const, icon: 'briefcase', color: '#10b981' },
+  { name: 'Freelance', type: 'INCOME' as const, icon: 'laptop', color: '#06b6d4' },
+  { name: 'Investments', type: 'INCOME' as const, icon: 'trending-up', color: '#8b5cf6' },
+  { name: 'Other Income', type: 'INCOME' as const, icon: 'plus-circle', color: '#6366f1' },
+  { name: 'Food & Dining', type: 'EXPENSE' as const, icon: 'utensils', color: '#ef4444' },
+  { name: 'Transportation', type: 'EXPENSE' as const, icon: 'car', color: '#f97316' },
+  { name: 'Housing', type: 'EXPENSE' as const, icon: 'home', color: '#eab308' },
+  { name: 'Utilities', type: 'EXPENSE' as const, icon: 'zap', color: '#14b8a6' },
+  { name: 'Entertainment', type: 'EXPENSE' as const, icon: 'film', color: '#ec4899' },
+  { name: 'Shopping', type: 'EXPENSE' as const, icon: 'shopping-bag', color: '#a855f7' },
+  { name: 'Healthcare', type: 'EXPENSE' as const, icon: 'heart', color: '#f43f5e' },
+  { name: 'Education', type: 'EXPENSE' as const, icon: 'book', color: '#3b82f6' },
+  { name: 'Personal', type: 'EXPENSE' as const, icon: 'user', color: '#64748b' },
+  { name: 'Other Expense', type: 'EXPENSE' as const, icon: 'minus-circle', color: '#78716c' },
+];
+
 export type SubscriptionPackageRow = {
   id: string;
   slug: string;
@@ -300,6 +317,82 @@ export async function updateLocaleAction(locale: string): Promise<ActionResponse
     return { success: true, message: 'Language updated', data: { preferredLocale } };
   } catch {
     return { success: false, message: 'Failed to update language' };
+  }
+}
+
+export async function clearMyDataAction(formData: FormData): Promise<ActionResponse<{ recreateStarterData: boolean }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  const confirmation = String(formData.get('confirmation') || '').trim().toUpperCase();
+  if (confirmation !== 'CLEAR') {
+    return { success: false, message: 'Type CLEAR to confirm data reset.' };
+  }
+
+  const recreateStarterData = formData.get('recreateStarterData') === 'on';
+  const userId = session.user.id;
+
+  try {
+    await prisma.$transaction(async (tx) => {
+      await tx.notification.deleteMany({ where: { userId } });
+      await tx.salaryScenario.deleteMany({ where: { userId } });
+      await tx.financialNote.deleteMany({ where: { userId } });
+      await tx.personalSubscription.deleteMany({ where: { userId } });
+      await tx.recurringTransaction.deleteMany({ where: { userId } });
+      await tx.investment.deleteMany({ where: { userId } });
+      await tx.investmentTypeConfig.deleteMany({ where: { userId } });
+      await tx.goal.deleteMany({ where: { userId } });
+      await tx.budget.deleteMany({ where: { userId } });
+      await tx.transaction.deleteMany({ where: { userId } });
+      await tx.category.deleteMany({ where: { userId } });
+      await tx.account.deleteMany({ where: { userId } });
+
+      if (recreateStarterData) {
+        await tx.category.createMany({
+          data: STARTER_CATEGORIES.map((category) => ({
+            userId,
+            ...category,
+            isDefault: true,
+          })),
+        });
+
+        await tx.account.create({
+          data: {
+            userId,
+            name: 'Cash',
+            type: 'CASH',
+            balance: 0,
+            color: '#10b981',
+            icon: 'wallet',
+          },
+        });
+      }
+    }, { timeout: 30000 });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+    revalidatePath('/accounts');
+    revalidatePath('/budgets');
+    revalidatePath('/goals');
+    revalidatePath('/categories');
+    revalidatePath('/recurring');
+    revalidatePath('/reports');
+    revalidatePath('/service-tracker');
+    revalidatePath('/investments');
+    revalidatePath('/notes');
+    revalidatePath('/salary-planner');
+    revalidatePath('/settings');
+
+    return {
+      success: true,
+      message: recreateStarterData
+        ? 'Your data was cleared. Starter categories and a Cash account were recreated.'
+        : 'Your data was cleared. You can now build everything from a blank workspace.',
+      data: { recreateStarterData },
+    };
+  } catch (error) {
+    console.error('Failed to clear user data:', error);
+    return { success: false, message: 'Failed to clear data. Please try again.' };
   }
 }
 

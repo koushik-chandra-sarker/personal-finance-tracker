@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, KeyRound, LifeBuoy, ReceiptText, Palette, Shield, User } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, KeyRound, LifeBuoy, ReceiptText, Palette, Shield, Trash2, User } from 'lucide-react';
+import Swal from 'sweetalert2';
 import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import CollaboratorsList from '@/components/settings/CollaboratorsList';
@@ -12,6 +13,7 @@ import StartTrialButton from '@/components/subscription/StartTrialButton';
 import Select from '@/components/ui/Select';
 import Loader from '@/components/ui/Loader';
 import {
+  clearMyDataAction,
   getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
   type SubscriptionPackageRow,
@@ -57,6 +59,7 @@ export default function SettingsPageClient({
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [isPinPending, startPinTransition] = useTransition();
+  const [isClearPending, startClearTransition] = useTransition();
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [isLocaleUpdating, setIsLocaleUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -64,6 +67,7 @@ export default function SettingsPageClient({
   const [appPinStatus, setAppPinStatus] = useState<AppPinStatus>(initialAppPinStatus);
   const [subscriptionMessage, setSubscriptionMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [activeTab, setActiveTab] = useState<'account' | 'preferences' | 'billing' | 'security' | 'community'>('account');
+  const [recreateStarterData, setRecreateStarterData] = useState(true);
   const [renderedAt] = useState(() => Date.now());
   
   const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
@@ -159,6 +163,66 @@ export default function SettingsPageClient({
           setPinMessage(null);
         }, 1600);
       }
+    });
+  };
+
+  const handleClearData = async () => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Clear all app data?',
+      html: `
+        <div class="text-left text-sm leading-6">
+          <p>This will permanently remove your accounts, transactions, budgets, goals, recurring items, service tracker, investments, notes, salary plans, and related notifications.</p>
+          <p class="mt-2 font-semibold">Your login, subscription, payment history, support tickets, language, currency, and PIN will stay.</p>
+          <p class="mt-3">Type <b>CLEAR</b> to confirm.</p>
+        </div>
+      `,
+      input: 'text',
+      inputPlaceholder: 'CLEAR',
+      showCancelButton: true,
+      confirmButtonText: 'Clear data',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      buttonsStyling: false,
+      customClass: {
+        popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+        title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+        htmlContainer: 'text-sm leading-6 text-slate-600 dark:text-slate-300',
+        input: 'rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
+        confirmButton: 'inline-flex min-h-11 min-w-28 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700',
+        cancelButton: 'mr-2 inline-flex min-h-11 min-w-24 items-center justify-center rounded-2xl border border-slate-300 px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
+      },
+      preConfirm: (value) => {
+        if (String(value || '').trim().toUpperCase() !== 'CLEAR') {
+          Swal.showValidationMessage('Type CLEAR to confirm.');
+          return false;
+        }
+        return value;
+      },
+    });
+
+    if (!result.isConfirmed) return;
+
+    const formData = new FormData();
+    formData.set('confirmation', 'CLEAR');
+    if (recreateStarterData) formData.set('recreateStarterData', 'on');
+
+    startClearTransition(async () => {
+      const response = await clearMyDataAction(formData);
+      await Swal.fire({
+        icon: response.success ? 'success' : 'error',
+        title: response.success ? 'Data reset complete' : 'Reset failed',
+        text: response.message,
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+          title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+          htmlContainer: 'text-sm leading-6 text-slate-600 dark:text-slate-300',
+          confirmButton: `${response.success ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/20'} inline-flex min-h-11 min-w-28 items-center justify-center rounded-2xl px-5 text-sm font-bold text-white shadow-lg transition`,
+        },
+      });
+      if (response.success) router.refresh();
     });
   };
 
@@ -557,6 +621,47 @@ export default function SettingsPageClient({
                           <LifeBuoy className="h-4 w-4" />
                           Go to support
                         </Link>
+                      </div>
+                    </div>
+
+                    <div className="rounded-2xl border border-rose-200 bg-rose-50/70 p-5 dark:border-rose-500/30 dark:bg-rose-500/10">
+                      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="flex gap-3">
+                          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-rose-600 shadow-sm ring-1 ring-rose-200 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-500/30">
+                            <AlertTriangle className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="text-base font-bold text-slate-950 dark:text-slate-100">Clear all app data</p>
+                            <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-600 dark:text-slate-300">
+                              Remove your finance workspace data and start again. Your account, subscription, manual payment history, support tickets, language, currency, and PIN will not be deleted.
+                            </p>
+                            <label className="mt-4 flex cursor-pointer items-start gap-3 rounded-xl border border-rose-200 bg-white/70 p-3 text-sm font-semibold text-slate-700 dark:border-rose-500/30 dark:bg-slate-950/30 dark:text-slate-200">
+                              <input
+                                type="checkbox"
+                                checked={recreateStarterData}
+                                onChange={(event) => setRecreateStarterData(event.target.checked)}
+                                className="mt-0.5 h-4 w-4 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+                              />
+                              <span>
+                                Recreate starter categories and a Cash account after clearing
+                                <span className="mt-1 block text-xs font-normal leading-5 text-slate-500 dark:text-slate-400">
+                                  Turn this off if you want a completely blank workspace with no preconfigured data.
+                                </span>
+                              </span>
+                            </label>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="danger"
+                          size="md"
+                          onClick={handleClearData}
+                          isLoading={isClearPending}
+                          className="shrink-0"
+                        >
+                          Clear data
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
