@@ -2,6 +2,8 @@ import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import AdminMessagePresenter from '@/components/messages/AdminMessagePresenter';
 import AppPinGate from '@/components/security/AppPinGate';
+import PendingPaymentAccessBanner from '@/components/subscription/PendingPaymentAccessBanner';
+import TrialAccessBanner from '@/components/subscription/TrialAccessBanner';
 import SupportViewBanner from '@/components/support/SupportViewBanner';
 import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
@@ -10,7 +12,24 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getVisibleAdminMessagesForUser } from '@/services/admin-message.service';
 import { getActiveSupportViewAction } from '@/actions/support.actions';
+import { getPendingPaymentAccessState } from '@/lib/pending-payment-access';
 import { getSubscriptionBlockReason, hasActiveSubscriptionAccess, isSubscriptionUnlockedPath } from '@/lib/subscription-access';
+
+function getRequestPath(headerStore: Headers) {
+  const pathname = headerStore.get('x-pathname');
+  const search = headerStore.get('x-search') || '';
+  if (pathname) return { pathname, search };
+
+  const nextUrl = headerStore.get('next-url');
+  if (!nextUrl) return { pathname: '', search: '' };
+
+  try {
+    const parsedUrl = new URL(nextUrl, 'http://localhost');
+    return { pathname: parsedUrl.pathname, search: parsedUrl.search };
+  } catch {
+    return { pathname: '', search: '' };
+  }
+}
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -36,6 +55,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
             cancelAtPeriodEnd: true,
           },
         },
+        manualPaymentRequests: {
+          where: { status: 'PENDING' },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          select: {
+            id: true,
+            createdAt: true,
+            package: { select: { name: true } },
+          },
+        },
       },
     }),
     headers(),
@@ -49,8 +78,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
     redirect('/change-password');
   }
 
-  const requestPathname = headerStore.get('x-pathname') || '';
-  const requestSearch = headerStore.get('x-search') || '';
+  const { pathname: requestPathname, search: requestSearch } = getRequestPath(headerStore);
+  const pendingPaymentAccess = getPendingPaymentAccessState(user.manualPaymentRequests[0] || null);
   const subscriptionAccessUser = {
     role: user.role,
     status: user.status,
@@ -60,9 +89,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
     subscriptionStatus: user.subscription?.status || null,
     subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd?.toISOString() || null,
     subscriptionCancelAtPeriodEnd: user.subscription?.cancelAtPeriodEnd || false,
+    pendingPaymentAccessUntil: pendingPaymentAccess.accessUntil?.toISOString() || null,
   };
+  const trialPeriodEnd = user.subscription?.status === 'TRIALING' && user.subscription.currentPeriodEnd
+    ? user.subscription.currentPeriodEnd
+    : null;
+  const now = new Date();
+  const trialDaysRemaining = trialPeriodEnd
+    ? Math.max(0, Math.ceil((trialPeriodEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)))
+    : 0;
 
-  if (!isSubscriptionUnlockedPath(requestPathname) && !hasActiveSubscriptionAccess(subscriptionAccessUser)) {
+  if (requestPathname && !isSubscriptionUnlockedPath(requestPathname) && !hasActiveSubscriptionAccess(subscriptionAccessUser)) {
     const params = new URLSearchParams({ reason: getSubscriptionBlockReason(subscriptionAccessUser) });
     if (requestPathname) params.set('next', `${requestPathname}${requestSearch}`);
     redirect(`/subscription?${params.toString()}`);
@@ -93,6 +130,19 @@ export default async function DashboardLayout({ children }: { children: React.Re
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-hidden">
           <Topbar subscriptionAccessUser={subscriptionAccessUser} />
           {supportView && <SupportViewBanner supportView={supportView} />}
+          {trialPeriodEnd && trialPeriodEnd >= now && (
+            <TrialAccessBanner
+              currentPeriodEnd={trialPeriodEnd.toISOString()}
+              daysRemaining={trialDaysRemaining}
+            />
+          )}
+          {!trialPeriodEnd && pendingPaymentAccess.isActive && pendingPaymentAccess.accessUntil && (
+            <PendingPaymentAccessBanner
+              accessUntil={pendingPaymentAccess.accessUntil.toISOString()}
+              packageName={pendingPaymentAccess.request?.package?.name || null}
+              hours={pendingPaymentAccess.hours}
+            />
+          )}
           <AdminMessagePresenter initialMessages={serializedAdminMessages} />
           <main className="flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden max-w-full relative">
             {children}

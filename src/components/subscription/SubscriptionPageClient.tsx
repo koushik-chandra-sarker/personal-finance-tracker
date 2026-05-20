@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { Check, CheckCircle2, CreditCard, ReceiptText, ShieldAlert, Smartphone } from 'lucide-react';
+import { Check, CheckCircle2, CreditCard, ShieldAlert, Smartphone, Sparkles } from 'lucide-react';
 import Card from '@/components/ui/Card';
 import ContinuePaymentButton from '@/components/subscription/ContinuePaymentButton';
+import StartTrialButton from '@/components/subscription/StartTrialButton';
 import type { SubscriptionPackageRow } from '@/actions/settings.actions';
 import { formatCurrency } from '@/lib/utils';
 import { useI18n } from '@/i18n/client';
@@ -12,13 +13,17 @@ interface SubscriptionPageClientProps {
   reason: string;
   packages: SubscriptionPackageRow[];
   accessState?: 'blocked' | 'active' | 'pending';
+  canStartTrial?: boolean;
 }
 
-export default function SubscriptionPageClient({ reason, packages, accessState = 'blocked' }: SubscriptionPageClientProps) {
+export default function SubscriptionPageClient({ reason, packages, accessState = 'blocked', canStartTrial = false }: SubscriptionPageClientProps) {
   const { locale, messages } = useI18n();
   const copy = messages.subscription;
   const reasonMessage = copy.reasons[reason as keyof typeof copy.reasons] || copy.reasons.invalid;
-  const featuredPackage = packages.find((pkg) => pkg.isFeatured) || packages[0] || null;
+  const isTrialPackage = (plan: SubscriptionPackageRow) => plan.price === 0 && plan.trialDays > 0;
+  const trialPackage = canStartTrial ? packages.find(isTrialPackage) || null : null;
+  const paidPackages = packages.filter((pkg) => !isTrialPackage(pkg));
+  const featuredPackage = paidPackages.find((pkg) => pkg.isFeatured) || paidPackages[0] || null;
 
   if (accessState === 'active') {
     return (
@@ -58,7 +63,14 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{reasonMessage}</p>
 
-          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+          <div className={`mt-8 grid gap-3 ${canStartTrial ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}>
+            {canStartTrial && (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
+                <Sparkles className="mb-3 h-5 w-5 text-emerald-500" />
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.startTrial}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.trialHelp}</p>
+              </div>
+            )}
             <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
               <CreditCard className="mb-3 h-5 w-5 text-indigo-500" />
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.pickPackage}</p>
@@ -69,30 +81,39 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
               <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.payManually}</p>
               <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.payManuallyHelp}</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700/50 dark:bg-slate-900/40">
-              <ReceiptText className="mb-3 h-5 w-5 text-sky-500" />
-              <p className="text-sm font-semibold text-slate-900 dark:text-slate-200">{copy.submitDetails}</p>
-              <p className="mt-1 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.submitDetailsHelp}</p>
-            </div>
           </div>
         </div>
 
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6 dark:border-emerald-500/30 dark:bg-emerald-500/10">
-          <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.recommended}</p>
-          <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-slate-200">
-            {featuredPackage ? formatCurrency(featuredPackage.price, featuredPackage.currency, locale) : 'BDT'}
-          </p>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-            {featuredPackage ? `${featuredPackage.name} · ${featuredPackage.interval === 'YEARLY' ? copy.yearly : copy.monthly}` : copy.noPackage}
-          </p>
-          {featuredPackage && (
-            <ContinuePaymentButton packageId={featuredPackage.id} icon="arrow" className="mt-6 w-full" />
+          {trialPackage ? (
+            <>
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.freeTrial}</p>
+              <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-slate-200">{trialPackage.trialDays} {copy.days}</p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                {copy.noPaymentRequired}
+              </p>
+              <StartTrialButton packageId={trialPackage.id} className="mt-6" />
+              <p className="mt-3 text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.paidAfterTrial}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm font-semibold text-emerald-700 dark:text-emerald-300">{copy.recommended}</p>
+              <p className="mt-3 text-4xl font-bold text-slate-900 dark:text-slate-200">
+                {featuredPackage ? formatCurrency(featuredPackage.price, featuredPackage.currency, locale) : 'BDT'}
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                {featuredPackage ? `${featuredPackage.name} · ${featuredPackage.interval === 'YEARLY' ? copy.yearly : copy.monthly}` : copy.noPackage}
+              </p>
+              {featuredPackage && (
+                <ContinuePaymentButton packageId={featuredPackage.id} icon="arrow" className="mt-6 w-full" />
+              )}
+            </>
           )}
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        {packages.map((plan) => (
+        {paidPackages.map((plan) => (
           <Card key={plan.id} className={plan.isFeatured ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : undefined}>
             <div className="mb-5 flex items-start justify-between gap-3">
               <div>
@@ -122,6 +143,11 @@ export default function SubscriptionPageClient({ reason, packages, accessState =
           </Card>
         ))}
       </div>
+      {paidPackages.length === 0 && (
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-400">
+          {copy.noPaidPackage}
+        </div>
+      )}
     </div>
   );
 }

@@ -14,12 +14,14 @@ import {
   Clock3,
   Copy,
   CreditCard,
+  Gem,
   History,
   MessageCircle,
   ReceiptText,
   ShieldCheck,
   Smartphone,
 } from 'lucide-react';
+import Swal from 'sweetalert2';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -48,8 +50,11 @@ type PaymentPageClientProps = {
   activeSubscription?: {
     packageId: string | null;
     source: string | null;
+    status: string | null;
     currentPeriodEnd: string | null;
   } | null;
+  pendingPaymentAccessUntil?: string | null;
+  pendingPaymentAccessHours?: number;
 };
 
 type PaymentProvider = 'BKASH' | 'NAGAD';
@@ -76,6 +81,10 @@ function normalizeWhatsAppNumber(value: string) {
   return digits;
 }
 
+function isTrialPackage(pkg: SubscriptionPackageRow) {
+  return pkg.price === 0 && pkg.trialDays > 0;
+}
+
 export default function PaymentPageClient({
   packages,
   selectedPackageId,
@@ -83,6 +92,8 @@ export default function PaymentPageClient({
   paymentRequests: initialPaymentRequests,
   accessState = 'blocked',
   activeSubscription = null,
+  pendingPaymentAccessUntil = null,
+  pendingPaymentAccessHours = 24,
 }: PaymentPageClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -93,14 +104,14 @@ export default function PaymentPageClient({
   const [selectedMethodId, setSelectedMethodId] = useState(paymentMethods[0]?.id || '');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [renderedAt] = useState(() => Date.now());
   const [isPending, startTransition] = useTransition();
 
+  const paidPackages = packages.filter((pkg) => !isTrialPackage(pkg));
   const selectedPackage =
-    packages.find((pkg) => pkg.id === selectedPackageId) ||
-    packages.find((pkg) => pkg.isFeatured) ||
-    packages[0] ||
+    paidPackages.find((pkg) => pkg.id === selectedPackageId) ||
+    paidPackages.find((pkg) => pkg.isFeatured) ||
+    paidPackages[0] ||
     null;
   const methodsByProvider = useMemo(() => ({
     BKASH: paymentMethods.filter((method) => method.provider === 'BKASH'),
@@ -111,10 +122,25 @@ export default function PaymentPageClient({
   const pendingRequest = requests.find((request) => request.status === 'PENDING') || null;
   const latestApprovedRequest = requests.find((request) => request.status === 'APPROVED') || null;
   const canSubmit = Boolean(selectedPackage && !pendingRequest);
+  const paymentReviewHours = pendingPaymentAccessHours || 24;
+  const pendingAccessEndDate = pendingPaymentAccessUntil
+    ? new Date(pendingPaymentAccessUntil)
+    : pendingRequest
+      ? new Date(new Date(pendingRequest.createdAt).getTime() + paymentReviewHours * 60 * 60 * 1000)
+      : null;
+  const isPendingAccessActive = Boolean(pendingRequest && pendingAccessEndDate && pendingAccessEndDate.getTime() >= renderedAt);
+  const pendingAccessEndLabel = pendingAccessEndDate ? formatDate(pendingAccessEndDate, undefined, locale) : '';
+  const verifiedWithinText = copy.verifiedWithin.replace('{hours}', String(paymentReviewHours));
+  const paymentTermsText = copy.termsText.replace('{hours}', String(paymentReviewHours));
+  const pendingAccessHelpText = (isPendingAccessActive ? copy.pendingAccessActiveHelp : copy.pendingAccessExpiredHelp)
+    .replace('{date}', pendingAccessEndLabel);
+  const pendingReviewTitle = isPendingAccessActive ? copy.pendingAccessActiveTitle : copy.pendingAccessExpiredTitle;
   const canUseProviderTabs = paymentMethods.length > 0;
-  const activePackageId = activeSubscription?.packageId || session?.user?.subscriptionPackageId || null;
+  const activePackageId = activeSubscription?.packageId || null;
   const activePackage = packages.find((pkg) => pkg.id === activePackageId) || null;
-  const activePeriodEnd = activeSubscription?.currentPeriodEnd || session?.user?.subscriptionCurrentPeriodEnd || null;
+  const activeStatus = activeSubscription?.status || null;
+  const isTrialAccess = activeStatus === 'TRIALING';
+  const activePeriodEnd = activeSubscription?.currentPeriodEnd || null;
   const accessEndDate = activePeriodEnd ? new Date(activePeriodEnd) : null;
   const accessEndLabel = accessEndDate ? formatDate(accessEndDate, undefined, locale) : copy.noExpiry;
   const daysRemaining = accessEndDate
@@ -148,7 +174,6 @@ export default function PaymentPageClient({
   const submitPayment = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
-    setMessage(null);
     startTransition(async () => {
       const result = await createManualPaymentRequestAction(formData);
       if (result.success) {
@@ -156,7 +181,24 @@ export default function PaymentPageClient({
         router.replace('/subscription/payment');
         router.refresh();
       }
-      setMessage({ type: result.success ? 'success' : 'error', text: result.message });
+      await Swal.fire({
+        icon: result.success ? 'success' : 'error',
+        title: result.success ? copy.paymentSubmittedTitle : copy.paymentFailedTitle,
+        text: result.message,
+        confirmButtonText: 'OK',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+          title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+          htmlContainer: 'text-sm leading-6 text-slate-600 dark:text-slate-300',
+          confirmButton: cn(
+            'inline-flex min-h-11 min-w-28 items-center justify-center rounded-2xl px-5 text-sm font-bold text-white shadow-lg transition',
+            result.success
+              ? 'bg-emerald-600 shadow-emerald-500/20 hover:bg-emerald-700'
+              : 'bg-rose-600 shadow-rose-500/20 hover:bg-rose-700'
+          ),
+        },
+      });
     });
   };
 
@@ -170,7 +212,9 @@ export default function PaymentPageClient({
                 <CheckCircle2 className="h-7 w-7" />
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">{copy.paymentApproved}</p>
+                <p className="text-sm font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-300">
+                  {activeStatus === 'TRIALING' ? copy.trialAccess : copy.paymentApproved}
+                </p>
                 <h1 className="mt-1 text-3xl font-bold text-slate-900 dark:text-slate-200">{copy.subscriptionActive}</h1>
                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">
                   {copy.activeFormHidden}
@@ -193,7 +237,13 @@ export default function PaymentPageClient({
               </div>
               <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.currentPlan}</p>
               <p className="mt-1 text-2xl font-black text-slate-900 dark:text-slate-200">{activePackage?.name || latestApprovedRequest?.package.name || 'PRO Access'}</p>
-              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{(activeSubscription?.source || session?.user?.subscriptionSource) === 'ADMIN_GRANT' ? 'Admin granted' : messages.subscription.payManually}</p>
+              <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                {activeStatus === 'TRIALING'
+                  ? copy.trialAccess
+                  : activeSubscription?.source === 'ADMIN_GRANT'
+                    ? 'Admin granted'
+                    : messages.subscription.payManually}
+              </p>
             </div>
             <div className="border-t border-slate-200 p-5 dark:border-slate-800 md:border-l md:border-t-0">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
@@ -276,13 +326,34 @@ export default function PaymentPageClient({
         </div>
         <div className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-200">
           <ShieldCheck className="h-4 w-4" />
-          {copy.verifiedWithin}
+          {verifiedWithinText}
         </div>
       </div>
 
-      {message && (
-        <div className={`rounded-xl p-3 text-sm ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'}`}>
-          {message.text}
+      {isTrialAccess && (
+        <div className="overflow-hidden rounded-2xl border border-amber-200 bg-amber-50 shadow-sm dark:border-amber-300/40 dark:bg-slate-950">
+          <div className="grid gap-4 p-5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+            <div className="flex items-start gap-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white text-amber-700 shadow-sm ring-1 ring-amber-200 dark:bg-amber-300 dark:text-slate-950 dark:ring-amber-200/80">
+                <Gem className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full border border-amber-300 bg-white/70 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-800 dark:border-amber-300/40 dark:bg-transparent dark:text-amber-200">
+                    {messages.subscription.trialBadge}
+                  </span>
+                  <h2 className="text-base font-bold text-slate-950 dark:text-slate-50">{copy.trialUpgradeTitle}</h2>
+                </div>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-300">{copy.trialUpgradeHelp}</p>
+              </div>
+            </div>
+            {daysRemaining !== null && (
+              <div className="rounded-2xl border border-amber-200 bg-white px-4 py-3 text-left shadow-sm sm:text-right dark:border-amber-300/30 dark:bg-white/5">
+                <p className="text-2xl font-black text-amber-700 dark:text-amber-200">{daysRemaining}</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-300">{copy.remainingSuffix}</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
@@ -452,7 +523,7 @@ export default function PaymentPageClient({
                   <div>
                     <h2 className="font-bold text-slate-950 dark:text-slate-200">{copy.termsTitle}</h2>
                     <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                      {copy.termsText}
+                      {paymentTermsText}
                     </p>
                   </div>
                 </div>
@@ -475,16 +546,47 @@ export default function PaymentPageClient({
           ) : (
             <Card>
               <div className="flex items-start gap-3">
-                <Clock3 className="mt-1 h-5 w-5 text-amber-500" />
+                {isPendingAccessActive ? (
+                  <ShieldCheck className="mt-1 h-5 w-5 text-emerald-500" />
+                ) : (
+                  <Clock3 className="mt-1 h-5 w-5 text-amber-500" />
+                )}
                 <div>
-                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">{copy.alreadySubmitted}</h2>
+                  <h2 className="text-lg font-bold text-slate-900 dark:text-slate-200">
+                    {pendingRequest ? pendingReviewTitle : messages.subscription.noPaidPackage}
+                  </h2>
                   <p className="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
-                    {copy.alreadySubmittedHelp}
+                    {pendingRequest
+                      ? `${copy.alreadySubmittedHelp} ${pendingAccessHelpText}`
+                      : messages.subscription.noPackage}
                   </p>
                   {pendingRequest && (
-                    <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
-                      <p className="font-semibold text-amber-800 dark:text-amber-200">Reference: {pendingRequest.reference}</p>
-                      <p className="mt-1 text-amber-700 dark:text-amber-300">TrxID: {pendingRequest.transactionId}</p>
+                    <div className={cn(
+                      'mt-4 rounded-2xl border p-4 text-sm',
+                      isPendingAccessActive
+                        ? 'border-emerald-200 bg-emerald-50 dark:border-emerald-500/30 dark:bg-emerald-500/10'
+                        : 'border-amber-200 bg-amber-50 dark:border-amber-500/30 dark:bg-amber-500/10'
+                    )}>
+                      <p className={cn(
+                        'font-semibold',
+                        isPendingAccessActive ? 'text-emerald-800 dark:text-emerald-200' : 'text-amber-800 dark:text-amber-200'
+                      )}>
+                        Reference: {pendingRequest.reference}
+                      </p>
+                      <p className={cn(
+                        'mt-1',
+                        isPendingAccessActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'
+                      )}>
+                        TrxID: {pendingRequest.transactionId}
+                      </p>
+                      {pendingAccessEndLabel && (
+                        <p className={cn(
+                          'mt-1',
+                          isPendingAccessActive ? 'text-emerald-700 dark:text-emerald-300' : 'text-amber-700 dark:text-amber-300'
+                        )}>
+                          {copy.validUntil}: {pendingAccessEndLabel}
+                        </p>
+                      )}
                     </div>
                   )}
                 </div>

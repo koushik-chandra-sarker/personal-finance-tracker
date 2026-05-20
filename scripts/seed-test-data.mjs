@@ -74,7 +74,45 @@ async function ensureSubscriptionPackages() {
     'Budgets, goals, notes, and investments',
   ];
 
-  const [monthly, yearly, trial] = await Promise.all([
+  const [trial, monthly, yearly] = await Promise.all([
+    prisma.subscriptionPackage.upsert({
+      where: { slug: 'pro-trial' },
+      update: {
+        name: 'Pro Trial',
+        description: 'Try full Pro access before choosing a paid package.',
+        currency: 'BDT',
+        price: 0,
+        interval: 'MONTHLY',
+        trialDays: 7,
+        discountLabel: 'No payment required',
+        featureBullets: [
+          'Full dashboard access during trial',
+          'No bKash or Nagad payment needed',
+          'Choose a paid package after trial ends',
+        ],
+        isActive: true,
+        isFeatured: false,
+        sortOrder: 5,
+      },
+      create: {
+        id: 'pkg_pro_trial',
+        slug: 'pro-trial',
+        name: 'Pro Trial',
+        description: 'Try full Pro access before choosing a paid package.',
+        currency: 'BDT',
+        price: 0,
+        interval: 'MONTHLY',
+        trialDays: 7,
+        discountLabel: 'No payment required',
+        featureBullets: [
+          'Full dashboard access during trial',
+          'No bKash or Nagad payment needed',
+          'Choose a paid package after trial ends',
+        ],
+        isActive: true,
+        sortOrder: 5,
+      },
+    }),
     prisma.subscriptionPackage.upsert({
       where: { slug: 'pro-monthly' },
       update: {

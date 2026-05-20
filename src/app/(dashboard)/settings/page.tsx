@@ -4,18 +4,41 @@ import SettingsPageClient from '@/components/settings/SettingsPageClient';
 
 export default async function SettingsPage() {
   const session = await auth();
-  const pinState = session?.user?.id
+  const userState = session?.user?.id
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
-        select: { appPinHash: true, appPinSetAt: true },
+        select: {
+          appPinHash: true,
+          appPinSetAt: true,
+          subscription: {
+            select: {
+              packageId: true,
+              plan: true,
+              interval: true,
+              source: true,
+              status: true,
+              currentPeriodEnd: true,
+              cancelAtPeriodEnd: true,
+            },
+          },
+        },
       })
     : null;
 
   return (
     <SettingsPageClient
       initialAppPinStatus={{
-        hasPin: Boolean(pinState?.appPinHash && pinState.appPinSetAt),
-        pinSetAt: pinState?.appPinSetAt?.toISOString() || null,
+        hasPin: Boolean(userState?.appPinHash && userState.appPinSetAt),
+        pinSetAt: userState?.appPinSetAt?.toISOString() || null,
+      }}
+      initialSubscription={{
+        plan: userState?.subscription?.plan || null,
+        interval: userState?.subscription?.interval || null,
+        packageId: userState?.subscription?.packageId || null,
+        source: userState?.subscription?.source || null,
+        status: userState?.subscription?.status || null,
+        currentPeriodEnd: userState?.subscription?.currentPeriodEnd?.toISOString() || null,
+        cancelAtPeriodEnd: userState?.subscription?.cancelAtPeriodEnd || false,
       }}
     />
   );

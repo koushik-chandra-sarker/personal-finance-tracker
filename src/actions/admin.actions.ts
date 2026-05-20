@@ -570,27 +570,36 @@ function parsePackageFormData(formData: FormData): ActionResponse<{
   isFeatured: boolean;
   sortOrder: number;
 }> {
-  const name = String(formData.get('name') || '').trim();
-  const slug = slugify(String(formData.get('slug') || name));
-  const description = String(formData.get('description') || '').trim();
-  const currency = String(formData.get('currency') || 'BDT').trim().toUpperCase();
-  const price = Number(formData.get('price'));
-  const interval = String(formData.get('interval') || '') as SubscriptionInterval;
+  const isTrial = formData.get('isTrial') === 'on';
   const trialDays = Number(formData.get('trialDays') || 0);
-  const discountLabel = String(formData.get('discountLabel') || '').trim() || null;
-  const featureBullets = String(formData.get('featureBullets') || '')
+  const name = String(formData.get('name') || (isTrial ? 'Pro Trial' : '')).trim();
+  const slug = slugify(String(formData.get('slug') || name));
+  const description = String(formData.get('description') || (isTrial ? 'Try full Pro access before choosing a paid package.' : '')).trim();
+  const currency = String(formData.get('currency') || 'BDT').trim().toUpperCase();
+  const price = isTrial ? 0 : Number(formData.get('price'));
+  const interval = (isTrial ? 'MONTHLY' : String(formData.get('interval') || '')) as SubscriptionInterval;
+  const discountLabel = String(formData.get('discountLabel') || (isTrial ? 'No payment required' : '')).trim() || null;
+  const featureBulletsRaw = String(formData.get('featureBullets') || (
+    isTrial
+      ? 'Full dashboard access during trial\nNo bKash or Nagad payment needed\nChoose a paid package after trial ends'
+      : ''
+  ));
+  const featureBullets = featureBulletsRaw
     .split(/\r?\n/)
     .map((bullet) => bullet.trim())
     .filter(Boolean);
-  const sortOrder = Number(formData.get('sortOrder') || 0);
+  const sortOrder = Number(formData.get('sortOrder') || (isTrial ? 5 : 0));
 
   if (!name) return { success: false, message: 'প্যাকেজের নাম প্রয়োজন' };
   if (!slug || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return { success: false, message: 'প্যাকেজ স্লাগ সঠিক নয়' };
   if (!description) return { success: false, message: 'প্যাকেজ বিবরণ প্রয়োজন' };
   if (!currency || currency.length > 12) return { success: false, message: 'কারেন্সি সঠিক নয়' };
-  if (!Number.isFinite(price) || price <= 0) return { success: false, message: 'মূল্য শূন্যের বেশি হতে হবে' };
   if (interval !== 'MONTHLY' && interval !== 'YEARLY') return { success: false, message: 'ইন্টারভ্যাল সঠিক নয়' };
   if (!Number.isInteger(trialDays) || trialDays < 0) return { success: false, message: 'ট্রায়াল দিন শূন্য বা তার বেশি হতে হবে' };
+  if (isTrial && trialDays <= 0) return { success: false, message: 'ট্রায়াল প্যাকেজের জন্য ট্রায়াল দিন দিতে হবে' };
+  if (!Number.isFinite(price) || price < 0) return { success: false, message: 'মূল্য শূন্য বা তার বেশি হতে হবে' };
+  if (!isTrial && price <= 0) return { success: false, message: 'পেইড প্যাকেজের মূল্য শূন্যের বেশি হতে হবে' };
+  if (!isTrial && trialDays > 0) return { success: false, message: 'পেইড প্যাকেজে ট্রায়াল দিন ব্যবহার করবেন না। আলাদা ফ্রি ট্রায়াল প্যাকেজ তৈরি করুন' };
   if (!Number.isInteger(sortOrder)) return { success: false, message: 'সোর্ট অর্ডার পূর্ণ সংখ্যা হতে হবে' };
 
   return {
@@ -607,7 +616,7 @@ function parsePackageFormData(formData: FormData): ActionResponse<{
       discountLabel,
       featureBullets,
       isActive: formData.get('isActive') === 'on',
-      isFeatured: formData.get('isFeatured') === 'on',
+      isFeatured: !isTrial && formData.get('isFeatured') === 'on',
       sortOrder,
     },
   };
@@ -1395,6 +1404,9 @@ export async function approveManualPaymentRequestAction(requestId: string, formD
 
   if (!request) return { success: false, message: 'পেমেন্ট রিকোয়েস্ট পাওয়া যায়নি' };
   if (request.status !== 'PENDING') return { success: false, message: 'শুধু পেন্ডিং পেমেন্ট অনুমোদন করা যায়' };
+  if (Number(request.package.price) === 0 && request.package.trialDays > 0) {
+    return { success: false, message: 'ট্রায়াল প্যাকেজ পেমেন্ট ছাড়াই ব্যবহারকারী নিজে চালু করবে' };
+  }
 
   const now = new Date();
   await prisma.$transaction(async (tx) => {
@@ -1483,7 +1495,11 @@ export async function rejectManualPaymentRequestAction(requestId: string, formDa
   });
 
   revalidatePath('/admin/subscriptions');
+  revalidatePath('/admin/payments');
   revalidatePath('/subscription');
+  revalidatePath('/subscription/payment');
+  revalidatePath('/settings');
+  revalidatePath('/dashboard');
   return { success: true, message: `${request.user.email}-এর পেমেন্ট রিজেক্ট হয়েছে` };
 }
 

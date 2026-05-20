@@ -2,6 +2,7 @@ import { auth } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import type { SubscriptionPlan, UserRole } from '@prisma/client';
 import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getPendingPaymentAccessState } from '@/lib/pending-payment-access';
 
 const ROLE_RANK: Record<UserRole, number> = {
   USER: 1,
@@ -36,12 +37,23 @@ export async function getCurrentUserAccess() {
           cancelAtPeriodEnd: true,
         },
       },
+      manualPaymentRequests: {
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: {
+          id: true,
+          createdAt: true,
+          package: { select: { name: true } },
+        },
+      },
     },
   });
 
   if (!user) throw new Error('Unauthorized');
   if (user.status !== 'ACTIVE') throw new Error('Account is not active.');
   if (user.lockedUntil && user.lockedUntil > new Date()) throw new Error('Account is temporarily locked.');
+  const pendingPaymentAccess = getPendingPaymentAccessState(user.manualPaymentRequests[0] || null);
   return {
     id: user.id,
     role: user.role,
@@ -54,6 +66,11 @@ export async function getCurrentUserAccess() {
     subscriptionCurrentPeriodStart: user.subscription?.currentPeriodStart || null,
     subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd || null,
     subscriptionCancelAtPeriodEnd: user.subscription?.cancelAtPeriodEnd || false,
+    pendingPaymentRequestId: pendingPaymentAccess.request?.id || null,
+    pendingPaymentPackageName: pendingPaymentAccess.request?.package?.name || null,
+    pendingPaymentAccessUntil: pendingPaymentAccess.accessUntil,
+    pendingPaymentAccessActive: pendingPaymentAccess.isActive,
+    pendingPaymentAccessHours: pendingPaymentAccess.hours,
   };
 }
 
@@ -74,6 +91,12 @@ export async function requireSubscriptionPlan(userId: string, requiredPlan: Subs
       subscription: {
         select: { plan: true, status: true, currentPeriodEnd: true },
       },
+      manualPaymentRequests: {
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, createdAt: true },
+      },
     },
   });
 
@@ -81,6 +104,7 @@ export async function requireSubscriptionPlan(userId: string, requiredPlan: Subs
   if (user.status !== 'ACTIVE') throw new Error('Account is not active.');
   if (user.lockedUntil && user.lockedUntil > new Date()) throw new Error('Account is temporarily locked.');
   if (user.role === 'ADMIN') return;
+  if (getPendingPaymentAccessState(user.manualPaymentRequests[0] || null).isActive) return;
 
   const plan = user.subscription?.plan || null;
   const status = user.subscription?.status || 'ACTIVE';
@@ -107,6 +131,12 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
           currentPeriodEnd: true,
         },
       },
+      manualPaymentRequests: {
+        where: { status: 'PENDING' },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+        select: { id: true, createdAt: true },
+      },
     },
   });
 
@@ -114,11 +144,13 @@ export async function hasActiveSubscription(userId: string): Promise<boolean> {
   if (user.status !== 'ACTIVE') return false;
   if (user.lockedUntil && user.lockedUntil > new Date()) return false;
   if (user.role === 'ADMIN') return true;
+  const pendingPaymentAccess = getPendingPaymentAccessState(user.manualPaymentRequests[0] || null);
   return hasActiveSubscriptionAccess({
     role: user.role,
     status: user.status,
     subscriptionPlan: user.subscription?.plan || null,
     subscriptionStatus: user.subscription?.status || null,
     subscriptionCurrentPeriodEnd: user.subscription?.currentPeriodEnd || null,
+    pendingPaymentAccessUntil: pendingPaymentAccess.accessUntil,
   });
 }

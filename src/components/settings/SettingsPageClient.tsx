@@ -8,6 +8,7 @@ import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
 import CollaboratorsList from '@/components/settings/CollaboratorsList';
 import NotificationSettings from '@/components/settings/NotificationSettings';
+import StartTrialButton from '@/components/subscription/StartTrialButton';
 import Select from '@/components/ui/Select';
 import Loader from '@/components/ui/Loader';
 import {
@@ -28,10 +29,26 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
+import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus } from '@/types';
 
 type AppPinStatus = { hasPin: boolean; pinSetAt: string | null };
+type SettingsSubscriptionSnapshot = {
+  plan: SubscriptionPlan | null;
+  interval: SubscriptionInterval | null;
+  packageId: string | null;
+  source: SubscriptionSource | null;
+  status: SubscriptionStatus | null;
+  currentPeriodEnd: string | null;
+  cancelAtPeriodEnd: boolean;
+};
 
-export default function SettingsPageClient({ initialAppPinStatus }: { initialAppPinStatus: AppPinStatus }) {
+export default function SettingsPageClient({
+  initialAppPinStatus,
+  initialSubscription,
+}: {
+  initialAppPinStatus: AppPinStatus;
+  initialSubscription: SettingsSubscriptionSnapshot;
+}) {
   const { data: session, update } = useSession();
   const router = useRouter();
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -51,23 +68,26 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
   
   const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
   const userLocale = session?.user?.preferredLocale;
-  const subscriptionPlan = session?.user?.subscriptionPlan || null;
-  const subscriptionInterval = session?.user?.subscriptionInterval || null;
-  const subscriptionPackageId = session?.user?.subscriptionPackageId || null;
-  const subscriptionSource = session?.user?.subscriptionSource || null;
-  const subscriptionStatus = session?.user?.subscriptionStatus || 'ACTIVE';
-  const subscriptionPeriodEnd = session?.user?.subscriptionCurrentPeriodEnd
-    ? formatDate(session.user.subscriptionCurrentPeriodEnd, undefined, userLocale)
+  const subscriptionPlan = initialSubscription.plan;
+  const subscriptionInterval = initialSubscription.interval;
+  const subscriptionPackageId = initialSubscription.packageId;
+  const subscriptionSource = initialSubscription.source;
+  const subscriptionStatus = initialSubscription.status;
+  const subscriptionPeriodEnd = initialSubscription.currentPeriodEnd
+    ? formatDate(initialSubscription.currentPeriodEnd, undefined, userLocale)
     : null;
-  const subscriptionEndDate = session?.user?.subscriptionCurrentPeriodEnd
-    ? new Date(session.user.subscriptionCurrentPeriodEnd)
+  const subscriptionEndDate = initialSubscription.currentPeriodEnd
+    ? new Date(initialSubscription.currentPeriodEnd)
     : null;
   const isAdmin = session?.user?.role === 'ADMIN';
   const hasActiveSubscription = isAdmin || (
     subscriptionPlan === 'PRO' &&
     (subscriptionStatus === 'ACTIVE' || subscriptionStatus === 'TRIALING') &&
-    (!session?.user?.subscriptionCurrentPeriodEnd || new Date(session.user.subscriptionCurrentPeriodEnd) >= new Date())
+    (!initialSubscription.currentPeriodEnd || new Date(initialSubscription.currentPeriodEnd) >= new Date())
   );
+  const canUpgradeFromTrial = !isAdmin && hasActiveSubscription && subscriptionStatus === 'TRIALING';
+  const canStartTrial = !isAdmin && !subscriptionPlan;
+  const isActiveTrialAccess = hasActiveSubscription && subscriptionStatus === 'TRIALING';
   const daysRemaining = subscriptionEndDate
     ? Math.max(0, Math.ceil((subscriptionEndDate.getTime() - renderedAt) / (1000 * 60 * 60 * 24)))
     : null;
@@ -142,11 +162,14 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
     });
   };
 
+  const isTrialPackage = (pkg: SubscriptionPackageRow) => pkg.price === 0 && pkg.trialDays > 0;
+
   const planLabel = () => {
     if (isAdmin) return 'Admin access';
     if (subscriptionPlan !== 'PRO') return 'Subscription required';
     if (subscriptionSource === 'ADMIN_GRANT') return subscriptionPeriodEnd ? 'Admin granted access' : 'Admin granted unlimited access';
     const currentPackage = packages.find((pkg) => pkg.id === subscriptionPackageId);
+    if (currentPackage && isTrialPackage(currentPackage) && !isActiveTrialAccess) return 'Trial ended';
     if (currentPackage) return currentPackage.name;
     return `Pro ${subscriptionInterval?.toLowerCase() || ''}`;
   };
@@ -158,6 +181,13 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
   };
 
   const currentPackage = packages.find((pkg) => pkg.id === subscriptionPackageId) || null;
+  const visibleCurrentPackage = currentPackage && (!isTrialPackage(currentPackage) || isActiveTrialAccess)
+    ? currentPackage
+    : null;
+  const visiblePackages = packages.filter((pkg) => {
+    if (!isTrialPackage(pkg)) return true;
+    return canStartTrial || (isActiveTrialAccess && pkg.id === subscriptionPackageId);
+  });
   const statusLabel = isAdmin
     ? 'Admin'
     : hasActiveSubscription
@@ -398,25 +428,29 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                       <div>
                         <h3 className="text-lg font-bold text-slate-900 dark:text-slate-200">Available packages</h3>
                         <p className="text-sm text-slate-500 dark:text-slate-400">
-                          {hasActiveSubscription && !isAdmin ? 'Package changes are available when your current access expires.' : 'Choose a package and submit payment details for admin approval.'}
+                          {canUpgradeFromTrial
+                            ? 'Your trial is active. You can upgrade to a paid package now.'
+                            : hasActiveSubscription && !isAdmin
+                              ? 'Package changes are available when your current access expires.'
+                              : 'Choose a package and submit payment details for admin approval.'}
                         </p>
                       </div>
-                      {currentPackage && (
+                      {visibleCurrentPackage && (
                         <div className="inline-flex w-fit items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
                           <ReceiptText className="h-4 w-4" />
-                          Current: {currentPackage.name}
+                          Current: {visibleCurrentPackage.name}
                         </div>
                       )}
                     </div>
 
                     <div className="grid gap-4 md:grid-cols-2">
-                      {packages.length === 0 ? (
+                      {visiblePackages.length === 0 ? (
                         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500 dark:border-slate-700/50 dark:bg-slate-900/50 dark:text-slate-400 md:col-span-2">
                           No subscription packages are currently available.
                         </div>
-                      ) : packages.map((pkg) => {
+                      ) : visiblePackages.map((pkg) => {
                         const currentPlan = isCurrentPackage(pkg.id, pkg.interval);
-                        const canPayNow = !isAdmin && !hasActiveSubscription;
+                        const canPayNow = !isAdmin && (!hasActiveSubscription || canUpgradeFromTrial) && !isTrialPackage(pkg);
                         return (
                           <div key={pkg.id} className={`flex min-h-full flex-col rounded-2xl border p-5 ${pkg.isFeatured ? 'border-emerald-200 bg-emerald-50/50 dark:border-emerald-500/30 dark:bg-emerald-500/10' : 'border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/30'}`}>
                             <div className="mb-4 flex items-start justify-between gap-3">
@@ -430,10 +464,13 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                               </div>
                               {currentPlan && <Check className="h-5 w-5 shrink-0 text-emerald-500" />}
                             </div>
-                            <p className="text-3xl font-black text-slate-900 dark:text-slate-200">{formatCurrency(pkg.price, pkg.currency, userLocale)}<span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span></p>
+                            <p className="text-3xl font-black text-slate-900 dark:text-slate-200">
+                              {isTrialPackage(pkg) ? `${pkg.trialDays} days` : formatCurrency(pkg.price, pkg.currency, userLocale)}
+                              {!isTrialPackage(pkg) && <span className="text-sm font-medium text-slate-500 dark:text-slate-400">{pkg.interval === 'YEARLY' ? '/yr' : '/mo'}</span>}
+                            </p>
                             <div className="mt-2 flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                               <CalendarClock className="h-4 w-4" />
-                              {pkg.interval === 'YEARLY' ? 'Yearly access' : 'Monthly access'}
+                              {isTrialPackage(pkg) ? 'Trial access without payment' : pkg.interval === 'YEARLY' ? 'Yearly access' : 'Monthly access'}
                             </div>
                             {pkg.featureBullets.length > 0 && (
                               <div className="my-6 space-y-2 text-sm text-slate-600 dark:text-slate-300">
@@ -445,7 +482,9 @@ export default function SettingsPageClient({ initialAppPinStatus }: { initialApp
                               </div>
                             )}
                             <div className="mt-auto">
-                              {canPayNow ? (
+                              {canPayNow && isTrialPackage(pkg) ? (
+                                <StartTrialButton packageId={pkg.id} />
+                              ) : canPayNow ? (
                                 <Link href={`/subscription/payment?packageId=${encodeURIComponent(pkg.id)}`} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:from-emerald-700 hover:to-emerald-700">
                                   Pay manually <ArrowRight className="h-4 w-4" />
                                 </Link>

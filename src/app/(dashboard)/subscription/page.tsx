@@ -18,6 +18,7 @@ export default async function SubscriptionPage({ searchParams }: SubscriptionPag
 
   const access = await getCurrentUserAccess();
   const hasActiveAccess = hasActiveSubscriptionAccess(access);
+  const isTrialAccess = access.subscriptionStatus === 'TRIALING';
 
   const params = await searchParams;
   const reasonParam = Array.isArray(params.reason) ? params.reason[0] : params.reason;
@@ -27,15 +28,16 @@ export default async function SubscriptionPage({ searchParams }: SubscriptionPag
   ]);
 
   const hasPendingPayment = paymentRequests.some((request) => request.status === 'PENDING');
-  if (!hasActiveAccess && hasPendingPayment) {
+  if (hasPendingPayment) {
     redirect('/subscription/payment');
   }
 
   return (
     <SubscriptionPageClient
-      reason={reasonParam || getSubscriptionBlockReason(access)}
+      reason={reasonParam || (isTrialAccess ? 'trialing' : getSubscriptionBlockReason(access))}
       packages={packages}
-      accessState={hasActiveAccess ? 'active' : 'blocked'}
+      accessState={hasActiveAccess && !isTrialAccess ? 'active' : 'blocked'}
+      canStartTrial={!access.subscriptionPlan && access.role !== 'ADMIN'}
     />
   );
 }

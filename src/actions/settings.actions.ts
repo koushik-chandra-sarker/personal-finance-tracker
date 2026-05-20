@@ -7,6 +7,7 @@ import type { ActionResponse } from '@/types';
 import type { ManualPaymentProvider, ManualPaymentStatus, SubscriptionInterval } from '@prisma/client';
 import { createNotification } from '@/services/notification.service';
 import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
+import { getPendingPaymentAccessHours } from '@/lib/pending-payment-access';
 import { normalizeLocale, type AppLocale } from '@/i18n/config';
 import { setLocaleCookie } from '@/i18n/server';
 
@@ -60,6 +61,16 @@ export type ManualPaymentRequestRow = {
     accountNumber: string;
   } | null;
 };
+
+function isTrialPackage(pkg: { price: unknown; trialDays: number }) {
+  return Number(pkg.price) === 0 && pkg.trialDays > 0;
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
 
 function serializePackage(pkg: {
   id: string;
@@ -315,6 +326,103 @@ export async function updateSubscriptionAction(packageId: string): Promise<Actio
   };
 }
 
+export async function activateTrialPackageAction(packageId: string): Promise<ActionResponse<{
+  subscriptionPlan: 'PRO';
+  subscriptionInterval: SubscriptionInterval;
+  subscriptionPackageId: string;
+  subscriptionSource: 'SELF_SERVICE';
+  subscriptionStatus: 'TRIALING';
+  subscriptionCurrentPeriodEnd: string;
+  subscriptionCancelAtPeriodEnd: true;
+}>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: {
+      role: true,
+      status: true,
+      subscription: {
+        select: {
+          plan: true,
+          status: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  if (!currentUser) return { success: false, message: 'Unauthorized' };
+  if (currentUser.role === 'ADMIN') return { success: false, message: 'Admin users already have full access.' };
+
+  if (hasActiveSubscriptionAccess({
+    role: currentUser.role,
+    status: currentUser.status,
+    subscriptionPlan: currentUser.subscription?.plan || null,
+    subscriptionStatus: currentUser.subscription?.status || null,
+    subscriptionCurrentPeriodEnd: currentUser.subscription?.currentPeriodEnd || null,
+  })) {
+    return { success: false, message: 'Your access is already active.' };
+  }
+
+  if (currentUser.subscription) {
+    return { success: false, message: 'Trial can be used only once. Please choose a paid package to continue.' };
+  }
+
+  const subscriptionPackage = await prisma.subscriptionPackage.findFirst({
+    where: { id: packageId, isActive: true },
+  });
+
+  if (!subscriptionPackage) return { success: false, message: 'Subscription package is not available.' };
+  if (!isTrialPackage(subscriptionPackage)) {
+    return { success: false, message: 'This package requires payment before activation.' };
+  }
+
+  const now = new Date();
+  const currentPeriodEnd = addDays(now, subscriptionPackage.trialDays);
+
+  try {
+    await prisma.userSubscription.create({
+      data: {
+        userId: session.user.id,
+        packageId: subscriptionPackage.id,
+        plan: 'PRO',
+        interval: subscriptionPackage.interval,
+        source: 'SELF_SERVICE',
+        status: 'TRIALING',
+        currentPeriodStart: now,
+        currentPeriodEnd,
+        cancelAtPeriodEnd: true,
+      },
+    });
+
+    revalidatePath('/subscription');
+    revalidatePath('/subscription/payment');
+    revalidatePath('/settings');
+    revalidatePath('/dashboard');
+
+    return {
+      success: true,
+      message: 'Trial activated. You can use the dashboard now.',
+      data: {
+        subscriptionPlan: 'PRO',
+        subscriptionInterval: subscriptionPackage.interval,
+        subscriptionPackageId: subscriptionPackage.id,
+        subscriptionSource: 'SELF_SERVICE',
+        subscriptionStatus: 'TRIALING',
+        subscriptionCurrentPeriodEnd: currentPeriodEnd.toISOString(),
+        subscriptionCancelAtPeriodEnd: true,
+      },
+    };
+  } catch (error) {
+    if (typeof error === 'object' && error && 'code' in error && error.code === 'P2002') {
+      return { success: false, message: 'Trial can be used only once. Please choose a paid package to continue.' };
+    }
+    return { success: false, message: 'Failed to activate trial. Please try again.' };
+  }
+}
+
 export async function createManualPaymentRequestAction(formData: FormData): Promise<ActionResponse> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
@@ -336,13 +444,16 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
 
   if (!currentUser) return { success: false, message: 'Unauthorized' };
 
-  if (hasActiveSubscriptionAccess({
+  const hasCurrentAccess = hasActiveSubscriptionAccess({
     role: currentUser.role,
     status: currentUser.status,
     subscriptionPlan: currentUser.subscription?.plan || null,
     subscriptionStatus: currentUser.subscription?.status || null,
     subscriptionCurrentPeriodEnd: currentUser.subscription?.currentPeriodEnd || null,
-  })) {
+  });
+  const isTrialAccess = currentUser.subscription?.status === 'TRIALING';
+
+  if (hasCurrentAccess && !isTrialAccess) {
     return { success: false, message: 'Your subscription is already active. You can renew or upgrade after it expires.' };
   }
 
@@ -380,6 +491,9 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
   ]);
 
   if (!subscriptionPackage) return { success: false, message: 'Subscription package is not available.' };
+  if (isTrialPackage(subscriptionPackage)) {
+    return { success: false, message: 'This is a trial package. Start the trial from the package selection page without payment.' };
+  }
   if (methodId && !method) return { success: false, message: 'Payment account is not available.' };
 
   const paymentProvider = method?.provider || provider;
@@ -387,33 +501,48 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
   const existingPending = await prisma.manualPaymentRequest.findFirst({
     where: {
       userId: session.user.id,
-      packageId: subscriptionPackage.id,
       status: 'PENDING',
     },
-    select: { id: true },
+    select: { id: true, package: { select: { name: true } } },
   });
 
   if (existingPending) {
-    return { success: false, message: 'You already have a pending payment for this package. Please wait for admin review.' };
+    return { success: false, message: `You already have a pending payment for ${existingPending.package.name}. Please wait for admin review.` };
   }
 
   try {
-    const paymentRequest = await prisma.manualPaymentRequest.create({
-      data: {
-        userId: session.user.id,
-        packageId: subscriptionPackage.id,
-        methodId: method?.id || null,
-        provider: paymentProvider,
-        amount: subscriptionPackage.price,
-        currency: subscriptionPackage.currency,
-        reference,
-        senderAccount,
-        transactionId,
-        paidAt,
-        screenshotUrl,
-        note,
-      },
-      select: { id: true },
+    const now = new Date();
+    const paymentRequest = await prisma.$transaction(async (tx) => {
+      const createdRequest = await tx.manualPaymentRequest.create({
+        data: {
+          userId: session.user.id,
+          packageId: subscriptionPackage.id,
+          methodId: method?.id || null,
+          provider: paymentProvider,
+          amount: subscriptionPackage.price,
+          currency: subscriptionPackage.currency,
+          reference,
+          senderAccount,
+          transactionId,
+          paidAt,
+          screenshotUrl,
+          note,
+        },
+        select: { id: true },
+      });
+
+      if (isTrialAccess) {
+        await tx.userSubscription.update({
+          where: { userId: session.user.id },
+          data: {
+            status: 'CANCELED',
+            currentPeriodEnd: now,
+            cancelAtPeriodEnd: true,
+          },
+        });
+      }
+
+      return createdRequest;
     });
 
     await notifyAdminsOfManualPaymentRequest({
@@ -428,9 +557,16 @@ export async function createManualPaymentRequestAction(formData: FormData): Prom
 
     revalidatePath('/subscription');
     revalidatePath('/subscription/payment');
+    revalidatePath('/dashboard');
+    revalidatePath('/settings');
     revalidatePath('/admin/subscriptions');
     revalidatePath('/admin/payments');
-    return { success: true, message: 'Payment submitted. Admin will verify it from the wallet transaction history.' };
+    return {
+      success: true,
+      message: isTrialAccess
+        ? `Payment submitted. Your trial has ended and you can use the app for ${getPendingPaymentAccessHours()} hours while admin verifies it.`
+        : `Payment submitted. You can use the app for ${getPendingPaymentAccessHours()} hours while admin verifies it.`,
+    };
   } catch (error) {
     if (typeof error === 'object' && error && 'code' in error && error.code === 'P2002') {
       return { success: false, message: 'This transaction ID has already been submitted.' };

@@ -27,6 +27,8 @@ export default async function SubscriptionPaymentPage({
 
   const access = await getCurrentUserAccess();
   const hasActiveAccess = hasActiveSubscriptionAccess(access);
+  const isTrialAccess = access.subscriptionStatus === 'TRIALING';
+  const hasPendingPaymentAccess = Boolean(access.pendingPaymentAccessActive);
 
   const params = await searchParams;
   const [packages, paymentMethods, paymentRequests] = await Promise.all([
@@ -41,12 +43,15 @@ export default async function SubscriptionPaymentPage({
       selectedPackageId={firstParam(params.packageId) || null}
       paymentMethods={paymentMethods}
       paymentRequests={paymentRequests}
-      accessState={hasActiveAccess ? 'active' : 'blocked'}
-      activeSubscription={hasActiveAccess ? {
+      accessState={hasActiveAccess && !isTrialAccess && !hasPendingPaymentAccess ? 'active' : 'blocked'}
+      activeSubscription={hasActiveAccess && !hasPendingPaymentAccess ? {
         packageId: access.subscriptionPackageId,
         source: access.subscriptionSource,
+        status: access.subscriptionStatus,
         currentPeriodEnd: access.subscriptionCurrentPeriodEnd?.toISOString() || null,
       } : null}
+      pendingPaymentAccessUntil={access.pendingPaymentAccessUntil?.toISOString() || null}
+      pendingPaymentAccessHours={access.pendingPaymentAccessHours}
     />
   );
 }

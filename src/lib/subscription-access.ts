@@ -8,6 +8,7 @@ export type SubscriptionAccessUser = {
   subscriptionPlan?: SubscriptionPlan | string | null;
   subscriptionStatus?: SubscriptionStatus | string | null;
   subscriptionCurrentPeriodEnd?: Date | string | null;
+  pendingPaymentAccessUntil?: Date | string | null;
 };
 
 const SUBSCRIPTION_UNLOCKED_PATH_PREFIXES = ['/subscription', '/tutorials'];
@@ -20,6 +21,7 @@ export function hasActiveSubscriptionAccess(user?: SubscriptionAccessUser | null
   if (!user) return false;
   if (user.status && user.status !== 'ACTIVE') return false;
   if (user.role === 'ADMIN') return true;
+  if (user.pendingPaymentAccessUntil && new Date(user.pendingPaymentAccessUntil) >= new Date()) return true;
   if (user.subscriptionPlan !== 'PRO') return false;
   if (user.subscriptionStatus !== 'ACTIVE' && user.subscriptionStatus !== 'TRIALING') return false;
   if (!user.subscriptionCurrentPeriodEnd) return true;
