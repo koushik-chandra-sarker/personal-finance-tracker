@@ -1,0 +1,1 @@
+ALTER TYPE "AdminMessageDisplayMode" ADD VALUE IF NOT EXISTS 'PUSH_ONLY';

@@ -1547,6 +1547,7 @@ const bnBDMessages = {
       paused: 'বিরতি',
       popupModal: 'পপআপ মডাল',
       topBanner: 'টপ ব্যানার',
+      pushOnly: 'শুধু push',
       everyRefresh: 'প্রতি রিফ্রেশে',
       untilDismissed: 'ডিসমিস করা পর্যন্ত',
       oneTime: 'একবার',

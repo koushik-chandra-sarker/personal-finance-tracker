@@ -851,6 +851,7 @@ enum AdminMessageAudience {
 enum AdminMessageDisplayMode {
   MODAL
   BANNER
+  PUSH_ONLY
 }
 
 enum AdminMessageFrequency {

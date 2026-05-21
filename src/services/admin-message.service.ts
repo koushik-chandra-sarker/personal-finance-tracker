@@ -436,6 +436,7 @@ export async function getVisibleAdminMessagesForUser(userId: string, now = new D
   const messages = await prisma.adminMessage.findMany({
     where: {
       isActive: true,
+      displayMode: { not: 'PUSH_ONLY' },
       OR: [
         { startsAt: null },
         { startsAt: { lte: now } },

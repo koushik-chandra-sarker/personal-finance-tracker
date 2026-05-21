@@ -58,6 +58,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
   const displayModeOptions = [
     { value: 'MODAL', label: copy.popupModal },
     { value: 'BANNER', label: copy.topBanner },
+    { value: 'PUSH_ONLY', label: copy.pushOnly },
   ];
   const frequencyOptions = [
     { value: 'ONCE', label: copy.oneTime },
@@ -251,7 +252,9 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">
-                      <p className="font-semibold">{message.displayMode === 'MODAL' ? copy.popupModal : copy.topBanner}</p>
+                      <p className="font-semibold">
+                        {message.displayMode === 'MODAL' ? copy.popupModal : message.displayMode === 'BANNER' ? copy.topBanner : copy.pushOnly}
+                      </p>
                       <p className="text-xs text-slate-400">{formatFrequency(message.frequency, copy)}</p>
                     </td>
                     <td className="px-5 py-4 text-sm text-slate-600 dark:text-slate-300">

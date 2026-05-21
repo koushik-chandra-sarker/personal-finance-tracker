@@ -1547,6 +1547,7 @@ const enUSMessages = {
       paused: 'Paused',
       popupModal: 'Popup modal',
       topBanner: 'Top banner',
+      pushOnly: 'Push only',
       everyRefresh: 'Every refresh',
       untilDismissed: 'Until dismissed',
       oneTime: 'One time',

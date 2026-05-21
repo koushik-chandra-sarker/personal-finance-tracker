@@ -10,7 +10,7 @@ import type { UpdateAdminMessageInput } from '@/services/admin-message.service';
 import type { ActionResponse } from '@/types';
 
 const severityValues: NotificationSeverity[] = ['INFO', 'WARNING', 'CRITICAL', 'SUCCESS'];
-const displayModeValues: AdminMessageDisplayMode[] = ['MODAL', 'BANNER'];
+const displayModeValues: AdminMessageDisplayMode[] = ['MODAL', 'BANNER', 'PUSH_ONLY'];
 const frequencyValues: AdminMessageFrequency[] = ['EVERY_REFRESH', 'ONCE', 'UNTIL_DISMISSED'];
 const audienceValues: AdminMessageAudience[] = ['ALL', 'SELECTED'];
 
