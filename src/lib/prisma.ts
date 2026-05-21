@@ -17,16 +17,19 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   const hasAdminMessageModel = Boolean(runtimeClient?._runtimeDataModel?.models?.AdminMessage);
   const hasManualPaymentModel = Boolean(runtimeClient?._runtimeDataModel?.models?.ManualPaymentRequest);
   const hasSalaryScenarioModel = Boolean(runtimeClient?._runtimeDataModel?.models?.SalaryScenario);
+  const hasAccountDeletionRecordModel = Boolean(runtimeClient?._runtimeDataModel?.models?.AccountDeletionRecord);
 
   return Boolean(
     client &&
     'investmentCashflow' in client &&
     'pageView' in client &&
     'userActivity' in client &&
+    'accountDeletionRecord' in client &&
     hasTutorialPremiumFlag &&
     hasAdminMessageModel &&
     hasManualPaymentModel &&
-    hasSalaryScenarioModel
+    hasSalaryScenarioModel &&
+    hasAccountDeletionRecordModel
   );
 }
 

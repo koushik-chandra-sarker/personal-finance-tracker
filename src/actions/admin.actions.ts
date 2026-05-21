@@ -54,10 +54,19 @@ export type AdminUserRow = {
     currentPeriodEnd: string | null;
     package: { id: string; name: string } | null;
   } | null;
+  deletionRecord: {
+    originalName: string;
+    originalEmail: string;
+    deletionType: 'USER_SELF' | 'ADMIN_SOFT' | 'ADMIN_PERMANENT';
+    performedByName: string | null;
+    performedByEmail: string | null;
+    createdAt: string;
+  } | null;
 };
 
 export type AdminUsersPageResult = {
   users: AdminUserRow[];
+  deletionRecords: AdminAccountDeletionRecordRow[];
   total: number;
   page: number;
   limit: number;
@@ -71,6 +80,20 @@ export type AdminUsersPageResult = {
     withAccess: number;
     noAccess: number;
   };
+};
+
+export type AdminAccountDeletionRecordRow = {
+  id: string;
+  deletedUserId: string | null;
+  originalName: string;
+  originalEmail: string;
+  originalRole: UserRole;
+  deletionType: 'USER_SELF' | 'ADMIN_SOFT' | 'ADMIN_PERMANENT';
+  anonymizedEmail: string | null;
+  performedByName: string | null;
+  performedByEmail: string | null;
+  note: string | null;
+  createdAt: string;
 };
 
 export type AdminSubscriptionPackageRow = SubscriptionPackageRow & {
@@ -302,6 +325,14 @@ function serializeUser(user: {
     currentPeriodEnd: Date | null;
     package: { id: string; name: string } | null;
   } | null;
+  deletionRecord?: {
+    originalName: string;
+    originalEmail: string;
+    deletionType: 'USER_SELF' | 'ADMIN_SOFT' | 'ADMIN_PERMANENT';
+    performedByName: string | null;
+    performedByEmail: string | null;
+    createdAt: Date;
+  } | null;
 }): AdminUserRow {
   return {
     ...user,
@@ -314,6 +345,31 @@ function serializeUser(user: {
           currentPeriodEnd: user.subscription.currentPeriodEnd?.toISOString() || null,
         }
       : null,
+    deletionRecord: user.deletionRecord
+      ? {
+          ...user.deletionRecord,
+          createdAt: user.deletionRecord.createdAt.toISOString(),
+        }
+      : null,
+  };
+}
+
+function serializeAccountDeletionRecord(record: {
+  id: string;
+  deletedUserId: string | null;
+  originalName: string;
+  originalEmail: string;
+  originalRole: UserRole;
+  deletionType: 'USER_SELF' | 'ADMIN_SOFT' | 'ADMIN_PERMANENT';
+  anonymizedEmail: string | null;
+  performedByName: string | null;
+  performedByEmail: string | null;
+  note: string | null;
+  createdAt: Date;
+}): AdminAccountDeletionRecordRow {
+  return {
+    ...record,
+    createdAt: record.createdAt.toISOString(),
   };
 }
 
@@ -508,7 +564,7 @@ function normalizeAdminUsersQuery(query: AdminUsersQuery = {}): AdminUsersPageFi
   };
 }
 
-function buildAdminUsersWhere(filters: ReturnType<typeof normalizeAdminUsersQuery>): Prisma.UserWhereInput {
+function buildAdminUsersWhere(filters: ReturnType<typeof normalizeAdminUsersQuery>, deletionMatchedUserIds: string[] = []): Prisma.UserWhereInput {
   const and: Prisma.UserWhereInput[] = [];
 
   if (filters.q) {
@@ -516,6 +572,7 @@ function buildAdminUsersWhere(filters: ReturnType<typeof normalizeAdminUsersQuer
       OR: [
         { name: { contains: filters.q, mode: 'insensitive' } },
         { email: { contains: filters.q, mode: 'insensitive' } },
+        ...(deletionMatchedUserIds.length > 0 ? [{ id: { in: deletionMatchedUserIds } }] : []),
       ],
     });
   }
@@ -700,14 +757,44 @@ export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
     take: 100,
   });
 
-  return users.map(serializeUser);
+  const deletionRecords = await prisma.accountDeletionRecord.findMany({
+    where: { deletedUserId: { in: users.map((user) => user.id) } },
+    orderBy: { createdAt: 'desc' },
+  });
+  const deletionRecordByUserId = new Map<string, (typeof deletionRecords)[number]>();
+  deletionRecords.forEach((record) => {
+    if (record.deletedUserId && !deletionRecordByUserId.has(record.deletedUserId)) {
+      deletionRecordByUserId.set(record.deletedUserId, record);
+    }
+  });
+
+  return users.map((user) => serializeUser({
+    ...user,
+    deletionRecord: deletionRecordByUserId.get(user.id) || null,
+  }));
 }
 
 export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Promise<AdminUsersPageResult> {
   await requireRole('ADMIN');
 
   const filters = normalizeAdminUsersQuery(query);
-  const where = buildAdminUsersWhere(filters);
+  const deletionMatches = filters.q
+    ? await prisma.accountDeletionRecord.findMany({
+        where: {
+          OR: [
+            { originalName: { contains: filters.q, mode: 'insensitive' } },
+            { originalEmail: { contains: filters.q, mode: 'insensitive' } },
+          ],
+          deletedUserId: { not: null },
+        },
+        select: { deletedUserId: true },
+        take: 100,
+      })
+    : [];
+  const deletionMatchedUserIds = deletionMatches
+    .map((record) => record.deletedUserId)
+    .filter((id): id is string => Boolean(id));
+  const where = buildAdminUsersWhere(filters, deletionMatchedUserIds);
   const orderBy = buildAdminUsersOrderBy(filters.sort);
 
   const [total, totalUsers, active, admins, suspended, withAccess, noAccess] = await prisma.$transaction([
@@ -757,9 +844,27 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
     skip: (page - 1) * filters.limit,
     take: filters.limit,
   });
+  const deletionRecords = await prisma.accountDeletionRecord.findMany({
+    where: { deletedUserId: { in: users.map((user) => user.id) } },
+    orderBy: { createdAt: 'desc' },
+  });
+  const recentDeletionRecords = await prisma.accountDeletionRecord.findMany({
+    orderBy: { createdAt: 'desc' },
+    take: 10,
+  });
+  const deletionRecordByUserId = new Map<string, (typeof deletionRecords)[number]>();
+  deletionRecords.forEach((record) => {
+    if (record.deletedUserId && !deletionRecordByUserId.has(record.deletedUserId)) {
+      deletionRecordByUserId.set(record.deletedUserId, record);
+    }
+  });
 
   return {
-    users: users.map(serializeUser),
+    users: users.map((user) => serializeUser({
+      ...user,
+      deletionRecord: deletionRecordByUserId.get(user.id) || null,
+    })),
+    deletionRecords: recentDeletionRecords.map(serializeAccountDeletionRecord),
     total,
     page,
     limit: filters.limit,
@@ -1719,7 +1824,7 @@ export async function updateUserStatusAction(userId: string, status: UserStatus)
 
   const targetUser = await prisma.user.findUnique({
     where: { id: userId },
-    select: { email: true, role: true, status: true },
+    select: { name: true, email: true, role: true, status: true },
   });
   if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
 
@@ -1742,6 +1847,92 @@ export async function updateUserStatusAction(userId: string, status: UserStatus)
   revalidatePath('/admin/users');
   revalidatePath('/admin/subscriptions');
   return { success: true, message: `${targetUser.email} ${status === 'ACTIVE' ? 'পুনরায় সক্রিয় হয়েছে' : 'সাসপেন্ড হয়েছে'}` };
+}
+
+export async function deleteUserAccountAction(userId: string, mode: 'soft' | 'permanent'): Promise<ActionResponse> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
+  await requireRole('ADMIN');
+
+  if (mode !== 'soft' && mode !== 'permanent') {
+    return { success: false, message: 'ডিলিট মোড সঠিক নয়' };
+  }
+
+  if (userId === session.user.id) {
+    return { success: false, message: 'নিজের অ্যাকাউন্ট অ্যাডমিন প্যানেল থেকে ডিলিট করা যাবে না।' };
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { name: true, email: true, role: true, status: true },
+  });
+  if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
+
+  if (targetUser.role === 'ADMIN' && targetUser.status === 'ACTIVE') {
+    const activeAdminCount = await prisma.user.count({ where: { role: 'ADMIN', status: 'ACTIVE' } });
+    if (activeAdminCount <= 1) {
+      return { success: false, message: 'কমপক্ষে একজন সক্রিয় অ্যাডমিন প্রয়োজন।' };
+    }
+  }
+
+  if (mode === 'permanent') {
+    await prisma.$transaction(async (tx) => {
+      await tx.accountDeletionRecord.create({
+        data: {
+          deletedUserId: userId,
+          originalName: targetUser.name,
+          originalEmail: targetUser.email,
+          originalRole: targetUser.role,
+          deletionType: 'ADMIN_PERMANENT',
+          performedById: session.user.id,
+          performedByName: session.user.name || null,
+          performedByEmail: session.user.email || null,
+          note: 'Admin permanently deleted this account.',
+        },
+      });
+      await tx.user.delete({ where: { id: userId } });
+    });
+    revalidatePath('/admin/users');
+    revalidatePath('/admin/subscriptions');
+    revalidatePath('/admin/payments');
+    return { success: true, message: `${targetUser.email} স্থায়ীভাবে ডিলিট হয়েছে` };
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.accountDeletionRecord.create({
+      data: {
+        deletedUserId: userId,
+        originalName: targetUser.name,
+        originalEmail: targetUser.email,
+        originalRole: targetUser.role,
+        deletionType: 'ADMIN_SOFT',
+        performedById: session.user.id,
+        performedByName: session.user.name || null,
+        performedByEmail: session.user.email || null,
+        note: 'Admin soft deleted this account. Original login email is still retained on the user row.',
+      },
+    });
+    await tx.userSubscription.updateMany({
+      where: { userId },
+      data: {
+        status: 'CANCELED',
+        currentPeriodEnd: new Date(),
+        cancelAtPeriodEnd: true,
+      },
+    });
+    await tx.user.update({
+      where: { id: userId },
+      data: {
+        status: 'DELETED',
+        lockedUntil: null,
+        sessionVersion: { increment: 1 },
+      },
+    });
+  });
+
+  revalidatePath('/admin/users');
+  revalidatePath('/admin/subscriptions');
+  return { success: true, message: `${targetUser.email} soft delete হয়েছে` };
 }
 
 export async function grantUserAccessAction(formData: FormData): Promise<ActionResponse> {

@@ -58,6 +58,7 @@ model User {
   supportTickets SupportTicket[] @relation("UserSupportTickets")
   transactions  Transaction[]
   createdAdminMessages AdminMessage[] @relation("CreatedAdminMessages")
+  performedAccountDeletions AccountDeletionRecord[] @relation("PerformedAccountDeletions")
 
   @@index([status])
   @@index([lastLoginAt])
@@ -80,6 +81,27 @@ model UserInvite {
   @@index([email])
   @@index([expiresAt])
   @@index([acceptedAt])
+}
+
+model AccountDeletionRecord {
+  id              String              @id @default(cuid())
+  deletedUserId   String?
+  originalName    String
+  originalEmail   String
+  originalRole    UserRole
+  deletionType    AccountDeletionType
+  anonymizedEmail String?
+  performedById   String?
+  performedByName String?
+  performedByEmail String?
+  note            String?
+  createdAt       DateTime            @default(now())
+  performedBy     User?               @relation("PerformedAccountDeletions", fields: [performedById], references: [id], onDelete: SetNull)
+
+  @@index([deletedUserId])
+  @@index([originalEmail])
+  @@index([deletionType, createdAt])
+  @@index([performedById])
 }
 
 model UserSubscription {
@@ -667,6 +689,12 @@ enum UserStatus {
   SUSPENDED
   INVITED
   DELETED
+}
+
+enum AccountDeletionType {
+  USER_SELF
+  ADMIN_SOFT
+  ADMIN_PERMANENT
 }
 
 enum SubscriptionPlan {

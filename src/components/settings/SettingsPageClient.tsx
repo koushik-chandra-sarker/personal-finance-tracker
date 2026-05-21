@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { AlertTriangle, ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, KeyRound, LifeBuoy, ReceiptText, Palette, Shield, Trash2, User } from 'lucide-react';
 import Swal from 'sweetalert2';
 import Card from '@/components/ui/Card';
@@ -14,6 +14,7 @@ import Select from '@/components/ui/Select';
 import Loader from '@/components/ui/Loader';
 import {
   clearMyDataAction,
+  deleteMyAccountAction,
   getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
   type SubscriptionPackageRow,
@@ -60,6 +61,7 @@ export default function SettingsPageClient({
   const [isPending, startTransition] = useTransition();
   const [isPinPending, startPinTransition] = useTransition();
   const [isClearPending, startClearTransition] = useTransition();
+  const [isDeletePending, startDeleteTransition] = useTransition();
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [isLocaleUpdating, setIsLocaleUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -223,6 +225,80 @@ export default function SettingsPageClient({
         },
       });
       if (response.success) router.refresh();
+    });
+  };
+
+  const handleDeleteAccount = async () => {
+    const result = await Swal.fire({
+      icon: 'warning',
+      title: 'Delete your account?',
+      html: `
+        <div class="text-left text-sm leading-6">
+          <p>Your login will be removed and your email will be available for registration again.</p>
+          <p class="mt-2">Admins may still see a deleted, anonymized account record for audit history.</p>
+          <p class="mt-3 font-semibold">Type <b>DELETE</b> to confirm.</p>
+        </div>
+      `,
+      input: 'text',
+      inputPlaceholder: 'DELETE',
+      showCancelButton: true,
+      confirmButtonText: 'Delete account',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      buttonsStyling: false,
+      customClass: {
+        popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+        title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+        htmlContainer: 'text-sm leading-6 text-slate-600 dark:text-slate-300',
+        input: 'rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
+        confirmButton: 'inline-flex min-h-11 min-w-32 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700',
+        cancelButton: 'mr-2 inline-flex min-h-11 min-w-24 items-center justify-center rounded-2xl border border-slate-300 px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
+      },
+      preConfirm: (value) => {
+        if (String(value || '').trim().toUpperCase() !== 'DELETE') {
+          Swal.showValidationMessage('Type DELETE to confirm.');
+          return false;
+        }
+        return value;
+      },
+    });
+
+    if (!result.isConfirmed) return;
+
+    const formData = new FormData();
+    formData.set('confirmation', 'DELETE');
+
+    startDeleteTransition(async () => {
+      const response = await deleteMyAccountAction(formData);
+      if (!response.success) {
+        await Swal.fire({
+          icon: 'error',
+          title: 'Delete failed',
+          text: response.message,
+          confirmButtonText: 'OK',
+          buttonsStyling: false,
+          customClass: {
+            popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+            title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+            confirmButton: 'inline-flex min-h-11 min-w-28 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700',
+          },
+        });
+        return;
+      }
+
+      await Swal.fire({
+        icon: 'success',
+        title: 'Account deleted',
+        text: response.message,
+        confirmButtonText: 'Go to login',
+        buttonsStyling: false,
+        customClass: {
+          popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+          title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+          confirmButton: 'inline-flex min-h-11 min-w-28 items-center justify-center rounded-2xl bg-emerald-600 px-5 text-sm font-bold text-white shadow-lg shadow-emerald-500/20 transition hover:bg-emerald-700',
+        },
+      });
+      await signOut({ callbackUrl: '/login' });
     });
   };
 
@@ -651,17 +727,29 @@ export default function SettingsPageClient({
                             </label>
                           </div>
                         </div>
-                        <Button
-                          type="button"
-                          variant="danger"
-                          size="md"
-                          onClick={handleClearData}
-                          isLoading={isClearPending}
-                          className="shrink-0"
-                        >
-                          Clear data
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+                          <Button
+                            type="button"
+                            variant="danger"
+                            size="md"
+                            onClick={handleClearData}
+                            isLoading={isClearPending}
+                          >
+                            Clear data
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="md"
+                            onClick={handleDeleteAccount}
+                            isLoading={isDeletePending}
+                            className="border-rose-300 text-rose-700 hover:bg-rose-50 dark:border-rose-500/40 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                          >
+                            Delete account
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </div>

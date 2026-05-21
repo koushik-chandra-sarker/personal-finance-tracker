@@ -3,7 +3,8 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import type { ReactNode } from 'react';
-import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, MoreVertical, Search, Shield, Users } from 'lucide-react';
+import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, MoreVertical, Search, Shield, Trash2, Users } from 'lucide-react';
+import Swal from 'sweetalert2';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -14,6 +15,7 @@ import AdminCreateUserPanel from '@/components/admin/AdminCreateUserPanel';
 import UserInvitePanel from '@/components/admin/UserInvitePanel';
 import UserInviteList from '@/components/admin/UserInviteList';
 import {
+  deleteUserAccountAction,
   updateUserStatusAction,
   updateUserRoleAction,
   type AdminSubscriptionPackageRow,
@@ -275,6 +277,52 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
     });
   };
 
+  const deleteAccount = async (user: AdminUsersPageResult['users'][number], mode: 'soft' | 'permanent') => {
+    setMessage(null);
+    setActionMenuUserId(null);
+
+    const confirmed = await Swal.fire({
+      icon: 'warning',
+      title: mode === 'permanent' ? 'Permanently delete user?' : 'Soft delete user?',
+      html: mode === 'permanent'
+        ? `<div class="text-left text-sm leading-6"><p><b>${user.email}</b> and related records will be permanently deleted where database rules allow it.</p><p class="mt-2 font-semibold">This cannot be undone.</p><p class="mt-3">Type <b>DELETE</b> to confirm.</p></div>`
+        : `<div class="text-left text-sm leading-6"><p><b>${user.email}</b> will be marked as deleted and access will be blocked.</p><p class="mt-2">Data stays in the database so admin can retain history.</p><p class="mt-3">Type <b>DELETE</b> to confirm.</p></div>`,
+      input: 'text',
+      inputPlaceholder: 'DELETE',
+      showCancelButton: true,
+      confirmButtonText: mode === 'permanent' ? 'Delete permanently' : 'Soft delete',
+      cancelButtonText: 'Cancel',
+      reverseButtons: true,
+      buttonsStyling: false,
+      customClass: {
+        popup: 'rounded-3xl border border-white/70 bg-white text-slate-900 shadow-2xl shadow-slate-950/20 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100',
+        title: 'text-2xl font-black text-slate-950 dark:text-slate-100',
+        htmlContainer: 'text-sm leading-6 text-slate-600 dark:text-slate-300',
+        input: 'rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100',
+        confirmButton: 'inline-flex min-h-11 min-w-32 items-center justify-center rounded-2xl bg-rose-600 px-5 text-sm font-bold text-white shadow-lg shadow-rose-500/20 transition hover:bg-rose-700',
+        cancelButton: 'mr-2 inline-flex min-h-11 min-w-24 items-center justify-center rounded-2xl border border-slate-300 px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800',
+      },
+      preConfirm: (value) => {
+        if (String(value || '').trim().toUpperCase() !== 'DELETE') {
+          Swal.showValidationMessage('Type DELETE to confirm.');
+          return false;
+        }
+        return value;
+      },
+    });
+
+    if (!confirmed.isConfirmed) return;
+
+    startRoleTransition(async () => {
+      setUpdatingUserId(user.id);
+      setLoaderMessage(mode === 'permanent' ? 'Deleting user permanently...' : 'Soft deleting user...');
+      const result = await deleteUserAccountAction(user.id, mode);
+      setMessage({ type: result.success ? 'success' : 'error', text: result.message });
+      setUpdatingUserId(null);
+      if (result.success) router.refresh();
+    });
+  };
+
   const navigateTo = (href: string, message: string = copy.loadingUsers) => {
     setLoaderMessage(message);
     startNavigationTransition(() => {
@@ -363,6 +411,39 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
         </div>
       )}
 
+      {usersPage.deletionRecords.length > 0 && (
+        <Card className="p-0">
+          <div className="border-b border-slate-200 p-4 dark:border-slate-700/50">
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">Recent deletion records</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">Original identity is preserved here even when the login email is anonymized or the user row is permanently deleted.</p>
+          </div>
+          <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
+            {usersPage.deletionRecords.map((record) => (
+              <div key={record.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_minmax(180px,auto)_minmax(160px,auto)] md:items-center">
+                <div className="min-w-0">
+                  <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{record.originalName}</p>
+                  <p className="break-all text-sm text-slate-500 dark:text-slate-400">{record.originalEmail}</p>
+                  {record.anonymizedEmail && (
+                    <p className="mt-1 break-all text-xs text-slate-400 dark:text-slate-500">Stored as {record.anonymizedEmail}</p>
+                  )}
+                </div>
+                <div>
+                  <Badge variant={record.deletionType === 'ADMIN_PERMANENT' ? 'danger' : 'warning'}>
+                    {record.deletionType.split('_').join(' ').toLowerCase()}
+                  </Badge>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    by {record.performedByName || record.performedByEmail || 'system'}
+                  </p>
+                </div>
+                <p className="text-sm text-slate-500 dark:text-slate-400">
+                  {formatDate(record.createdAt, locale, adminCopy.common.never)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card>
         <form action={applyFilters} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:items-end">
           <Input
@@ -437,7 +518,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                       {!isUpdating && <MoreVertical className="h-4 w-4" />}
                     </Button>
                     {menuOpen && (
-                      <div className="absolute right-0 top-11 z-[60] w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl xl:right-12 xl:top-1/2 xl:-translate-y-1/2 dark:border-slate-700 dark:bg-slate-900">
+                      <div className="absolute right-0 top-11 z-[60] w-56 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl xl:right-12 xl:top-1/2 xl:-translate-y-1/2 dark:border-slate-700 dark:bg-slate-900">
                         <button
                           type="button"
                           disabled={disableActions || user.role === 'USER'}
@@ -466,7 +547,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                             <Ban className="h-4 w-4" />
                             {copy.suspend}
                           </button>
-                        ) : user.status === 'SUSPENDED' ? (
+                        ) : user.status === 'SUSPENDED' || user.status === 'DELETED' ? (
                           <button
                             type="button"
                             disabled={disableActions}
@@ -477,6 +558,25 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                             {copy.reactivate}
                           </button>
                         ) : null}
+                        <div className="my-1 border-t border-slate-200 dark:border-slate-700" />
+                        <button
+                          type="button"
+                          disabled={disableActions || user.status === 'DELETED'}
+                          onClick={() => deleteAccount(user, 'soft')}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-600 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Soft delete
+                        </button>
+                        <button
+                          type="button"
+                          disabled={disableActions}
+                          onClick={() => deleteAccount(user, 'permanent')}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-rose-700 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50 dark:text-rose-300 dark:hover:bg-rose-500/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          Delete permanently
+                        </button>
                       </div>
                     )}
                   </div>
@@ -490,6 +590,15 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{user.name}</p>
                           <p className="truncate text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+                          {user.deletionRecord && (
+                            <div className="mt-2 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-xs leading-5 text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+                              <p className="font-semibold">Original: {user.deletionRecord.originalName}</p>
+                              <p className="break-all">{user.deletionRecord.originalEmail}</p>
+                              <p className="text-rose-600/80 dark:text-rose-200/80">
+                                {user.deletionRecord.deletionType.split('_').join(' ').toLowerCase()} by {user.deletionRecord.performedByName || user.deletionRecord.performedByEmail || 'system'}
+                              </p>
+                            </div>
+                          )}
                           <div className="mt-2 flex flex-wrap gap-2">
                             <Badge variant={getAccountBadgeVariant(user.status)} className="capitalize">
                               {formatAccountStatus(user.status, copy)}

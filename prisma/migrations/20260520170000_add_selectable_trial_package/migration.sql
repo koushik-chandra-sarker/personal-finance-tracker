@@ -17,7 +17,8 @@ INSERT INTO "SubscriptionPackage" (
   "featureBullets",
   "isActive",
   "isFeatured",
-  "sortOrder"
+  "sortOrder",
+  "updatedAt"
 ) VALUES (
   'pkg_pro_trial',
   'pro-trial',
@@ -31,7 +32,8 @@ INSERT INTO "SubscriptionPackage" (
   ARRAY['Full dashboard access during trial', 'No bKash or Nagad payment needed', 'Choose a paid package after trial ends']::TEXT[],
   true,
   false,
-  5
+  5,
+  CURRENT_TIMESTAMP
 )
 ON CONFLICT ("slug") DO UPDATE SET
   "name" = EXCLUDED."name",
