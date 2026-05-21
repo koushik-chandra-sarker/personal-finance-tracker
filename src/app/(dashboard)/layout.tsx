@@ -1,6 +1,7 @@
 import Sidebar from '@/components/layout/Sidebar';
 import Topbar from '@/components/layout/Topbar';
 import AdminMessagePresenter from '@/components/messages/AdminMessagePresenter';
+import BrowserNotificationManager from '@/components/messages/BrowserNotificationManager';
 import AppPinGate from '@/components/security/AppPinGate';
 import PendingPaymentAccessBanner from '@/components/subscription/PendingPaymentAccessBanner';
 import TrialAccessBanner from '@/components/subscription/TrialAccessBanner';
@@ -144,6 +145,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
             />
           )}
           <AdminMessagePresenter initialMessages={serializedAdminMessages} />
+          <BrowserNotificationManager />
           <main className="flex-1 p-4 lg:p-6 overflow-y-auto overflow-x-hidden max-w-full relative">
             {children}
           </main>

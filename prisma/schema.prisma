@@ -30,6 +30,7 @@ model User {
   accounts      Account[]
   adminMessageStates AdminMessageState[]
   adminMessageRecipients AdminMessageRecipient[]
+  browserPushSubscriptions BrowserPushSubscription[]
   adminSupportAccessAudits SupportAccessAudit[] @relation("AdminSupportAccessAudits")
   adminSupportAccessSessions SupportAccessSession[] @relation("AdminSupportAccessSessions")
   budgets       Budget[]
@@ -475,6 +476,8 @@ model AdminMessage {
   actionUrl   String?
   startsAt    DateTime?
   endsAt      DateTime?
+  browserPushEnabled Boolean            @default(false)
+  browserPushDaily   Boolean            @default(false)
   isActive    Boolean                   @default(true)
   createdById String?
   createdAt   DateTime                  @default(now())
@@ -506,11 +509,30 @@ model AdminMessageState {
   seenCount   Int          @default(0)
   lastSeenAt  DateTime?
   dismissedAt DateTime?
+  browserPushSentCount Int              @default(0)
+  browserPushLastSentAt DateTime?
   message     AdminMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([messageId, userId])
   @@index([userId, dismissedAt])
+  @@index([userId, browserPushLastSentAt])
+}
+
+model BrowserPushSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  endpoint   String   @unique
+  p256dhKey  String
+  authKey    String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastUsedAt DateTime?
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([updatedAt])
 }
 
 model SupportTicket {

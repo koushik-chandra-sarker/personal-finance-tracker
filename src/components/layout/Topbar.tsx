@@ -260,6 +260,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
         return;
       }
 
+      window.dispatchEvent(new CustomEvent('takapilot:server-event'));
       void fetchNotifications({ announceNew: true });
     };
 

@@ -1,9 +1,16 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
-import { Bell, Edit3, Megaphone, MessageSquarePlus, PauseCircle, PlayCircle, Search, Trash2, Users } from 'lucide-react';
+import { Bell, Edit3, Megaphone, MessageSquarePlus, PauseCircle, PlayCircle, Search, Send, Trash2, Users } from 'lucide-react';
 import type { AdminMessageRow, AdminMessageUserOption } from '@/actions/admin-message.actions';
-import { createAdminMessageAction, deleteAdminMessageAction, updateAdminMessageAction, updateAdminMessageStatusAction } from '@/actions/admin-message.actions';
+import {
+  createAdminMessageAction,
+  deleteAdminMessageAction,
+  getAdminMessagesAction,
+  pushAdminMessageNowAction,
+  updateAdminMessageAction,
+  updateAdminMessageStatusAction,
+} from '@/actions/admin-message.actions';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
@@ -115,8 +122,9 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
     setSelectedUsers((current) => Array.from(new Set([...current, ...filteredUsers.map((user) => user.id)])));
   };
 
-  const refreshMessages = () => {
-    window.location.reload();
+  const refreshMessages = async () => {
+    const nextMessages = await getAdminMessagesAction();
+    setMessages(nextMessages);
   };
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
@@ -132,7 +140,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
       setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
       if (result.success) {
         closeModal();
-        refreshMessages();
+        await refreshMessages();
       }
     });
   };
@@ -157,6 +165,15 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
       if (result.success) {
         setMessages((current) => current.filter((message) => message.id !== id));
       }
+    });
+  };
+
+  const handlePushNow = (id: string) => {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await pushAdminMessageNowAction(id);
+      setFeedback({ type: result.success ? 'success' : 'error', text: result.message });
+      if (result.success) await refreshMessages();
     });
   };
 
@@ -227,6 +244,7 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                         <div className="mb-2 flex flex-wrap items-center gap-2">
                           <Badge variant={badgeForSeverity(message.severity)}>{message.severity}</Badge>
                           <Badge variant={message.isActive ? 'success' : 'default'}>{message.isActive ? copy.active : copy.paused}</Badge>
+                          {message.browserPushEnabled && <Badge variant="info">{message.browserPushDaily ? copy.dailyPush : copy.browserPush}</Badge>}
                         </div>
                         <p className="font-bold text-slate-900 dark:text-slate-200">{message.title}</p>
                         <p className="mt-1 line-clamp-2 text-sm text-slate-500 dark:text-slate-400">{message.message}</p>
@@ -248,6 +266,16 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
                     <td className="px-5 py-4 text-sm font-semibold text-slate-600 dark:text-slate-300">{message.seenCount}</td>
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handlePushNow(message.id)}
+                          disabled={isPending}
+                          className="h-9 w-9 p-0 text-indigo-600 hover:bg-indigo-50 hover:text-indigo-700 dark:text-indigo-300 dark:hover:bg-indigo-500/10"
+                          title={copy.pushNow}
+                        >
+                          <Send className="h-4 w-4" />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -390,6 +418,22 @@ export default function AdminMessagesClient({ initialMessages, users }: Props) {
               <span className="block text-xs leading-5 text-slate-500 dark:text-slate-400">{copy.showUnsubscribedHelp}</span>
             </span>
           </label>
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4 dark:border-indigo-500/20 dark:bg-indigo-500/10">
+            <label className="flex items-start gap-3">
+              <input type="checkbox" name="browserPushEnabled" defaultChecked={editingMessage?.browserPushEnabled ?? false} className="mt-1" />
+              <span>
+                <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{copy.browserPush}</span>
+                <span className="block text-xs leading-5 text-slate-600 dark:text-slate-300">{copy.browserPushHelp}</span>
+              </span>
+            </label>
+            <label className="mt-3 flex items-start gap-3 border-t border-indigo-100 pt-3 dark:border-indigo-500/20">
+              <input type="checkbox" name="browserPushDaily" defaultChecked={editingMessage?.browserPushDaily ?? false} className="mt-1" />
+              <span>
+                <span className="block text-sm font-bold text-slate-800 dark:text-slate-100">{copy.dailyPush}</span>
+                <span className="block text-xs leading-5 text-slate-600 dark:text-slate-300">{copy.dailyPushHelp}</span>
+              </span>
+            </label>
+          </div>
           <div className="flex justify-end gap-3 pt-2">
             <Button type="button" variant="ghost" onClick={closeModal} disabled={isPending}>{copy.close}</Button>
             <Button type="submit" isLoading={isPending}>{editingMessage ? copy.updateMessage : copy.createMessage}</Button>
