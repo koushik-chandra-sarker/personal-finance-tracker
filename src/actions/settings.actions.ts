@@ -3,7 +3,7 @@
 import { prisma } from '@/lib/prisma';
 import { auth } from '@/lib/auth';
 import { revalidatePath } from 'next/cache';
-import type { ActionResponse } from '@/types';
+import type { ActionResponse, UserExperienceMode } from '@/types';
 import type { ManualPaymentProvider, ManualPaymentStatus, SubscriptionInterval } from '@prisma/client';
 import { createNotification } from '@/services/notification.service';
 import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
@@ -304,6 +304,31 @@ export async function updateLocaleAction(locale: string): Promise<ActionResponse
   }
 }
 
+export async function updateExperienceModeAction(experienceMode: string): Promise<ActionResponse<{ experienceMode: UserExperienceMode }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  const normalizedMode = experienceMode === 'BASIC' ? 'BASIC' : experienceMode === 'FULL' ? 'FULL' : null;
+  if (!normalizedMode) return { success: false, message: 'Choose Basic or Full experience mode.' };
+
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { experienceMode: normalizedMode },
+    });
+
+    revalidatePath('/dashboard');
+    revalidatePath('/settings');
+    return {
+      success: true,
+      message: normalizedMode === 'BASIC' ? 'Basic mode enabled.' : 'Full mode enabled.',
+      data: { experienceMode: normalizedMode },
+    };
+  } catch {
+    return { success: false, message: 'Failed to update experience mode.' };
+  }
+}
+
 export async function clearMyDataAction(formData: FormData): Promise<ActionResponse<{ recreateStarterData: boolean }>> {
   const session = await auth();
   if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
@@ -388,6 +413,7 @@ export async function deleteMyAccountAction(formData: FormData): Promise<ActionR
           appPinHash: null,
           appPinSetAt: null,
           appPinResetAt: null,
+          appPinReminderAt: null,
           lockedUntil: null,
           sessionVersion: { increment: 1 },
         },

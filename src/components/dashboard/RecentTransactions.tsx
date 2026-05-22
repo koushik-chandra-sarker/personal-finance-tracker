@@ -22,7 +22,7 @@ interface RecentTransactionsProps {
   locale?: AppLocale;
 }
 
-export default function RecentTransactions({ transactions, currency = 'USD', locale = DEFAULT_LOCALE }: RecentTransactionsProps) {
+export default function RecentTransactions({ transactions, currency = 'BDT', locale = DEFAULT_LOCALE }: RecentTransactionsProps) {
   const copy = getMessages(locale).dashboard;
 
   return (

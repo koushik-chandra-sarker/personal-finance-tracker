@@ -53,7 +53,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
     getBudgetUsageSummary(userId, month, year),
   ]);
 
-  const userCurrency = (session.user as { currency?: string }).currency || 'USD';
+  const userCurrency = (session.user as { currency?: string }).currency || 'BDT';
   return (
     <div className="space-y-6">
       {/* Header with Month/Year Picker */}

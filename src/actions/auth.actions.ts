@@ -81,6 +81,7 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
         name: parsed.data.name,
         email: parsed.data.email.toLowerCase(),
         password: hashedPassword,
+        currency: 'BDT',
         preferredLocale,
         role: userCount === 0 ? 'ADMIN' : invite?.role || 'USER',
         status: 'ACTIVE',

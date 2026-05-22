@@ -1,0 +1,3 @@
+ALTER TABLE "User" ALTER COLUMN "currency" SET DEFAULT 'BDT';
+
+ALTER TABLE "PersonalSubscription" ALTER COLUMN "currency" SET DEFAULT 'BDT';

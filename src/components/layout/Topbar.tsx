@@ -23,6 +23,7 @@ import AppLogo from '@/components/brand/AppLogo';
 import { getSubscriptionLockedHref, hasActiveSubscriptionAccess, type SubscriptionAccessUser } from '@/lib/subscription-access';
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
 import { useI18n } from '@/i18n/client';
+import { isVisibleForExperienceMode } from '@/lib/experience-mode';
 
 type NavItem = {
   href: string;
@@ -119,6 +120,11 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
   const isSubscriptionLocked = Boolean(accessUser) && !hasActiveSubscriptionAccess(accessUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const experienceMode = accessUser?.experienceMode;
+  const visiblePrimaryNavItems = primaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const visibleInvestmentNavItems = investmentNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const showInvestments = visibleInvestmentNavItems.length > 0;
   const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? accessUser : null);
   const navLabel = useCallback((label: string) => messages.navigation[label as keyof typeof messages.navigation] || label, [messages]);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -611,7 +617,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
               </button>
             </div>
             <nav className="space-y-1">
-              {primaryNavItems.map((item) => {
+              {visiblePrimaryNavItems.map((item) => {
                 const isActive = isActiveRoute(pathname, item.href);
                 return (
                   <Link
@@ -632,6 +638,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                 );
               })}
 
+              {showInvestments && (
               <div>
                 <button
                   type="button"
@@ -651,7 +658,7 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
 
                 {mobileInvestmentsOpen && (
                   <div className="mt-1 pl-4 space-y-1">
-                    {investmentNavItems.map((item) => {
+                    {visibleInvestmentNavItems.map((item) => {
                       const isActive = isActiveInvestmentRoute(pathname, item.href);
                       return (
                         <Link
@@ -674,8 +681,9 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
                   </div>
                 )}
               </div>
+              )}
 
-              {secondaryNavItems.map((item) => {
+              {visibleSecondaryNavItems.map((item) => {
                 const isActive = isActiveRoute(pathname, item.href);
                 return (
                   <Link

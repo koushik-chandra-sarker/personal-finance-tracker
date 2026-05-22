@@ -13,7 +13,7 @@ export async function GET() {
         name: 'Demo User',
         email: 'demo@example.com',
         password: hashedPassword,
-        currency: 'USD',
+        currency: 'BDT',
       },
     });
 

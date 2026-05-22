@@ -19,7 +19,7 @@ export default async function NotesPage() {
   }
 
   const result = await getFinancialNotes(userId, { limit: 200 });
-  const userCurrency = (session.user as { currency?: string }).currency || 'USD';
+  const userCurrency = (session.user as { currency?: string }).currency || 'BDT';
 
   return (
     <NotesPageClient

@@ -5,7 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { useEffect, useState, useTransition } from 'react';
 import { KeyRound, LifeBuoy, LockKeyhole, PlayCircle, ShieldCheck, X } from 'lucide-react';
-import { createAppPinAction, verifyAppPinAction } from '@/actions/app-pin.actions';
+import { createAppPinAction, remindAppPinLaterAction, verifyAppPinAction } from '@/actions/app-pin.actions';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
@@ -15,6 +15,7 @@ type PinGateState = {
   isUnlocked: boolean;
   userId: string;
   unlockKey: string | null;
+  reminderAt: string | null;
 };
 
 type Props = {
@@ -45,8 +46,9 @@ export default function AppPinGate({ state, children }: Props) {
   const [isPending, startTransition] = useTransition();
 
   const canBypassPin = isPinBypassPath(pathname);
+  const isReminderDue = !state.reminderAt || new Date(state.reminderAt) <= new Date();
   const shouldLock = hasPin && !isCheckingTabUnlock && !isUnlocked && !canBypassPin;
-  const shouldSuggestPin = !hasPin && !isPromptDismissed && !canBypassPin;
+  const shouldSuggestPin = !hasPin && !isPromptDismissed && isReminderDue && !canBypassPin;
   const storageKey = tabUnlockStorageKey(state.userId, state.unlockKey);
 
   useEffect(() => {
@@ -116,6 +118,19 @@ export default function AppPinGate({ state, children }: Props) {
         form.reset();
         router.refresh();
       }
+    });
+  };
+
+  const handleRemindLater = () => {
+    setFeedback(null);
+    startTransition(async () => {
+      const result = await remindAppPinLaterAction();
+      if (result.success) {
+        setIsPromptDismissed(true);
+        router.refresh();
+        return;
+      }
+      setFeedback({ type: 'error', text: result.message });
     });
   };
 
@@ -240,8 +255,8 @@ export default function AppPinGate({ state, children }: Props) {
                 <Button type="button" size="sm" onClick={() => setIsSetupOpen(true)}>
                   Create PIN
                 </Button>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setIsPromptDismissed(true)}>
-                  Later
+                <Button type="button" size="sm" variant="ghost" onClick={handleRemindLater} isLoading={isPending}>
+                  Remind me in 7 days
                 </Button>
               </div>
             </div>

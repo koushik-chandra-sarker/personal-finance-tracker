@@ -103,7 +103,7 @@ export default function TransactionPageClient({
   const { data: session } = useSession();
   const userCurrency = session?.user && 'currency' in session.user && typeof session.user.currency === 'string'
     ? session.user.currency
-    : 'USD';
+    : 'BDT';
   const { locale: userLocale, messages } = useI18n();
   const copy = messages.pages.transactions;
   const common = messages.pages.common;

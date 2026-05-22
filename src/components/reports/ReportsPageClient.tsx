@@ -31,7 +31,7 @@ interface ReportsPageClientProps {
 export default function ReportsPageClient({ trend, breakdown, transactions, investmentReport, fromMonth, fromYear, toMonth, toYear }: ReportsPageClientProps) {
   const { theme, resolvedTheme } = useTheme();
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = (session?.user as any)?.currency || 'BDT';
   const { locale, messages } = useI18n();
   const copy = messages.pages.reports;
   const months = Array.from({ length: 12 }, (_, index) => ({

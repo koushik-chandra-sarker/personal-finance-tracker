@@ -119,7 +119,7 @@ export default function PersonalSubscriptionsClient({ subscriptions, accounts, c
     .sort((a, b) => new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime());
   const monthlyTotal = activeItems.reduce((sum, item) => sum + monthlyEquivalent(item), 0);
   const annualTotal = monthlyTotal * 12;
-  const primaryCurrency = activeItems[0]?.currency || items[0]?.currency || 'USD';
+  const primaryCurrency = activeItems[0]?.currency || items[0]?.currency || 'BDT';
   const billingCycleOptions = [
     { value: 'WEEKLY', label: copy.cycles.WEEKLY },
     { value: 'MONTHLY', label: copy.cycles.MONTHLY },

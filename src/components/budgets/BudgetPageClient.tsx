@@ -29,7 +29,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
   const router = useRouter();
   
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = (session?.user as any)?.currency || 'BDT';
   const { locale, messages } = useI18n();
   const copy = messages.pages.budgets;
   const common = messages.pages.common;

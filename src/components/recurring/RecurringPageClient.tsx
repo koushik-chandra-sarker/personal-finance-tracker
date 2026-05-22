@@ -33,7 +33,7 @@ export default function RecurringPageClient({ recurring, categories, accounts }:
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = (session?.user as any)?.currency || 'BDT';
   const { locale: userLocale, messages } = useI18n();
   const copy = messages.pages.recurring;
   const common = messages.pages.common;

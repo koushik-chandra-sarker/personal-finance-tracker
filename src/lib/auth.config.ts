@@ -1,10 +1,12 @@
 import type { NextAuthConfig } from 'next-auth';
-import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserRole, UserStatus } from '@/types';
+import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserExperienceMode, UserRole, UserStatus } from '@/types';
 
 type SessionUpdate = {
   id?: string;
   currency?: string;
   preferredLocale?: 'bn-BD' | 'en-US';
+  experienceMode?: UserExperienceMode;
+  onboardingCompletedAt?: string | null;
   role?: UserRole;
   status?: UserStatus;
   lastLoginAt?: string | null;
@@ -27,25 +29,40 @@ export const authConfig = {
     async authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user;
       const isPasswordChangeRoute = nextUrl.pathname.startsWith('/change-password');
+      const isOnboardingRoute = nextUrl.pathname.startsWith('/onboarding');
       const isAuthPage = nextUrl.pathname.startsWith('/login') || 
         nextUrl.pathname.startsWith('/register') || 
         nextUrl.pathname.startsWith('/recovery-backdoor');
-      const isProtectedRoute = nextUrl.pathname.startsWith('/dashboard') || 
+      const isProtectedRoute = isOnboardingRoute ||
+        nextUrl.pathname.startsWith('/dashboard') ||
         nextUrl.pathname.startsWith('/admin') ||
         nextUrl.pathname.startsWith('/transactions') ||
         nextUrl.pathname.startsWith('/accounts') || 
+        nextUrl.pathname.startsWith('/categories') ||
         nextUrl.pathname.startsWith('/budgets') ||
         nextUrl.pathname.startsWith('/goals') || 
+        nextUrl.pathname.startsWith('/investments') ||
+        nextUrl.pathname.startsWith('/salary-planner') ||
+        nextUrl.pathname.startsWith('/tax-calculator') ||
         nextUrl.pathname.startsWith('/service-tracker') ||
         nextUrl.pathname.startsWith('/notes') ||
         nextUrl.pathname.startsWith('/recurring') ||
         nextUrl.pathname.startsWith('/reports') || 
         nextUrl.pathname.startsWith('/settings') ||
+        nextUrl.pathname.startsWith('/support') ||
+        nextUrl.pathname.startsWith('/tutorials') ||
         nextUrl.pathname.startsWith('/subscription');
 
       if (isPasswordChangeRoute) {
         if (!isLoggedIn) return false;
         if (!auth.user.mustChangePassword) return Response.redirect(new URL('/dashboard', nextUrl));
+        return true;
+      }
+
+      if (isOnboardingRoute) {
+        if (!isLoggedIn) return false;
+        if (auth.user.mustChangePassword) return Response.redirect(new URL('/change-password', nextUrl));
+        if (auth.user.onboardingCompletedAt) return Response.redirect(new URL('/dashboard', nextUrl));
         return true;
       }
 
@@ -55,6 +72,11 @@ export const authConfig = {
           const passwordUrl = new URL('/change-password', nextUrl);
           passwordUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
           return Response.redirect(passwordUrl);
+        }
+        if (auth.user.onboardingCompletedAt === null) {
+          const onboardingUrl = new URL('/onboarding', nextUrl);
+          onboardingUrl.searchParams.set('next', `${nextUrl.pathname}${nextUrl.search}`);
+          return Response.redirect(onboardingUrl);
         }
         return true;
       } else if (isAuthPage) {
@@ -70,6 +92,8 @@ export const authConfig = {
         appToken.id = user.id;
         appToken.currency = user.currency;
         appToken.preferredLocale = user.preferredLocale;
+        appToken.experienceMode = user.experienceMode;
+        appToken.onboardingCompletedAt = user.onboardingCompletedAt;
         appToken.role = user.role;
         appToken.status = user.status;
         appToken.lastLoginAt = user.lastLoginAt;
@@ -87,6 +111,8 @@ export const authConfig = {
         const updatedSession = session as SessionUpdate;
         if (updatedSession.currency) appToken.currency = updatedSession.currency;
         if (updatedSession.preferredLocale) appToken.preferredLocale = updatedSession.preferredLocale;
+        if (updatedSession.experienceMode) appToken.experienceMode = updatedSession.experienceMode;
+        if (updatedSession.onboardingCompletedAt !== undefined) appToken.onboardingCompletedAt = updatedSession.onboardingCompletedAt;
         if (updatedSession.status) appToken.status = updatedSession.status;
         if (updatedSession.lastLoginAt !== undefined) appToken.lastLoginAt = updatedSession.lastLoginAt;
         if (updatedSession.mustChangePassword !== undefined) appToken.mustChangePassword = updatedSession.mustChangePassword;
@@ -109,6 +135,8 @@ export const authConfig = {
         session.user.id = appToken.id;
         session.user.currency = appToken.currency;
         session.user.preferredLocale = appToken.preferredLocale;
+        session.user.experienceMode = appToken.experienceMode;
+        session.user.onboardingCompletedAt = appToken.onboardingCompletedAt;
         session.user.role = appToken.role;
         session.user.status = appToken.status;
         session.user.lastLoginAt = appToken.lastLoginAt;

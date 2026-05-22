@@ -1,10 +1,11 @@
-import type { SubscriptionPlan, SubscriptionStatus, UserRole, UserStatus } from '@/types';
+import type { SubscriptionPlan, SubscriptionStatus, UserExperienceMode, UserRole, UserStatus } from '@/types';
 
 export type SubscriptionBlockReason = 'missing' | 'inactive' | 'expired' | 'invalid';
 
 export type SubscriptionAccessUser = {
   role?: UserRole | string | null;
   status?: UserStatus | string | null;
+  experienceMode?: UserExperienceMode | string | null;
   subscriptionPlan?: SubscriptionPlan | string | null;
   subscriptionStatus?: SubscriptionStatus | string | null;
   subscriptionCurrentPeriodEnd?: Date | string | null;

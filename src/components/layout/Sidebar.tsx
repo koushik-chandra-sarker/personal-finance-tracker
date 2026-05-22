@@ -13,6 +13,7 @@ import {
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
 import { useI18n } from '@/i18n/client';
+import { isVisibleForExperienceMode } from '@/lib/experience-mode';
 
 type NavItem = {
   href: string;
@@ -84,6 +85,11 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
   const isSubscriptionLocked = Boolean(currentUser) && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const experienceMode = currentUser?.experienceMode;
+  const visiblePrimaryNavItems = primaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const visibleInvestmentNavItems = investmentNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const visibleSecondaryNavItems = secondaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
+  const showInvestments = visibleInvestmentNavItems.length > 0;
   const navHref = (href: string) => getSubscriptionLockedHref(href, isSubscriptionLocked ? currentUser : null);
   const navLabel = (label: string) => messages.navigation[label as keyof typeof messages.navigation] || label;
   const renderNavLink = (item: NavItem) => {
@@ -118,8 +124,9 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 p-4 space-y-1 overflow-y-auto custom-scrollbar">
-        {primaryNavItems.map(renderNavLink)}
+        {visiblePrimaryNavItems.map(renderNavLink)}
 
+        {showInvestments && (
         <div>
           <button
             type="button"
@@ -144,7 +151,7 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
 
           {investmentsOpen && (
             <div className={cn('mt-1 space-y-1', collapsed ? '' : 'pl-4')}>
-              {investmentNavItems.map((item) => {
+              {visibleInvestmentNavItems.map((item) => {
                 const isActive = isActiveInvestmentRoute(pathname, item.href);
                 return (
                   <Link
@@ -167,8 +174,9 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
             </div>
           )}
         </div>
+        )}
 
-        {secondaryNavItems.map(renderNavLink)}
+        {visibleSecondaryNavItems.map(renderNavLink)}
 
         {isAdmin && (
           <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700/50">

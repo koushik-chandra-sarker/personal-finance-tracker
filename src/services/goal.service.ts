@@ -121,7 +121,7 @@ export async function contributeToGoal(
       const user = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
       await createNotificationOnce(userId, {
         title: `${goal.name} reached`,
-        message: `You reached your ${formatCurrency(Number(goal.targetAmount), user?.currency || 'USD')} goal.`,
+        message: `You reached your ${formatCurrency(Number(goal.targetAmount), user?.currency || 'BDT')} goal.`,
         type: 'GOAL_REACHED',
         severity: 'SUCCESS',
         sourceType: 'GOAL',

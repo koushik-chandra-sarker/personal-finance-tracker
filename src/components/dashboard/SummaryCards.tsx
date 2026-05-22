@@ -19,7 +19,7 @@ interface SummaryCardsProps {
   locale?: AppLocale;
 }
 
-export default function SummaryCards({ summary, totalBalance, upcomingBills, budgetUsage, periodLabel, month, year, currency = 'USD', locale = DEFAULT_LOCALE }: SummaryCardsProps) {
+export default function SummaryCards({ summary, totalBalance, upcomingBills, budgetUsage, periodLabel, month, year, currency = 'BDT', locale = DEFAULT_LOCALE }: SummaryCardsProps) {
   const copy = getMessages(locale).dashboard;
   const now = new Date();
   const resolvedMonth = typeof month === 'number' && Number.isInteger(month) && month >= 1 && month <= 12

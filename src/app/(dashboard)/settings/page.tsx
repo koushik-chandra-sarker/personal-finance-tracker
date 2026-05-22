@@ -8,6 +8,7 @@ export default async function SettingsPage() {
     ? await prisma.user.findUnique({
         where: { id: session.user.id },
         select: {
+          experienceMode: true,
           appPinHash: true,
           appPinSetAt: true,
           subscription: {
@@ -31,6 +32,7 @@ export default async function SettingsPage() {
         hasPin: Boolean(userState?.appPinHash && userState.appPinSetAt),
         pinSetAt: userState?.appPinSetAt?.toISOString() || null,
       }}
+      initialExperienceMode={userState?.experienceMode || 'FULL'}
       initialSubscription={{
         plan: userState?.subscription?.plan || null,
         interval: userState?.subscription?.interval || null,

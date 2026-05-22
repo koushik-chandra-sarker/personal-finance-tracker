@@ -14,10 +14,19 @@ type RuntimePrismaClient = PrismaClient & {
 function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   const runtimeClient = client as RuntimePrismaClient | undefined;
   const tutorialFields = runtimeClient?._runtimeDataModel?.models?.Tutorial?.fields;
+  const userFields = runtimeClient?._runtimeDataModel?.models?.User?.fields;
   const adminMessageFields = runtimeClient?._runtimeDataModel?.models?.AdminMessage?.fields;
   const adminMessageStateFields = runtimeClient?._runtimeDataModel?.models?.AdminMessageState?.fields;
   const adminMessageDisplayModeValues = runtimeClient?._runtimeDataModel?.enums?.AdminMessageDisplayMode?.values;
+  const userExperienceModeValues = runtimeClient?._runtimeDataModel?.enums?.UserExperienceMode?.values;
   const hasTutorialPremiumFlag = tutorialFields?.some((field) => field.name === 'isPremium') ?? false;
+  const hasUserExperienceModeField = userFields?.some((field) => field.name === 'experienceMode') ?? false;
+  const hasUserOnboardingCompletedField = userFields?.some((field) => field.name === 'onboardingCompletedAt') ?? false;
+  const hasUserAppPinReminderField = userFields?.some((field) => field.name === 'appPinReminderAt') ?? false;
+  const hasUserExperienceModeEnum = Boolean(
+    userExperienceModeValues?.some((value) => value.name === 'BASIC') &&
+    userExperienceModeValues?.some((value) => value.name === 'FULL')
+  );
   const hasAdminMessageBrowserPushFlag = adminMessageFields?.some((field) => field.name === 'browserPushEnabled') ?? false;
   const hasAdminMessageBrowserPushState = adminMessageStateFields?.some((field) => field.name === 'browserPushLastSentAt') ?? false;
   const hasPushOnlyAdminMessageDisplayMode = adminMessageDisplayModeValues?.some((value) => value.name === 'PUSH_ONLY') ?? false;
@@ -34,6 +43,10 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
     'userActivity' in client &&
     'accountDeletionRecord' in client &&
     hasTutorialPremiumFlag &&
+    hasUserExperienceModeField &&
+    hasUserOnboardingCompletedField &&
+    hasUserAppPinReminderField &&
+    hasUserExperienceModeEnum &&
     hasAdminMessageBrowserPushFlag &&
     hasAdminMessageBrowserPushState &&
     hasPushOnlyAdminMessageDisplayMode &&

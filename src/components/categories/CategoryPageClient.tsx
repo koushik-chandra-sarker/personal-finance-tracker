@@ -65,7 +65,7 @@ export default function CategoryPageClient({ initialCategories, currentMonth, cu
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
   const { data: session } = useSession();
-  const userCurrency = (session?.user as any)?.currency || 'USD';
+  const userCurrency = (session?.user as any)?.currency || 'BDT';
   const { locale, messages } = useI18n();
   const copy = messages.pages.categories;
   const common = messages.pages.common;

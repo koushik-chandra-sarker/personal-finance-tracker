@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { AlertTriangle, ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, KeyRound, LifeBuoy, ReceiptText, Palette, Shield, Trash2, User } from 'lucide-react';
+import { AlertTriangle, ArrowRight, CalendarClock, Check, CheckCircle2, Clock3, CreditCard, Globe, KeyRound, LayoutDashboard, LifeBuoy, ReceiptText, Palette, Shield, Trash2, User } from 'lucide-react';
 import Swal from 'sweetalert2';
 import Card from '@/components/ui/Card';
 import ThemeToggle from '@/components/layout/ThemeToggle';
@@ -17,6 +17,7 @@ import {
   deleteMyAccountAction,
   getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
+  updateExperienceModeAction,
   type SubscriptionPackageRow,
 } from '@/actions/settings.actions';
 
@@ -32,7 +33,7 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { formatCurrency, formatDate } from '@/lib/utils';
 import LanguageSwitcher from '@/components/i18n/LanguageSwitcher';
-import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus } from '@/types';
+import type { SubscriptionInterval, SubscriptionPlan, SubscriptionSource, SubscriptionStatus, UserExperienceMode } from '@/types';
 
 type AppPinStatus = { hasPin: boolean; pinSetAt: string | null };
 type SettingsSubscriptionSnapshot = {
@@ -47,9 +48,11 @@ type SettingsSubscriptionSnapshot = {
 
 export default function SettingsPageClient({
   initialAppPinStatus,
+  initialExperienceMode,
   initialSubscription,
 }: {
   initialAppPinStatus: AppPinStatus;
+  initialExperienceMode: UserExperienceMode;
   initialSubscription: SettingsSubscriptionSnapshot;
 }) {
   const { data: session, update } = useSession();
@@ -64,6 +67,7 @@ export default function SettingsPageClient({
   const [isDeletePending, startDeleteTransition] = useTransition();
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [isLocaleUpdating, setIsLocaleUpdating] = useState(false);
+  const [isExperienceModeUpdating, setIsExperienceModeUpdating] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [pinMessage, setPinMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [appPinStatus, setAppPinStatus] = useState<AppPinStatus>(initialAppPinStatus);
@@ -72,7 +76,8 @@ export default function SettingsPageClient({
   const [recreateStarterData, setRecreateStarterData] = useState(true);
   const [renderedAt] = useState(() => Date.now());
   
-  const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'USD';
+  const currentCurrency = (session?.user as { currency?: string } | undefined)?.currency || 'BDT';
+  const currentExperienceMode = session?.user?.experienceMode || initialExperienceMode || 'FULL';
   const userLocale = session?.user?.preferredLocale;
   const subscriptionPlan = initialSubscription.plan;
   const subscriptionInterval = initialSubscription.interval;
@@ -115,6 +120,17 @@ export default function SettingsPageClient({
       await update({ currency: newCurrency });
     }
     setIsCurrencyUpdating(false);
+  };
+
+  const handleExperienceModeChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const nextMode = e.target.value as UserExperienceMode;
+    setIsExperienceModeUpdating(true);
+    const result = await updateExperienceModeAction(nextMode);
+    if (result.success && result.data) {
+      await update({ experienceMode: result.data.experienceMode });
+      router.refresh();
+    }
+    setIsExperienceModeUpdating(false);
   };
 
   const isPersonalWorkspace = !activeId || activeId === session?.user?.id;
@@ -366,6 +382,7 @@ export default function SettingsPageClient({
     <div className="w-full space-y-8 pb-10">
       <Loader show={isCurrencyUpdating} message="Updating currency..." />
       <Loader show={isLocaleUpdating} message="ভাষা আপডেট হচ্ছে..." />
+      <Loader show={isExperienceModeUpdating} message="Updating workspace mode..." />
       {/* Header */}
       <div className="flex items-center gap-5">
         <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-500/20">
@@ -488,6 +505,33 @@ export default function SettingsPageClient({
                             disabled={isCurrencyUpdating}
                           />
                         </div>
+                      </div>
+                    </div>
+                  </Card>
+
+                  <Card>
+                    <div className="flex items-center gap-3 mb-8">
+                      <LayoutDashboard className="h-6 w-6 text-sky-500 dark:text-sky-300" />
+                      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-200">Workspace Mode</h2>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700/50">
+                      <div>
+                        <p className="text-base font-semibold text-slate-900 dark:text-slate-200">Experience Mode</p>
+                        <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+                          Basic keeps the app focused on daily tracking. Full unlocks planning tools like goals, investments, salary, tax, recurring items, and notes.
+                        </p>
+                      </div>
+                      <div className="w-full sm:w-56">
+                        <Select
+                          id="experienceMode"
+                          value={currentExperienceMode}
+                          onChange={handleExperienceModeChange}
+                          options={[
+                            { value: 'BASIC', label: 'Basic' },
+                            { value: 'FULL', label: 'Full' },
+                          ]}
+                          disabled={isExperienceModeUpdating}
+                        />
                       </div>
                     </div>
                   </Card>

@@ -390,6 +390,7 @@ export async function resetUserAppPinFromSupportAction(ticketId: string): Promis
           appPinHash: null,
           appPinSetAt: null,
           appPinResetAt: new Date(),
+          appPinReminderAt: null,
         },
       }),
       prisma.supportMessage.create({

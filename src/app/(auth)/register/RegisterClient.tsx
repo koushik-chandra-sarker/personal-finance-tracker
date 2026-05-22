@@ -61,7 +61,8 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
             (!session.user.subscriptionCurrentPeriodEnd || new Date(session.user.subscriptionCurrentPeriodEnd) >= new Date())
           );
 
-        router.replace(hasActiveSubscription ? '/dashboard' : '/subscription?reason=missing&next=/dashboard');
+        const nextPath = hasActiveSubscription ? '/dashboard' : '/subscription?reason=missing&next=/dashboard';
+        router.replace(`/onboarding?next=${encodeURIComponent(nextPath)}`);
         router.refresh();
       } else {
         setError(result.message);

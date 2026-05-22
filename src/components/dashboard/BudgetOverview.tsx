@@ -12,7 +12,7 @@ interface BudgetOverviewProps {
   locale?: AppLocale;
 }
 
-export default function BudgetOverview({ budgets, currency = 'USD', locale = DEFAULT_LOCALE }: BudgetOverviewProps) {
+export default function BudgetOverview({ budgets, currency = 'BDT', locale = DEFAULT_LOCALE }: BudgetOverviewProps) {
   const copy = getMessages(locale).dashboard;
   const rolloverEnabledCount = budgets.filter((budget) => budget.rolloverEnabled).length;
   const totalRollover = budgets.reduce((sum, budget) => sum + budget.rolloverAmount, 0);

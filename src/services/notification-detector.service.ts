@@ -112,7 +112,7 @@ export async function detectUpcomingBills(userId: string, now = new Date()) {
     const daysUntilDue = differenceInCalendarDays(bill.nextRunDate, now);
     const result = await createNotificationOnce(userId, {
       title: `${bill.description} due soon`,
-      message: `${formatCurrency(Number(bill.amount), user?.currency || 'USD')} is scheduled for ${formatDate(bill.nextRunDate, 'MMM d')}.`,
+      message: `${formatCurrency(Number(bill.amount), user?.currency || 'BDT')} is scheduled for ${formatDate(bill.nextRunDate, 'MMM d')}.`,
       type: 'BILL_REMINDER',
       severity: daysUntilDue <= 1 ? 'WARNING' : 'INFO',
       sourceType: 'RECURRING_TRANSACTION',
@@ -149,7 +149,7 @@ export async function detectBudgetThresholds(userId: string, now = new Date()) {
 
       const result = await createNotificationOnce(userId, {
         title: `${budget.categoryName} budget at ${budget.percentage}%`,
-        message: `${formatCurrency(budget.spent, user?.currency || 'USD')} of ${formatCurrency(budget.effectiveAmount, user?.currency || 'USD')} used this month.`,
+        message: `${formatCurrency(budget.spent, user?.currency || 'BDT')} of ${formatCurrency(budget.effectiveAmount, user?.currency || 'BDT')} used this month.`,
         type: 'BUDGET_ALERT',
         severity: threshold.severity,
         sourceType: 'BUDGET',
@@ -186,7 +186,7 @@ export async function detectGoalDeadlines(userId: string, now = new Date()) {
     const daysLeft = Math.max(0, differenceInCalendarDays(goal.deadline, now));
     const result = await createNotificationOnce(userId, {
       title: `${goal.name} deadline approaching`,
-      message: `${daysLeft} days left and ${formatCurrency(remaining, user?.currency || 'USD')} still needed.`,
+      message: `${daysLeft} days left and ${formatCurrency(remaining, user?.currency || 'BDT')} still needed.`,
       type: 'GOAL_DEADLINE',
       severity: daysLeft <= 3 ? 'CRITICAL' : 'WARNING',
       sourceType: 'GOAL',
@@ -249,7 +249,7 @@ export async function detectUnusualExpenses(userId: string, transactionId?: stri
 
     const result = await createNotificationOnce(userId, {
       title: `Unusual ${transaction.category.name} expense`,
-      message: `${formatCurrency(amount, user?.currency || 'USD')} is higher than your recent ${transaction.category.name} average.`,
+      message: `${formatCurrency(amount, user?.currency || 'BDT')} is higher than your recent ${transaction.category.name} average.`,
       type: 'UNUSUAL_EXPENSE',
       severity: 'WARNING',
       sourceType: 'TRANSACTION',
@@ -282,7 +282,7 @@ export async function detectLowBalances(userId: string, now = new Date()) {
   for (const account of accounts) {
     const result = await createNotificationOnce(userId, {
       title: `${account.name} balance is low`,
-      message: `Current balance is ${formatCurrency(Number(account.balance), user?.currency || 'USD')}, below your ${formatCurrency(threshold, user?.currency || 'USD')} threshold.`,
+      message: `Current balance is ${formatCurrency(Number(account.balance), user?.currency || 'BDT')}, below your ${formatCurrency(threshold, user?.currency || 'BDT')} threshold.`,
       type: 'LOW_BALANCE',
       severity: 'CRITICAL',
       sourceType: 'ACCOUNT',

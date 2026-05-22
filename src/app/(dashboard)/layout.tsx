@@ -13,6 +13,7 @@ import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { getVisibleAdminMessagesForUser } from '@/services/admin-message.service';
 import { getActiveSupportViewAction } from '@/actions/support.actions';
+import { isBasicModeBlockedPath } from '@/lib/experience-mode';
 import { getPendingPaymentAccessState } from '@/lib/pending-payment-access';
 import { getSubscriptionBlockReason, hasActiveSubscriptionAccess, isSubscriptionUnlockedPath } from '@/lib/subscription-access';
 
@@ -44,8 +45,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         status: true,
         lockedUntil: true,
         mustChangePassword: true,
+        experienceMode: true,
+        onboardingCompletedAt: true,
         appPinHash: true,
         appPinSetAt: true,
+        appPinReminderAt: true,
         subscription: {
           select: {
             plan: true,
@@ -80,10 +84,22 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   const { pathname: requestPathname, search: requestSearch } = getRequestPath(headerStore);
+
+  if (!user.onboardingCompletedAt) {
+    const params = new URLSearchParams();
+    if (requestPathname) params.set('next', `${requestPathname}${requestSearch}`);
+    redirect(`/onboarding${params.size ? `?${params.toString()}` : ''}`);
+  }
+
+  if (requestPathname && isBasicModeBlockedPath(requestPathname, user.experienceMode)) {
+    redirect('/dashboard');
+  }
+
   const pendingPaymentAccess = getPendingPaymentAccessState(user.manualPaymentRequests[0] || null);
   const subscriptionAccessUser = {
     role: user.role,
     status: user.status,
+    experienceMode: user.experienceMode,
     subscriptionPlan: user.subscription?.plan || null,
     subscriptionInterval: user.subscription?.interval || null,
     subscriptionSource: user.subscription?.source || null,
@@ -125,7 +141,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }));
 
   return (
-    <AppPinGate state={{ hasPin: hasAppPin, isUnlocked: isAppPinUnlocked, userId: session.user.id, unlockKey: appPinSetAt?.toISOString() || null }}>
+    <AppPinGate state={{
+      hasPin: hasAppPin,
+      isUnlocked: isAppPinUnlocked,
+      userId: session.user.id,
+      unlockKey: appPinSetAt?.toISOString() || null,
+      reminderAt: user.appPinReminderAt?.toISOString() || null,
+    }}>
       <div className="flex h-[100dvh] overflow-hidden bg-slate-50/90 dark:bg-slate-950">
         <Sidebar subscriptionAccessUser={subscriptionAccessUser} />
         <div className="flex-1 flex flex-col min-w-0 max-w-full overflow-hidden">

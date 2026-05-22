@@ -28,7 +28,7 @@ const CustomTooltip = ({ active, payload, currency, locale }: {
   );
 };
 
-export default function CategoryPieChart({ data, currency = 'USD', locale = DEFAULT_LOCALE }: CategoryPieChartProps) {
+export default function CategoryPieChart({ data, currency = 'BDT', locale = DEFAULT_LOCALE }: CategoryPieChartProps) {
   const copy = getMessages(locale).dashboard;
 
   if (data.length === 0) {

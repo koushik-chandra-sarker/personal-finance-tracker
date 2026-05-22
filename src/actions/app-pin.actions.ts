@@ -42,6 +42,7 @@ export async function createAppPinAction(formData: FormData): Promise<ActionResp
         appPinHash: pinHash,
         appPinSetAt: now,
         appPinResetAt: null,
+        appPinReminderAt: null,
       },
     });
     await setAppPinUnlockCookie(user.id, now);
@@ -50,6 +51,28 @@ export async function createAppPinAction(formData: FormData): Promise<ActionResp
     return { success: true, message: 'Security PIN created.', data: { hasPin: true, unlockKey: now.toISOString() } };
   } catch (error) {
     return { success: false, message: getErrorMessage(error, 'Failed to create PIN.') };
+  }
+}
+
+export async function remindAppPinLaterAction(): Promise<ActionResponse<{ remindAt: string }>> {
+  try {
+    const user = await getSessionUser();
+    const remindAt = new Date();
+    remindAt.setDate(remindAt.getDate() + 7);
+
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { appPinReminderAt: remindAt },
+    });
+
+    revalidatePath('/', 'layout');
+    return {
+      success: true,
+      message: 'We will remind you again in 7 days.',
+      data: { remindAt: remindAt.toISOString() },
+    };
+  } catch (error) {
+    return { success: false, message: getErrorMessage(error, 'Failed to save reminder.') };
   }
 }
 

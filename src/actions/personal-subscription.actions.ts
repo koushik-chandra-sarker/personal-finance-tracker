@@ -24,7 +24,7 @@ function parseFormData(formData: FormData) {
     accountId: firstString(formData.get('accountId')),
     categoryId: firstString(formData.get('categoryId')),
     amount: firstString(formData.get('amount')),
-    currency: firstString(formData.get('currency')) || 'USD',
+    currency: firstString(formData.get('currency')) || 'BDT',
     billingCycle: firstString(formData.get('billingCycle')) || 'MONTHLY',
     nextBillingDate: firstString(formData.get('nextBillingDate')),
     status: firstString(formData.get('status')) || 'ACTIVE',

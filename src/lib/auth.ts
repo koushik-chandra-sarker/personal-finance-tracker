@@ -42,6 +42,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           currency: user.currency,
           preferredLocale: normalizeLocale(user.preferredLocale),
+          experienceMode: user.experienceMode,
+          onboardingCompletedAt: user.onboardingCompletedAt?.toISOString() || null,
           role: user.role,
           status: user.status,
           lastLoginAt: lastLoginAt.toISOString(),

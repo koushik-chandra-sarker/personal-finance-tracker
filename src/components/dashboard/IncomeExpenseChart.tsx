@@ -32,7 +32,7 @@ const CustomTooltip = ({ active, payload, label, currency, locale }: {
   );
 };
 
-export default function IncomeExpenseChart({ data, currency = 'USD', locale = DEFAULT_LOCALE }: IncomeExpenseChartProps) {
+export default function IncomeExpenseChart({ data, currency = 'BDT', locale = DEFAULT_LOCALE }: IncomeExpenseChartProps) {
   const copy = getMessages(locale).dashboard;
 
   return (
