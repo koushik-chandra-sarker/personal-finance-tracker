@@ -7,6 +7,7 @@ const globalForPrisma = globalThis as unknown as {
 type RuntimePrismaClient = PrismaClient & {
   _runtimeDataModel?: {
     models?: Record<string, { fields?: Array<{ name?: string }> }>;
+    enums?: Record<string, { values?: Array<{ name?: string }> }>;
   };
 };
 
@@ -15,9 +16,11 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
   const tutorialFields = runtimeClient?._runtimeDataModel?.models?.Tutorial?.fields;
   const adminMessageFields = runtimeClient?._runtimeDataModel?.models?.AdminMessage?.fields;
   const adminMessageStateFields = runtimeClient?._runtimeDataModel?.models?.AdminMessageState?.fields;
+  const adminMessageDisplayModeValues = runtimeClient?._runtimeDataModel?.enums?.AdminMessageDisplayMode?.values;
   const hasTutorialPremiumFlag = tutorialFields?.some((field) => field.name === 'isPremium') ?? false;
   const hasAdminMessageBrowserPushFlag = adminMessageFields?.some((field) => field.name === 'browserPushEnabled') ?? false;
   const hasAdminMessageBrowserPushState = adminMessageStateFields?.some((field) => field.name === 'browserPushLastSentAt') ?? false;
+  const hasPushOnlyAdminMessageDisplayMode = adminMessageDisplayModeValues?.some((value) => value.name === 'PUSH_ONLY') ?? false;
   const hasAdminMessageModel = Boolean(runtimeClient?._runtimeDataModel?.models?.AdminMessage);
   const hasManualPaymentModel = Boolean(runtimeClient?._runtimeDataModel?.models?.ManualPaymentRequest);
   const hasSalaryScenarioModel = Boolean(runtimeClient?._runtimeDataModel?.models?.SalaryScenario);
@@ -33,6 +36,7 @@ function hasCurrentPrismaDelegates(client: PrismaClient | undefined) {
     hasTutorialPremiumFlag &&
     hasAdminMessageBrowserPushFlag &&
     hasAdminMessageBrowserPushState &&
+    hasPushOnlyAdminMessageDisplayMode &&
     hasAdminMessageModel &&
     hasManualPaymentModel &&
     hasSalaryScenarioModel &&
