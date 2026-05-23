@@ -12,7 +12,7 @@ export type SubscriptionAccessUser = {
   pendingPaymentAccessUntil?: Date | string | null;
 };
 
-const SUBSCRIPTION_UNLOCKED_PATH_PREFIXES = ['/subscription', '/tutorials'];
+const SUBSCRIPTION_UNLOCKED_PATH_PREFIXES = ['/subscription', '/tutorials', '/guide'];
 
 export function isSubscriptionUnlockedPath(pathname: string) {
   return SUBSCRIPTION_UNLOCKED_PATH_PREFIXES.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));

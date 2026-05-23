@@ -13,6 +13,7 @@ import Input from '@/components/ui/Input';
 import { Mail, Lock, User } from 'lucide-react';
 import AppLogo from '@/components/brand/AppLogo';
 import { useI18n } from '@/i18n/client';
+import PublicNav from '@/components/public/PublicNav';
 
 type RegisterClientProps = {
   inviteToken?: string;
@@ -75,7 +76,9 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
   };
 
   return (
-    <div className="min-h-screen auth-bg flex items-center justify-center p-4">
+    <div className="min-h-screen auth-bg">
+      <PublicNav active="register" dark />
+      <div className="flex min-h-[calc(100vh-5.5rem)] items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="flex items-center justify-center gap-3 mb-8">
           <AppLogo size="lg" tagline={messages.brand.tagline} textClassName="text-white" taglineClassName="text-slate-400" />
@@ -143,6 +146,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
             </Link>
           </p>
         </div>
+      </div>
       </div>
     </div>
   );

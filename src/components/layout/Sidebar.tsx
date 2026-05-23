@@ -8,7 +8,7 @@ import { getSubscriptionLockedHref, hasActiveSubscriptionAccess, type Subscripti
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText, CreditCard,
-  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator,
+  Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator, BookOpen,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -44,6 +44,7 @@ const secondaryNavItems: NavItem[] = [
   { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
   { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
+  { href: '/guide', label: 'User Guide', icon: BookOpen },
   { href: '/support', label: 'Support', icon: LifeBuoy },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];

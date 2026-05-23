@@ -1,7 +1,7 @@
  'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { AlertTriangle, Bell, CheckCircle2, FileText, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
+import { AlertTriangle, Bell, BookOpen, CheckCircle2, FileText, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { type ElementType, useState, useRef, useEffect, useCallback } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -54,6 +54,7 @@ const secondaryNavItems: NavItem[] = [
   { href: '/service-tracker', label: 'Subscription Tracker', icon: CreditCard },
   { href: '/notes', label: 'Notes', icon: FileText },
   { href: '/tutorials', label: 'Tutorials', icon: PlayCircle },
+  { href: '/guide', label: 'User Guide', icon: BookOpen },
   { href: '/support', label: 'Support', icon: LifeBuoy },
   { href: '/settings', label: 'Settings', icon: Settings },
 ];
