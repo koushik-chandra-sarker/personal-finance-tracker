@@ -1,13 +1,47 @@
 import Link from 'next/link';
 import AppLogo from '@/components/brand/AppLogo';
+import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
 import { cn } from '@/lib/utils';
+import PublicLanguageToggle from './PublicLanguageToggle';
 
 type PublicNavProps = {
-  active?: 'guide' | 'login' | 'register';
+  active?: 'home' | 'guide' | 'login' | 'register';
   dark?: boolean;
+  isAuthenticated?: boolean;
+  locale?: AppLocale;
+  labels?: {
+    guide?: string;
+    login?: string;
+    register?: string;
+    dashboard?: string;
+    tagline?: string;
+  };
 };
 
-export default function PublicNav({ active, dark = false }: PublicNavProps) {
+export default function PublicNav({
+  active,
+  dark = false,
+  isAuthenticated = false,
+  locale = DEFAULT_LOCALE,
+  labels,
+}: PublicNavProps) {
+  const defaultLabels = locale === 'bn-BD'
+    ? {
+      guide: 'গাইড',
+      login: 'লগইন',
+      register: 'রেজিস্টার',
+      dashboard: 'ড্যাশবোর্ড',
+      tagline: 'ব্যক্তিগত অর্থ ব্যবস্থাপক',
+    }
+    : {
+      guide: 'User Guide',
+      login: 'Login',
+      register: 'Register',
+      dashboard: 'Dashboard',
+      tagline: 'Personal Finance Manager',
+    };
+  const navLabels = { ...defaultLabels, ...labels };
+
   const linkClass = (key: PublicNavProps['active']) => cn(
     'rounded-xl px-3 py-2 text-sm font-bold transition-colors',
     active === key
@@ -21,21 +55,32 @@ export default function PublicNav({ active, dark = false }: PublicNavProps) {
 
   return (
     <header className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-      <Link href="/login" aria-label="TakaPilot login">
+      <Link href="/" aria-label="TakaPilot home">
         <AppLogo
           size="sm"
-          tagline="Personal Finance Manager"
+          tagline={navLabels.tagline}
           textClassName={dark ? 'text-white' : undefined}
           taglineClassName={cn('hidden sm:block', dark ? 'text-slate-400' : undefined)}
         />
       </Link>
-      <nav className="flex w-full items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5 sm:w-auto">
-        <Link href="/guide" className={linkClass('guide')}>User Guide</Link>
-        <Link href="/login" className={linkClass('login')}>Login</Link>
-        <Link href="/register" className={cn(linkClass('register'), active !== 'register' && !dark && 'text-indigo-600', active !== 'register' && dark && 'text-indigo-200')}>
-          Register
-        </Link>
-      </nav>
+      <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
+        <nav className="flex min-w-0 items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
+          <Link href="/guide" className={linkClass('guide')}>{navLabels.guide}</Link>
+          {isAuthenticated ? (
+            <Link href="/dashboard" className={cn(linkClass(undefined), !dark && 'text-indigo-600', dark && 'text-indigo-200')}>
+              {navLabels.dashboard}
+            </Link>
+          ) : (
+            <>
+              <Link href="/login" className={linkClass('login')}>{navLabels.login}</Link>
+              <Link href="/register" className={cn(linkClass('register'), active !== 'register' && !dark && 'text-indigo-600', active !== 'register' && dark && 'text-indigo-200')}>
+                {navLabels.register}
+              </Link>
+            </>
+          )}
+        </nav>
+        <PublicLanguageToggle locale={locale} dark={dark} />
+      </div>
     </header>
   );
 }

@@ -1,17 +1,15 @@
-import { auth } from '@/lib/auth';
-import { prisma } from '@/lib/prisma';
 import { redirect } from 'next/navigation';
+import { auth } from '@/lib/auth';
+
+function redirectPathForAuthenticatedUser(user: { mustChangePassword?: boolean; onboardingCompletedAt?: string | null }) {
+  if (user.mustChangePassword) return '/change-password';
+  if (user.onboardingCompletedAt === null) return '/onboarding';
+  return '/dashboard';
+}
 
 export default async function Home() {
   const session = await auth();
-  if (session) {
-    const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
-      select: { mustChangePassword: true },
-    });
-    if (user?.mustChangePassword) redirect('/change-password');
-    redirect('/dashboard');
-  } else {
-    redirect('/login');
-  }
+  if (!session?.user) redirect('/login');
+
+  redirect(redirectPathForAuthenticatedUser(session.user));
 }
