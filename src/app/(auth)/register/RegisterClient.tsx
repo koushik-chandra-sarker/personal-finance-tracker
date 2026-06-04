@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
@@ -25,7 +25,6 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
   const { messages, locale } = useI18n();
   const copy = messages.auth;
   const isBangla = locale === 'bn-BD';
-  const [mounted, setMounted] = useState(false);
   const [step, setStep] = useState<RegisterStep>('phone');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [normalizedPhone, setNormalizedPhone] = useState('');
@@ -38,9 +37,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
   const [email, setEmail] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const isDarkTheme = !mounted || resolvedTheme !== 'light';
-
-  useEffect(() => setMounted(true), []);
+  const isDarkTheme = resolvedTheme !== 'light';
 
   const steps = [
     isBangla ? 'ফোন' : 'Phone',
@@ -196,7 +193,7 @@ export default function RegisterClient({ inviteToken }: RegisterClientProps) {
               <form onSubmit={handleOtpVerify} className="space-y-4">
                 <div className="rounded-xl border border-[#A0BEB9] bg-[#D8E5E3]/70 p-3 text-sm text-[#042450] dark:border-emerald-400/20 dark:bg-emerald-500/10 dark:text-emerald-100">
                   {isBangla ? 'ওটিপি পাঠানো হয়েছে' : 'OTP sent to'} {normalizedPhone || phoneNumber}
-                  {devOtp ? <span className="mt-2 block font-black text-slate-950 dark:text-white">{isBangla ? 'ডেমো ওটিপি' : 'Demo OTP'}: {devOtp}</span> : null}
+                  {devOtp ? <span className="mt-2 block font-black text-slate-950 dark:text-white">{isBangla ? 'ওটিপি' : 'OTP'}: {devOtp}</span> : null}
                 </div>
                 <Input id="otpCode" label={isBangla ? '৬ ডিজিট ওটিপি' : '6 digit OTP'} type="text" inputMode="numeric" placeholder="123456" icon={<ShieldCheck className="h-4 w-4" />} value={otpCode} onChange={(event) => setOtpCode(event.target.value)} required />
                 <div className="flex gap-3">

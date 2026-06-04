@@ -51,7 +51,8 @@ function hashOtp(phoneNumber: string, otpCode: string) {
 }
 
 function shouldExposeOtp() {
-  return process.env.NODE_ENV !== 'production' || process.env.PHONE_OTP_EXPOSE_CODE === 'true';
+  // Temporary until the production SMS gateway is connected.
+  return true;
 }
 
 function generatedPhoneEmail(phoneNumber: string) {
