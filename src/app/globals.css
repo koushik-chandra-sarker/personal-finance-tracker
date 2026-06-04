@@ -35,9 +35,14 @@ body {
 
 /* Animated gradient background */
 .auth-bg {
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 25%, #312e81 50%, #1e1b4b 75%, #0f172a 100%);
+  background: linear-gradient(135deg, #061b14 0%, #064e3b 34%, #0f766e 66%, #0f172a 100%);
   background-size: 400% 400%;
   animation: gradient-shift 8s ease infinite;
+}
+
+.light .auth-bg {
+  background: linear-gradient(135deg, #f8fafc 0%, #d8e5e3 34%, #eef7f1 66%, #e0f2fe 100%);
+  background-size: 400% 400%;
 }
 
 @keyframes gradient-shift {
@@ -47,14 +52,15 @@ body {
 
 /* Glass card effect */
 .glass-card {
-  background: rgba(30, 41, 59, 0.5);
+  background: rgba(4, 36, 80, 0.58);
   backdrop-filter: blur(20px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  border: 1px solid rgba(160, 190, 185, 0.22);
 }
 
 .light .glass-card {
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(254, 254, 254, 0.9);
+  border: 1px solid rgba(160, 190, 185, 0.72);
+  box-shadow: 0 24px 70px rgba(4, 36, 80, 0.12);
 }
 
 /* Glow effects */

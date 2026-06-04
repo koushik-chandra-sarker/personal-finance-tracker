@@ -2,9 +2,9 @@
 
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
-import { createHash } from 'crypto';
+import { createHash, createHmac, randomInt } from 'crypto';
 import { auth, signIn } from '@/lib/auth';
-import { registerSchema, changePasswordSchema, backdoorResetSchema, firstLoginPasswordSchema } from '@/lib/validations/auth';
+import { registerSchema, phoneRegistrationStartSchema, phoneOtpVerifySchema, changePasswordSchema, backdoorResetSchema, firstLoginPasswordSchema } from '@/lib/validations/auth';
 import { assertRecoveryBackdoorEnabled } from '@/lib/recovery-backdoor';
 import type { ActionResponse } from '@/types';
 import { getRequestLocale } from '@/i18n/server';
@@ -30,10 +30,134 @@ function hashInviteToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function normalizePhoneNumber(value: string) {
+  const compact = value.trim().replace(/[\s().-]/g, '');
+  if (compact.startsWith('+8801') && compact.length === 14) return compact;
+  if (compact.startsWith('8801') && compact.length === 13) return `+${compact}`;
+  if (compact.startsWith('01') && compact.length === 11) return `+88${compact}`;
+  return compact;
+}
+
+function isValidNormalizedPhone(phoneNumber: string) {
+  return /^\+8801\d{9}$/.test(phoneNumber);
+}
+
+function otpSecret() {
+  return process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'takapilot-local-otp-secret';
+}
+
+function hashOtp(phoneNumber: string, otpCode: string) {
+  return createHmac('sha256', otpSecret()).update(`${phoneNumber}:${otpCode}`).digest('hex');
+}
+
+function shouldExposeOtp() {
+  return process.env.NODE_ENV !== 'production' || process.env.PHONE_OTP_EXPOSE_CODE === 'true';
+}
+
+function generatedPhoneEmail(phoneNumber: string) {
+  const digits = phoneNumber.replace(/\D/g, '');
+  return `phone-${digits}@takapilot.local`;
+}
+
+export async function sendRegistrationOtpAction(formData: FormData): Promise<ActionResponse<{ phoneNumber: string; verificationId: string; expiresAt: string; devOtp?: string }>> {
+  const raw = { phoneNumber: String(formData.get('phoneNumber') || '') };
+  const parsed = phoneRegistrationStartSchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const phoneNumber = normalizePhoneNumber(parsed.data.phoneNumber);
+  if (!isValidNormalizedPhone(phoneNumber)) {
+    return { success: false, message: 'Enter a valid Bangladesh phone number.' };
+  }
+
+  const existing = await prisma.user.findFirst({ where: { phoneNumber } });
+  if (existing) {
+    return { success: false, message: 'This phone number is already registered.' };
+  }
+
+  await prisma.phoneOtpVerification.deleteMany({
+    where: {
+      phoneNumber,
+      purpose: 'REGISTER',
+      consumedAt: null,
+      expiresAt: { lt: new Date() },
+    },
+  });
+
+  const otpCode = String(randomInt(100000, 1000000));
+  const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+  const verification = await prisma.phoneOtpVerification.create({
+    data: {
+      phoneNumber,
+      purpose: 'REGISTER',
+      otpHash: hashOtp(phoneNumber, otpCode),
+      expiresAt,
+    },
+  });
+
+  return {
+    success: true,
+    message: 'OTP generated successfully.',
+    data: {
+      phoneNumber,
+      verificationId: verification.id,
+      expiresAt: expiresAt.toISOString(),
+      ...(shouldExposeOtp() ? { devOtp: otpCode } : {}),
+    },
+  };
+}
+
+export async function verifyRegistrationOtpAction(formData: FormData): Promise<ActionResponse<{ phoneNumber: string; verificationId: string }>> {
+  const raw = {
+    phoneNumber: String(formData.get('phoneNumber') || ''),
+    otpCode: String(formData.get('otpCode') || ''),
+  };
+  const parsed = phoneOtpVerifySchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
+  }
+
+  const phoneNumber = normalizePhoneNumber(parsed.data.phoneNumber);
+  const verification = await prisma.phoneOtpVerification.findFirst({
+    where: {
+      phoneNumber,
+      purpose: 'REGISTER',
+      consumedAt: null,
+      expiresAt: { gt: new Date() },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  if (!verification) {
+    return { success: false, message: 'OTP expired. Please request a new code.' };
+  }
+  if (verification.attempts >= 5) {
+    return { success: false, message: 'Too many OTP attempts. Please request a new code.' };
+  }
+
+  const otpMatches = verification.otpHash === hashOtp(phoneNumber, parsed.data.otpCode);
+  await prisma.phoneOtpVerification.update({
+    where: { id: verification.id },
+    data: {
+      attempts: { increment: 1 },
+      ...(otpMatches ? { verifiedAt: new Date() } : {}),
+    },
+  });
+
+  if (!otpMatches) {
+    return { success: false, message: 'Invalid OTP code.' };
+  }
+
+  return { success: true, message: 'Phone number verified.', data: { phoneNumber, verificationId: verification.id } };
+}
+
 export async function registerUser(formData: FormData): Promise<ActionResponse> {
   const raw = {
-    name: formData.get('name') as string,
-    email: formData.get('email') as string,
+    username: formData.get('username') as string,
+    email: String(formData.get('email') || '').trim() || undefined,
+    phoneNumber: formData.get('phoneNumber') as string,
+    otpVerificationId: formData.get('otpVerificationId') as string,
     password: formData.get('password') as string,
     confirmPassword: formData.get('confirmPassword') as string,
     inviteToken: String(formData.get('inviteToken') || '').trim() || undefined,
@@ -44,9 +168,34 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
     return { success: false, message: 'Validation failed', errors: parsed.error.flatten().fieldErrors };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email: parsed.data.email } });
-  if (existing) {
-    return { success: false, message: 'Email already registered' };
+  const phoneNumber = normalizePhoneNumber(parsed.data.phoneNumber);
+  if (!isValidNormalizedPhone(phoneNumber)) {
+    return { success: false, message: 'Enter a valid Bangladesh phone number.' };
+  }
+
+  const username = parsed.data.username.trim();
+  const requestedEmail = parsed.data.email?.toLowerCase();
+
+  const existingPhone = await prisma.user.findFirst({ where: { phoneNumber } });
+  if (existingPhone) {
+    return { success: false, message: 'This phone number is already registered.' };
+  }
+
+  const existingUsername = await prisma.user.findFirst({ where: { username } });
+  if (existingUsername) {
+    return { success: false, message: 'Username already taken.' };
+  }
+
+  if (requestedEmail) {
+    const existingEmail = await prisma.user.findUnique({ where: { email: requestedEmail } });
+    if (existingEmail) {
+      return { success: false, message: 'Email already registered' };
+    }
+  }
+
+  const verification = await prisma.phoneOtpVerification.findUnique({ where: { id: parsed.data.otpVerificationId } });
+  if (!verification || verification.phoneNumber !== phoneNumber || verification.purpose !== 'REGISTER' || !verification.verifiedAt || verification.consumedAt || verification.expiresAt < new Date()) {
+    return { success: false, message: 'Phone verification is missing or expired. Please verify again.' };
   }
 
   const hashedPassword = await bcrypt.hash(parsed.data.password, 12);
@@ -70,23 +219,36 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
     if (invite.expiresAt < new Date()) {
       return { success: false, message: 'This invite has expired.' };
     }
-    if (invite.email.toLowerCase() !== parsed.data.email.toLowerCase()) {
+    if (requestedEmail && invite.email.toLowerCase() !== requestedEmail) {
       return { success: false, message: 'This invite was issued for a different email address.' };
     }
+  }
+
+  const email = invite?.email.toLowerCase() || requestedEmail || generatedPhoneEmail(phoneNumber);
+  const existingFinalEmail = await prisma.user.findUnique({ where: { email } });
+  if (existingFinalEmail) {
+    return { success: false, message: 'Email already registered' };
   }
 
   await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: {
-        name: parsed.data.name,
-        email: parsed.data.email.toLowerCase(),
+        name: username,
+        username,
+        email,
+        phoneNumber,
         password: hashedPassword,
         currency: 'BDT',
         preferredLocale,
         role: userCount === 0 ? 'ADMIN' : invite?.role || 'USER',
         status: 'ACTIVE',
-        emailVerifiedAt: invite ? new Date() : null,
+        emailVerifiedAt: invite || requestedEmail ? new Date() : null,
       },
+    });
+
+    await tx.phoneOtpVerification.update({
+      where: { id: verification.id },
+      data: { consumedAt: new Date() },
     });
 
     await tx.category.createMany({
@@ -152,13 +314,13 @@ export async function registerUser(formData: FormData): Promise<ActionResponse> 
 export async function loginUser(formData: FormData): Promise<ActionResponse> {
   try {
     await signIn('credentials', {
-      email: formData.get('email') as string,
+      identifier: formData.get('identifier') as string,
       password: formData.get('password') as string,
       redirect: false,
     });
     return { success: true, message: 'Login successful' };
   } catch {
-    return { success: false, message: 'Invalid email or password' };
+    return { success: false, message: 'Invalid phone/email or password' };
   }
 }
 export async function changePasswordAction(formData: FormData): Promise<ActionResponse> {

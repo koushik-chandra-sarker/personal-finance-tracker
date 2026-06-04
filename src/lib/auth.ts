@@ -7,9 +7,17 @@ import { authConfig } from './auth.config';
 import { normalizeLocale } from '@/i18n/config';
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().trim().min(3),
   password: z.string().min(6),
 });
+
+function normalizePhoneNumber(value: string) {
+  const compact = value.trim().replace(/[\s().-]/g, '');
+  if (compact.startsWith('+8801') && compact.length === 14) return compact;
+  if (compact.startsWith('8801') && compact.length === 13) return `+${compact}`;
+  if (compact.startsWith('01') && compact.length === 11) return `+88${compact}`;
+  return compact;
+}
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   ...authConfig,
@@ -19,8 +27,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const parsed = loginSchema.safeParse(credentials);
         if (!parsed.success) return null;
 
-        const user = await prisma.user.findUnique({
-          where: { email: parsed.data.email },
+        const identifier = parsed.data.identifier.trim();
+        const isEmail = identifier.includes('@');
+        const user = await prisma.user.findFirst({
+          where: isEmail
+            ? { email: identifier.toLowerCase() }
+            : { phoneNumber: normalizePhoneNumber(identifier) },
           include: { subscription: true },
         });
         if (!user) return null;

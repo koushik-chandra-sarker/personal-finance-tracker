@@ -1,4 +1,4 @@
-import { Navigation } from 'lucide-react';
+import Image from 'next/image';
 import { cn } from '@/lib/utils';
 
 export const APP_NAME = 'TakaPilot';
@@ -14,28 +14,16 @@ type AppLogoProps = {
 
 const sizeClasses = {
   sm: {
-    mark: 'h-8 w-8 rounded-lg',
-    text: 'text-base',
-    tagline: 'text-[10px]',
-    letters: 'text-[11px]',
-    navigator: 'h-4 w-4 -right-1 -top-1 rounded-md',
-    navigatorIcon: 'h-2.5 w-2.5',
+    lockup: 'h-9 w-[8.5rem]',
+    mark: 'h-9 w-9',
   },
   md: {
-    mark: 'h-10 w-10 rounded-xl',
-    text: 'text-lg',
-    tagline: 'text-[10px]',
-    letters: 'text-sm',
-    navigator: 'h-5 w-5 -right-1.5 -top-1.5 rounded-lg',
-    navigatorIcon: 'h-3 w-3',
+    lockup: 'h-11 w-[10.25rem]',
+    mark: 'h-10 w-10',
   },
   lg: {
-    mark: 'h-12 w-12 rounded-2xl',
-    text: 'text-2xl',
-    tagline: 'text-xs',
-    letters: 'text-base',
-    navigator: 'h-6 w-6 -right-1.5 -top-1.5 rounded-lg',
-    navigatorIcon: 'h-3.5 w-3.5',
+    lockup: 'h-16 w-[12.75rem]',
+    mark: 'h-14 w-14',
   },
 };
 
@@ -43,35 +31,21 @@ export default function AppLogo({
   showText = true,
   size = 'md',
   tagline = APP_TAGLINE,
-  textClassName,
-  taglineClassName,
 }: AppLogoProps) {
   const classes = sizeClasses[size];
+  const imageSrc = showText ? '/logo_horizontal.png' : '/logo_sq.png';
+  const imageAlt = showText ? `${APP_NAME} - ${tagline}` : APP_NAME;
 
   return (
-    <div className="flex items-center gap-3">
-      <div
-        className={cn(
-          'relative flex shrink-0 items-center justify-center overflow-visible bg-gradient-to-br from-emerald-500 via-sky-500 to-indigo-600 text-white shadow-lg shadow-sky-500/25',
-          classes.mark
-        )}
-        aria-hidden="true"
-      >
-        <span className={cn('font-black uppercase leading-none', classes.letters)}>tk</span>
-        <span className={cn('absolute flex items-center justify-center bg-white text-indigo-600 shadow-md', classes.navigator)}>
-          <Navigation className={classes.navigatorIcon} strokeWidth={3} />
-        </span>
-      </div>
-      {showText && (
-        <div className="min-w-0">
-          <h1 className={cn('font-bold leading-tight text-slate-900 dark:text-slate-200', classes.text, textClassName)}>
-            {APP_NAME}
-          </h1>
-          <p className={cn('leading-tight text-slate-500 dark:text-slate-400', classes.tagline, taglineClassName)}>
-            {tagline}
-          </p>
-        </div>
-      )}
+    <div className={cn('relative shrink-0 overflow-hidden', showText ? classes.lockup : classes.mark)}>
+      <Image
+        src={imageSrc}
+        alt={imageAlt}
+        fill
+        sizes={showText ? '(max-width: 640px) 136px, 204px' : '56px'}
+        className="object-contain"
+        priority={size === 'lg'}
+      />
     </div>
   );
 }

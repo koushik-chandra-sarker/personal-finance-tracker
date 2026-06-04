@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import AppLogo from '@/components/brand/AppLogo';
+import ThemeToggle from '@/components/layout/ThemeToggle';
 import { DEFAULT_LOCALE, type AppLocale } from '@/i18n/config';
 import { cn } from '@/lib/utils';
 import PublicLanguageToggle from './PublicLanguageToggle';
@@ -79,6 +80,7 @@ export default function PublicNav({
             </>
           )}
         </nav>
+        <ThemeToggle variant="public" dark={dark} />
         <PublicLanguageToggle locale={locale} dark={dark} />
       </div>
     </header>
