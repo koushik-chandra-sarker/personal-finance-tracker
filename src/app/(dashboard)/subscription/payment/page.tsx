@@ -8,6 +8,7 @@ import { hasActiveSubscriptionAccess } from '@/lib/subscription-access';
 import { getCurrentUserAccess } from '@/lib/rbac';
 import { redirect } from 'next/navigation';
 import PaymentPageClient from '@/components/subscription/PaymentPageClient';
+import { getPublicContactSettings } from '@/services/app-config.service';
 
 type PaymentSearchParams = {
   packageId?: string | string[];
@@ -31,10 +32,11 @@ export default async function SubscriptionPaymentPage({
   const hasPendingPaymentAccess = Boolean(access.pendingPaymentAccessActive);
 
   const params = await searchParams;
-  const [packages, paymentMethods, paymentRequests] = await Promise.all([
+  const [packages, paymentMethods, paymentRequests, contactSettings] = await Promise.all([
     getActiveSubscriptionPackagesAction(),
     getActiveManualPaymentMethodsAction(),
     getMyManualPaymentRequestsAction(),
+    getPublicContactSettings(),
   ]);
 
   return (
@@ -52,6 +54,7 @@ export default async function SubscriptionPaymentPage({
       } : null}
       pendingPaymentAccessUntil={access.pendingPaymentAccessUntil?.toISOString() || null}
       pendingPaymentAccessHours={access.pendingPaymentAccessHours}
+      supportWhatsappNumber={contactSettings.whatsappNumber}
     />
   );
 }

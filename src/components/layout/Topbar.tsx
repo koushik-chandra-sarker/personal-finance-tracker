@@ -1,7 +1,7 @@
  'use client';
 
 import { useSession, signOut } from 'next-auth/react';
-import { AlertTriangle, Bell, BookOpen, CheckCircle2, FileText, Info, LogOut, Menu, Search, Tags, User } from 'lucide-react';
+import { AlertTriangle, Bell, BookOpen, CheckCircle2, FileText, Info, LogOut, Mail, Menu, Search, Tags, User } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import { type ElementType, useState, useRef, useEffect, useCallback } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
@@ -65,6 +65,7 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/payments', label: 'Payments', icon: ReceiptText },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
+  { href: '/admin/contact-settings', label: 'Contact Settings', icon: Mail },
   { href: '/admin/support', label: 'Support', icon: LifeBuoy },
   { href: '/admin/investments', label: 'Investment Config', icon: TrendingUp },
   { href: '/admin/tutorials', label: 'Academy Management', icon: PlayCircle },

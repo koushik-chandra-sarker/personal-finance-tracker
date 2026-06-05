@@ -558,6 +558,13 @@ model BrowserPushSubscription {
   @@index([updatedAt])
 }
 
+model AppConfig {
+  key       String   @id
+  value     String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model SupportTicket {
   id          String                @id @default(cuid())
   userId      String

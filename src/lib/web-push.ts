@@ -1,5 +1,6 @@
 import webpush from 'web-push';
 import { prisma } from '@/lib/prisma';
+import { getPublicContactSettings } from '@/services/app-config.service';
 
 type PushPayload = {
   title: string;
@@ -11,10 +12,9 @@ type PushPayload = {
 function getVapidConfig() {
   const publicKey = process.env.NEXT_PUBLIC_WEB_PUSH_VAPID_PUBLIC_KEY;
   const privateKey = process.env.WEB_PUSH_VAPID_PRIVATE_KEY;
-  const contactEmail = process.env.WEB_PUSH_CONTACT_EMAIL || process.env.NEXT_PUBLIC_SUPPORT_EMAIL || 'admin@takapilot.local';
 
   if (!publicKey || !privateKey) return null;
-  return { publicKey, privateKey, contactEmail };
+  return { publicKey, privateKey };
 }
 
 export function getWebPushPublicKey() {
@@ -25,16 +25,17 @@ export function isWebPushConfigured() {
   return Boolean(getVapidConfig());
 }
 
-function configureWebPush() {
+async function configureWebPush() {
   const config = getVapidConfig();
   if (!config) return false;
+  const contactEmail = (await getPublicContactSettings()).contactEmail;
 
-  webpush.setVapidDetails(`mailto:${config.contactEmail}`, config.publicKey, config.privateKey);
+  webpush.setVapidDetails(`mailto:${contactEmail}`, config.publicKey, config.privateKey);
   return true;
 }
 
 export async function sendWebPushToUsers(userIds: string[], payload: PushPayload) {
-  if (userIds.length === 0 || !configureWebPush()) {
+  if (userIds.length === 0 || !(await configureWebPush())) {
     return { attemptedCount: 0, deliveredUserIds: [] as string[], expiredCount: 0 };
   }
 

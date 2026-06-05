@@ -55,6 +55,7 @@ type PaymentPageClientProps = {
   } | null;
   pendingPaymentAccessUntil?: string | null;
   pendingPaymentAccessHours?: number;
+  supportWhatsappNumber?: string;
 };
 
 type PaymentProvider = 'BKASH' | 'NAGAD';
@@ -94,6 +95,7 @@ export default function PaymentPageClient({
   activeSubscription = null,
   pendingPaymentAccessUntil = null,
   pendingPaymentAccessHours = 24,
+  supportWhatsappNumber = '',
 }: PaymentPageClientProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -150,7 +152,7 @@ export default function PaymentPageClient({
     const emailPart = session?.user?.email?.split('@')[0]?.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'USER';
     return selectedPackage ? `TP-${emailPart}-${selectedPackage.slug}`.toUpperCase() : '';
   }, [selectedPackage, session?.user?.email]);
-  const whatsAppDisplayNumber = process.env.NEXT_PUBLIC_PAYMENT_WHATSAPP_NUMBER || selectedMethod?.accountNumber || '';
+  const whatsAppDisplayNumber = supportWhatsappNumber || selectedMethod?.accountNumber || '';
   const whatsAppNumber = normalizeWhatsAppNumber(whatsAppDisplayNumber);
   const whatsAppText = encodeURIComponent(
     `Hello, I submitted a takapilot payment request. Reference: ${pendingRequest?.reference || userReference}. TrxID: ${pendingRequest?.transactionId || ''}`

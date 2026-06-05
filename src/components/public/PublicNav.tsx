@@ -6,12 +6,13 @@ import { cn } from '@/lib/utils';
 import PublicLanguageToggle from './PublicLanguageToggle';
 
 type PublicNavProps = {
-  active?: 'home' | 'guide' | 'login' | 'register';
+  active?: 'home' | 'guide' | 'contact' | 'login' | 'register';
   dark?: boolean;
   isAuthenticated?: boolean;
   locale?: AppLocale;
   labels?: {
     guide?: string;
+    contact?: string;
     login?: string;
     register?: string;
     dashboard?: string;
@@ -29,6 +30,7 @@ export default function PublicNav({
   const defaultLabels = locale === 'bn-BD'
     ? {
       guide: 'গাইড',
+      contact: 'যোগাযোগ',
       login: 'লগইন',
       register: 'রেজিস্টার',
       dashboard: 'ড্যাশবোর্ড',
@@ -36,6 +38,7 @@ export default function PublicNav({
     }
     : {
       guide: 'User Guide',
+      contact: 'Contact',
       login: 'Login',
       register: 'Register',
       dashboard: 'Dashboard',
@@ -48,10 +51,10 @@ export default function PublicNav({
     active === key
       ? dark
         ? 'bg-white/10 text-white'
-        : 'bg-slate-100 text-slate-950'
+        : 'bg-slate-100 text-slate-950 dark:bg-white/10 dark:text-white'
       : dark
         ? 'text-slate-300 hover:bg-white/10 hover:text-white'
-        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950'
+        : 'text-slate-500 hover:bg-slate-100 hover:text-slate-950 dark:text-slate-300 dark:hover:bg-white/10 dark:hover:text-white'
   );
 
   return (
@@ -67,6 +70,7 @@ export default function PublicNav({
       <div className="flex w-full flex-wrap items-center justify-center gap-2 sm:w-auto sm:justify-end">
         <nav className="flex min-w-0 items-center justify-center gap-1 rounded-2xl border border-slate-200 bg-white/80 p-1 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/5">
           <Link href="/guide" className={linkClass('guide')}>{navLabels.guide}</Link>
+          <Link href="/contact" className={linkClass('contact')}>{navLabels.contact}</Link>
           {isAuthenticated ? (
             <Link href="/dashboard" className={cn(linkClass(undefined), !dark && 'text-indigo-600', dark && 'text-indigo-200')}>
               {navLabels.dashboard}
