@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useTransition } from 'react';
 import type { ReactNode } from 'react';
-import { Ban, CheckCircle2, ChevronLeft, ChevronRight, KeyRound, MoreVertical, Search, Shield, Trash2, Users } from 'lucide-react';
+import { Ban, CheckCircle2, ChevronLeft, ChevronRight, Clock3, KeyRound, Mail, MoreVertical, Search, Shield, Trash2, UserPlus, Users } from 'lucide-react';
 import Swal from 'sweetalert2';
 import Badge from '@/components/ui/Badge';
 import Button from '@/components/ui/Button';
@@ -26,47 +26,13 @@ import type { UserRole, UserStatus } from '@prisma/client';
 import { useI18n } from '@/i18n/client';
 
 interface UserManagementClientProps {
+  view?: AdminUsersView;
   usersPage: AdminUsersPageResult;
   packages: AdminSubscriptionPackageRow[];
   invites: AdminUserInviteRow[];
 }
 
-const roleOptions = [
-  { value: 'all', label: 'All roles' },
-  { value: 'ADMIN', label: 'Admin' },
-  { value: 'USER', label: 'User' },
-];
-
-const accountStatusOptions = [
-  { value: 'all', label: 'All accounts' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'SUSPENDED', label: 'Suspended' },
-  { value: 'INVITED', label: 'Invited' },
-  { value: 'DELETED', label: 'Deleted' },
-];
-
-const accessOptions = [
-  { value: 'all', label: 'All access' },
-  { value: 'admin', label: 'Admins' },
-  { value: 'subscribed', label: 'Subscribed' },
-  { value: 'no_access', label: 'No access' },
-];
-
-const statusOptions = [
-  { value: 'all', label: 'All subscriptions' },
-  { value: 'ACTIVE', label: 'Active' },
-  { value: 'TRIALING', label: 'Trialing' },
-  { value: 'PAST_DUE', label: 'Past due' },
-  { value: 'CANCELED', label: 'Canceled' },
-  { value: 'MISSING', label: 'Missing' },
-];
-
-const sortOptions = [
-  { value: 'createdAt_desc', label: 'Newest first' },
-  { value: 'createdAt_asc', label: 'Oldest first' },
-  { value: 'name_asc', label: 'Name A-Z' },
-  { value: 'email_asc', label: 'Email A-Z' },
-];
+type AdminUsersView = 'accounts' | 'invites' | 'deleted';
 
 function formatDate(value: string | null, locale: string, unlimitedLabel: string) {
   if (!value) return unlimitedLabel;
@@ -127,7 +93,7 @@ function buildUsersHref(filters: AdminUsersPageResult['filters'], page: number) 
   if (page > 1) params.set('page', String(page));
 
   const query = params.toString();
-  return query ? `/admin/users?${query}` : '/admin/users';
+  return query ? `/admin/users/accounts?${query}` : '/admin/users/accounts';
 }
 
 function hasActiveFilters(filters: AdminUsersPageResult['filters']) {
@@ -179,7 +145,7 @@ function SummaryCard({
   );
 }
 
-export default function UserManagementClient({ usersPage, packages, invites }: UserManagementClientProps) {
+export default function UserManagementClient({ view = 'accounts', usersPage, packages, invites }: UserManagementClientProps) {
   const { locale, messages } = useI18n();
   const adminCopy = messages.pages.admin;
   const copy = adminCopy.users;
@@ -227,6 +193,14 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
     { value: 'all', label: copy.allPackages },
     ...packages.map((pkg) => ({ value: pkg.id, label: pkg.name })),
   ];
+  const viewLabel = view === 'invites' ? adminCopy.invites.title : view === 'deleted' ? copy.deleted : copy.users;
+  const viewSubtitle = view === 'invites' ? adminCopy.invites.help : view === 'deleted' ? copy.deletedRecordsHelp : copy.subtitle;
+  const pendingInvites = invites.filter((invite) => invite.status === 'PENDING').length;
+  const acceptedInvites = invites.filter((invite) => invite.status === 'ACCEPTED').length;
+  const expiredInvites = invites.filter((invite) => invite.status === 'EXPIRED').length;
+  const softDeletedRecords = usersPage.deletionRecords.filter((record) => record.deletionType === 'ADMIN_SOFT').length;
+  const permanentDeletedRecords = usersPage.deletionRecords.filter((record) => record.deletionType === 'ADMIN_PERMANENT').length;
+  const selfDeletedRecords = usersPage.deletionRecords.filter((record) => record.deletionType === 'USER_SELF').length;
 
   useEffect(() => {
     if (!actionMenuUserId) return;
@@ -349,7 +323,7 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
     if (sort !== 'createdAt_desc') params.set('sort', sort);
 
     const query = params.toString();
-    navigateTo(query ? `/admin/users?${query}` : '/admin/users', copy.applyingFilters);
+    navigateTo(query ? `/admin/users/accounts?${query}` : '/admin/users/accounts', copy.applyingFilters);
   };
 
   const start = usersPage.total === 0 ? 0 : (usersPage.page - 1) * usersPage.limit + 1;
@@ -364,46 +338,66 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h1 className="text-xl font-bold text-slate-900 dark:text-slate-200 sm:text-2xl">{copy.title}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
+          <p className="text-xs font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{copy.title}</p>
+          <h1 className="mt-2 text-xl font-bold text-slate-900 dark:text-slate-200 sm:text-2xl">{viewLabel}</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">{viewSubtitle}</p>
         </div>
         <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <UserInviteList invites={invites} />
-          <AdminCreateUserPanel packages={packages} />
-          <UserInvitePanel packages={packages} />
+          {view === 'accounts' && <AdminCreateUserPanel packages={packages} />}
+          {(view === 'accounts' || view === 'invites') && <UserInvitePanel packages={packages} />}
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryCard
-          icon={<Users className="h-5 w-5" />}
-          label={copy.totalUsers}
-          value={usersPage.stats.totalUsers}
-          detail={`${usersPage.stats.active} ${copy.activeAccounts}`}
-          tone="indigo"
-        />
-        <SummaryCard
-          icon={<Shield className="h-5 w-5" />}
-          label={copy.admins}
-          value={usersPage.stats.admins}
-          detail={copy.roleManagers}
-          tone="emerald"
-        />
-        <SummaryCard
-          icon={<KeyRound className="h-5 w-5" />}
-          label={copy.withAccess}
-          value={usersPage.stats.withAccess}
-          detail={`${accessRate}% ${copy.ofAllUsers}`}
-          tone="sky"
-        />
-        <SummaryCard
-          icon={<Ban className="h-5 w-5" />}
-          label={copy.needsAttention}
-          value={usersPage.stats.suspended + usersPage.stats.noAccess}
-          detail={`${usersPage.stats.suspended} ${copy.suspended}, ${usersPage.stats.noAccess} ${copy.noAccessLower}`}
-          tone={usersPage.stats.suspended > 0 ? 'amber' : 'rose'}
-        />
-      </div>
+      {view === 'accounts' && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard
+            icon={<Users className="h-5 w-5" />}
+            label={copy.totalUsers}
+            value={usersPage.stats.totalUsers}
+            detail={`${usersPage.stats.active} ${copy.activeAccounts}`}
+            tone="indigo"
+          />
+          <SummaryCard
+            icon={<Shield className="h-5 w-5" />}
+            label={copy.admins}
+            value={usersPage.stats.admins}
+            detail={copy.roleManagers}
+            tone="emerald"
+          />
+          <SummaryCard
+            icon={<KeyRound className="h-5 w-5" />}
+            label={copy.withAccess}
+            value={usersPage.stats.withAccess}
+            detail={`${accessRate}% ${copy.ofAllUsers}`}
+            tone="sky"
+          />
+          <SummaryCard
+            icon={<Ban className="h-5 w-5" />}
+            label={copy.needsAttention}
+            value={usersPage.stats.suspended + usersPage.stats.noAccess}
+            detail={`${usersPage.stats.suspended} ${copy.suspended}, ${usersPage.stats.noAccess} ${copy.noAccessLower}`}
+            tone={usersPage.stats.suspended > 0 ? 'amber' : 'rose'}
+          />
+        </div>
+      )}
+
+      {view === 'invites' && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard icon={<UserPlus className="h-5 w-5" />} label={adminCopy.invites.total} value={invites.length} detail={adminCopy.invites.title} tone="indigo" />
+          <SummaryCard icon={<Clock3 className="h-5 w-5" />} label={adminCopy.invites.pending} value={pendingInvites} detail={adminCopy.invites.expires} tone="amber" />
+          <SummaryCard icon={<CheckCircle2 className="h-5 w-5" />} label={adminCopy.invites.accepted} value={acceptedInvites} detail={adminCopy.invites.accepted} tone="emerald" />
+          <SummaryCard icon={<Mail className="h-5 w-5" />} label={adminCopy.invites.expired} value={expiredInvites} detail={adminCopy.invites.expired} tone="rose" />
+        </div>
+      )}
+
+      {view === 'deleted' && (
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <SummaryCard icon={<Trash2 className="h-5 w-5" />} label={copy.deletedRecords} value={usersPage.deletionRecords.length} detail={copy.recentRecords} tone="rose" />
+          <SummaryCard icon={<Ban className="h-5 w-5" />} label={copy.softDeleted} value={softDeletedRecords} detail={copy.deletedRecords} tone="amber" />
+          <SummaryCard icon={<Trash2 className="h-5 w-5" />} label={copy.permanentDeleted} value={permanentDeletedRecords} detail={copy.deletedRecords} tone="rose" />
+          <SummaryCard icon={<Users className="h-5 w-5" />} label={copy.selfDeleted} value={selfDeletedRecords} detail={copy.deletedRecords} tone="sky" />
+        </div>
+      )}
 
       {message && (
         <div className={`rounded-xl p-3 text-sm ${message.type === 'success' ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400'}`}>
@@ -411,39 +405,57 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
         </div>
       )}
 
-      {usersPage.deletionRecords.length > 0 && (
+      {view === 'invites' && (
         <Card className="p-0">
           <div className="border-b border-slate-200 p-4 dark:border-slate-700/50">
-            <h2 className="font-semibold text-slate-900 dark:text-slate-200">Recent deletion records</h2>
-            <p className="text-sm text-slate-500 dark:text-slate-400">Original identity is preserved here even when the login email is anonymized or the user row is permanently deleted.</p>
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{adminCopy.invites.title}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{adminCopy.invites.help}</p>
           </div>
-          <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
-            {usersPage.deletionRecords.map((record) => (
-              <div key={record.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_minmax(180px,auto)_minmax(160px,auto)] md:items-center">
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{record.originalName}</p>
-                  <p className="break-all text-sm text-slate-500 dark:text-slate-400">{record.originalEmail}</p>
-                  {record.anonymizedEmail && (
-                    <p className="mt-1 break-all text-xs text-slate-400 dark:text-slate-500">Stored as {record.anonymizedEmail}</p>
-                  )}
-                </div>
-                <div>
-                  <Badge variant={record.deletionType === 'ADMIN_PERMANENT' ? 'danger' : 'warning'}>
-                    {record.deletionType.split('_').join(' ').toLowerCase()}
-                  </Badge>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    by {record.performedByName || record.performedByEmail || 'system'}
-                  </p>
-                </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  {formatDate(record.createdAt, locale, adminCopy.common.never)}
-                </p>
-              </div>
-            ))}
+          <div className="p-4">
+            <UserInviteList invites={invites} variant="section" />
           </div>
         </Card>
       )}
 
+      {view === 'deleted' && (
+        <Card className="p-0">
+          <div className="border-b border-slate-200 p-4 dark:border-slate-700/50">
+            <h2 className="font-semibold text-slate-900 dark:text-slate-200">{copy.deletedRecords}</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">{copy.deletedRecordsHelp}</p>
+          </div>
+          {usersPage.deletionRecords.length === 0 ? (
+            <div className="p-8 text-center text-sm text-slate-500 dark:text-slate-400">{copy.noDeletedRecords}</div>
+          ) : (
+            <div className="divide-y divide-slate-200 dark:divide-slate-700/50">
+              {usersPage.deletionRecords.map((record) => (
+                <div key={record.id} className="grid gap-3 p-4 md:grid-cols-[minmax(0,1fr)_minmax(180px,auto)_minmax(160px,auto)] md:items-center">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{record.originalName}</p>
+                    <p className="break-all text-sm text-slate-500 dark:text-slate-400">{record.originalEmail}</p>
+                    {record.anonymizedEmail && (
+                      <p className="mt-1 break-all text-xs text-slate-400 dark:text-slate-500">{copy.storedAs} {record.anonymizedEmail}</p>
+                    )}
+                  </div>
+                  <div>
+                    <Badge variant={record.deletionType === 'ADMIN_PERMANENT' ? 'danger' : 'warning'}>
+                      {record.deletionType.split('_').join(' ').toLowerCase()}
+                    </Badge>
+                    <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      {copy.performedBy} {record.performedByName || record.performedByEmail || 'system'}
+                    </p>
+                  </div>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    {formatDate(record.createdAt, locale, adminCopy.common.never)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      )}
+
+      {view === 'accounts' && (
+      <>
       <Card>
         <form action={applyFilters} className="grid gap-4 md:grid-cols-2 xl:grid-cols-4 2xl:items-end">
           <Input
@@ -469,13 +481,15 @@ export default function UserManagementClient({ usersPage, packages, invites }: U
               variant="outline"
               className="h-[42px] w-full sm:w-36 sm:flex-none"
               disabled={isNavigationPending || !hasActiveFilters(usersPage.filters)}
-              onClick={() => navigateTo('/admin/users', copy.clearingFilters)}
+              onClick={() => navigateTo('/admin/users/accounts', copy.clearingFilters)}
             >
               {adminCopy.common.clear}
             </Button>
           </div>
         </form>
       </Card>
+      </>
+      )}
 
       <Card className="overflow-visible p-0">
         <div className="flex flex-col gap-2 border-b border-slate-200 p-4 dark:border-slate-700/50 sm:flex-row sm:items-center sm:justify-between">

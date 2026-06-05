@@ -30,7 +30,10 @@ import {
 } from '@/actions/admin.actions';
 import { useI18n } from '@/i18n/client';
 
+export type SubscriptionAdminView = 'packages' | 'payment-accounts' | 'access' | 'payment-review';
+
 interface SubscriptionManagementClientProps {
+  view?: SubscriptionAdminView;
   initialUsers: AdminUserRow[];
   initialPackages: AdminSubscriptionPackageRow[];
   initialPaymentMethods: AdminManualPaymentMethodRow[];
@@ -48,6 +51,7 @@ function paymentStatusClass(status: string) {
 }
 
 export default function SubscriptionManagementClient({
+  view = 'packages',
   initialUsers,
   initialPackages,
   initialPaymentMethods,
@@ -75,6 +79,13 @@ export default function SubscriptionManagementClient({
   const isTrialPackage = (pkg: AdminSubscriptionPackageRow) => pkg.price === 0 && pkg.trialDays > 0;
   const activePackages = packages.filter((pkg) => pkg.isActive && !isTrialPackage(pkg));
   const editingTrialPackage = packageForm ? isTrialPackage(packageForm) : false;
+  const viewOptions = [
+    { value: 'packages', label: copy.packageSetup, href: '/admin/subscriptions/packages' },
+    { value: 'access', label: copy.userAccess, href: '/admin/subscriptions/access' },
+    { value: 'payment-accounts', label: copy.paymentAccounts, href: '/admin/subscriptions/payment-accounts' },
+    { value: 'payment-review', label: copy.manualPaymentReview, href: '/admin/payments' },
+  ] satisfies { value: SubscriptionAdminView; label: string; href: string }[];
+  const currentView = viewOptions.find((item) => item.value === view) || viewOptions[0];
 
   const stats = useMemo(() => {
     const active = users.filter((user) => user.subscription);
@@ -86,6 +97,27 @@ export default function SubscriptionManagementClient({
       pendingPayments: paymentRequests.filter((request) => request.status === 'PENDING').length,
     };
   }, [paymentRequests, users]);
+  const activePaymentMethods = paymentMethods.filter((method) => method.isActive).length;
+  const statCards = view === 'access'
+    ? [
+      { label: copy.activeAccess, value: stats.active, icon: CreditCard, className: 'text-indigo-500' },
+      { label: copy.adminGrants, value: stats.adminGranted, icon: Timer, className: 'text-emerald-500' },
+      { label: copy.noAccess, value: stats.missing, icon: UserX, className: 'text-rose-500' },
+      { label: copy.unlimited, value: stats.unlimited, icon: Infinity, className: 'text-sky-500' },
+    ]
+    : view === 'payment-accounts'
+      ? [
+        { label: copy.paymentAccounts, value: paymentMethods.length, icon: Smartphone, className: 'text-indigo-500' },
+        { label: common.active, value: activePaymentMethods, icon: CheckCircle2, className: 'text-emerald-500' },
+        { label: copy.requests, value: paymentRequests.length, icon: ReceiptText, className: 'text-sky-500' },
+        { label: copy.pendingPayments, value: stats.pendingPayments, icon: Clock3, className: 'text-amber-500' },
+      ]
+      : [
+        { label: copy.packages, value: packages.length, icon: Package, className: 'text-indigo-500' },
+        { label: common.active, value: activePackages.length, icon: CheckCircle2, className: 'text-emerald-500' },
+        { label: copy.activeAccess, value: stats.active, icon: CreditCard, className: 'text-sky-500' },
+        { label: copy.pendingPayments, value: stats.pendingPayments, icon: ReceiptText, className: 'text-amber-500' },
+      ];
 
   const refreshUsers = async () => {
     const nextUsers = await getAdminUsersAction();
@@ -246,22 +278,27 @@ export default function SubscriptionManagementClient({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700/50 dark:bg-slate-900/70 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
+          <p className="text-xs font-black uppercase tracking-wide text-indigo-600 dark:text-indigo-300">{copy.title}</p>
+          <h1 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">{currentView.label}</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-slate-500 dark:text-slate-400">{copy.subtitle}</p>
         </div>
-        <Button onClick={openCreatePackage} disabled={isPending}>
-          <Package className="h-4 w-4" /> {copy.addPackage}
-        </Button>
+        {view === 'packages' && (
+          <Button onClick={openCreatePackage} disabled={isPending}>
+            <Package className="h-4 w-4" /> {copy.addPackage}
+          </Button>
+        )}
       </div>
 
-      <div className="grid gap-4 md:grid-cols-5">
-        <Card><CreditCard className="mb-3 h-5 w-5 text-indigo-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.activeAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.active}</p></Card>
-        <Card><Timer className="mb-3 h-5 w-5 text-emerald-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.adminGrants}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.adminGranted}</p></Card>
-        <Card><Infinity className="mb-3 h-5 w-5 text-sky-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.unlimited}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.unlimited}</p></Card>
-        <Card><UserX className="mb-3 h-5 w-5 text-rose-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.noAccess}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.missing}</p></Card>
-        <Card><ReceiptText className="mb-3 h-5 w-5 text-amber-500" /><p className="text-sm text-slate-500 dark:text-slate-400">{copy.pendingPayments}</p><p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{stats.pendingPayments}</p></Card>
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((item) => (
+          <Card key={item.label}>
+            <item.icon className={`mb-3 h-5 w-5 ${item.className}`} />
+            <p className="text-sm text-slate-500 dark:text-slate-400">{item.label}</p>
+            <p className="text-2xl font-bold text-slate-900 dark:text-slate-200">{item.value}</p>
+          </Card>
+        ))}
       </div>
 
       {message && (
@@ -270,6 +307,7 @@ export default function SubscriptionManagementClient({
         </div>
       )}
 
+      {view === 'payment-review' && (
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
@@ -300,6 +338,7 @@ export default function SubscriptionManagementClient({
                   </span>
                 </div>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{request.user.email}</p>
+                {request.user.phoneNumber && <p className="text-sm text-slate-500 dark:text-slate-400">{request.user.phoneNumber}</p>}
                 <p className="mt-1 text-xs text-slate-400">{request.package.name} · {formatCurrency(request.amount, request.currency)} · {new Date(request.createdAt).toLocaleString(locale)}</p>
               </div>
               <div>
@@ -334,7 +373,9 @@ export default function SubscriptionManagementClient({
           ))}
         </div>
       </Card>
+      )}
 
+      {view === 'payment-accounts' && (
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
@@ -380,7 +421,9 @@ export default function SubscriptionManagementClient({
           ))}
         </div>
       </Card>
+      )}
 
+      {view === 'packages' && (
       <Card className="overflow-hidden p-0">
         <div className="flex items-center justify-between gap-3 border-b border-slate-200 p-4 dark:border-slate-700/50">
           <div>
@@ -425,11 +468,14 @@ export default function SubscriptionManagementClient({
           ))}
         </div>
       </Card>
+      )}
 
+      {view === 'access' && (
+      <>
       <Card>
         <h2 className="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-200">{copy.grantFullAccess}</h2>
         <form action={grantAccess} className="grid gap-3 lg:grid-cols-[1fr_180px_220px_auto]">
-          <Input id="grantEmail" name="email" type="email" label={copy.userEmail} placeholder="user@example.com" required />
+          <Input id="grantIdentifier" name="identifier" type="text" label={copy.userIdentifier} placeholder="01XXXXXXXXX or user@example.com" required />
           <div>
             <label htmlFor="grantDuration" className="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300">{copy.duration}</label>
             <select
@@ -473,6 +519,7 @@ export default function SubscriptionManagementClient({
               <div>
                 <p className="font-semibold text-slate-900 dark:text-slate-200">{user.name}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{user.email}</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">{user.phoneNumber || copy.noPhone}</p>
               </div>
               <div>
                 <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.package}</p>
@@ -497,6 +544,8 @@ export default function SubscriptionManagementClient({
           ))}
         </div>
       </Card>
+      </>
+      )}
 
       <Modal
         isOpen={isPackageModalOpen}
@@ -666,6 +715,7 @@ export default function SubscriptionManagementClient({
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.user}</p>
                   <p className="font-semibold text-slate-900 dark:text-slate-200">{reviewRequest.user.name}</p>
                   <p className="text-sm text-slate-500 dark:text-slate-400">{reviewRequest.user.email}</p>
+                  {reviewRequest.user.phoneNumber && <p className="text-sm text-slate-500 dark:text-slate-400">{reviewRequest.user.phoneNumber}</p>}
                 </div>
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-slate-400">{common.package}</p>

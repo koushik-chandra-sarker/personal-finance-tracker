@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { cn } from '@/lib/utils';
@@ -9,6 +10,7 @@ import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, Tags,
   RefreshCw, FileBarChart, Settings, ChevronLeft, ChevronRight, ChevronDown, FileText, CreditCard,
   Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator, BookOpen, Mail,
+  Loader2, Trash2, UserPlus,
 } from 'lucide-react';
 import { type ElementType, useState } from 'react';
 import AppLogo from '@/components/brand/AppLogo';
@@ -51,8 +53,6 @@ const secondaryNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/payments', label: 'Payments', icon: ReceiptText },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/admin/contact-settings', label: 'Contact Settings', icon: Mail },
@@ -62,6 +62,18 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/tax-config', label: 'Tax Config', icon: Calculator },
 ];
 
+const userAdminNavItems: NavItem[] = [
+  { href: '/admin/users/accounts', label: 'User Accounts', icon: Users },
+  { href: '/admin/users/invites', label: 'User Invites', icon: UserPlus },
+  { href: '/admin/users/deleted', label: 'Deleted Users', icon: Trash2 },
+];
+
+const subscriptionAdminNavItems: NavItem[] = [
+  { href: '/admin/subscriptions/packages', label: 'Package Setup', icon: KeyRound },
+  { href: '/admin/subscriptions/access', label: 'User Access', icon: Users },
+  { href: '/admin/subscriptions/payment-accounts', label: 'Payment Accounts', icon: CreditCard },
+];
+
 function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
@@ -69,6 +81,20 @@ function isActiveRoute(pathname: string, href: string) {
 function isActiveInvestmentRoute(pathname: string, href: string) {
   if (href === '/investments') return pathname === href;
   return isActiveRoute(pathname, href);
+}
+
+function NavLinkPendingIcon() {
+  const { pending } = useLinkStatus();
+
+  return (
+    <Loader2
+      aria-hidden="true"
+      className={cn(
+        'ml-auto h-3.5 w-3.5 shrink-0 animate-spin transition-opacity',
+        pending ? 'opacity-100' : 'opacity-0'
+      )}
+    />
+  );
 }
 
 type SidebarProps = {
@@ -82,11 +108,15 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [investmentsOpen, setInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [adminOpen, setAdminOpen] = useState(() => pathname.startsWith('/admin'));
+  const [userAdminOpen, setUserAdminOpen] = useState(() => pathname.startsWith('/admin/users'));
+  const [subscriptionAdminOpen, setSubscriptionAdminOpen] = useState(() => pathname.startsWith('/admin/subscriptions'));
   const currentUser = subscriptionAccessUser || session?.user;
   const isAdmin = currentUser?.role === 'ADMIN';
   const isSubscriptionLocked = Boolean(currentUser) && !hasActiveSubscriptionAccess(currentUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const isUserAdminRoute = pathname.startsWith('/admin/users');
+  const isSubscriptionAdminRoute = pathname.startsWith('/admin/subscriptions');
   const experienceMode = currentUser?.experienceMode;
   const visiblePrimaryNavItems = primaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
   const visibleInvestmentNavItems = investmentNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
@@ -204,6 +234,104 @@ export default function Sidebar({ subscriptionAccessUser }: SidebarProps) {
 
             {adminOpen && (
               <div className={cn('mt-1 space-y-1', collapsed ? '' : 'pl-4')}>
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setUserAdminOpen(!userAdminOpen)}
+                    title={collapsed ? navLabel('Users') : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                      isUserAdminRoute
+                        ? 'bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-slate-200'
+                        : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                    )}
+                    aria-expanded={userAdminOpen}
+                  >
+                    <Users className={cn('h-5 w-5 flex-shrink-0', isUserAdminRoute ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left">{navLabel('Users')}</span>
+                        <ChevronDown className={cn('h-4 w-4 transition-transform', userAdminOpen && 'rotate-180')} />
+                      </>
+                    )}
+                  </button>
+
+                  {userAdminOpen && (
+                    <div className={cn('mt-1 space-y-1', collapsed ? '' : 'pl-4')}>
+                      {userAdminNavItems.map((item) => {
+                        const isActive = isActiveRoute(pathname, item.href);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={navHref(item.href)}
+                            prefetch={!isSubscriptionLocked}
+                            title={collapsed ? navLabel(item.label) : undefined}
+                            className={cn(
+                              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                              isActive
+                                ? 'border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-slate-200'
+                                : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                            )}
+                          >
+                            <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+                            {!collapsed && <span>{navLabel(item.label)}</span>}
+                            <NavLinkPendingIcon />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setSubscriptionAdminOpen(!subscriptionAdminOpen)}
+                    title={collapsed ? navLabel('Subscriptions') : undefined}
+                    className={cn(
+                      'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                      isSubscriptionAdminRoute
+                        ? 'bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-slate-200'
+                        : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                    )}
+                    aria-expanded={subscriptionAdminOpen}
+                  >
+                    <KeyRound className={cn('h-5 w-5 flex-shrink-0', isSubscriptionAdminRoute ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1 text-left">{navLabel('Subscriptions')}</span>
+                        <ChevronDown className={cn('h-4 w-4 transition-transform', subscriptionAdminOpen && 'rotate-180')} />
+                      </>
+                    )}
+                  </button>
+
+                  {subscriptionAdminOpen && (
+                    <div className={cn('mt-1 space-y-1', collapsed ? '' : 'pl-4')}>
+                      {subscriptionAdminNavItems.map((item) => {
+                        const isActive = isActiveRoute(pathname, item.href);
+                        return (
+                          <Link
+                            key={item.href}
+                            href={navHref(item.href)}
+                            prefetch={!isSubscriptionLocked}
+                            title={collapsed ? navLabel(item.label) : undefined}
+                            className={cn(
+                              'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200',
+                              isActive
+                                ? 'border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-slate-200'
+                                : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                            )}
+                          >
+                            <item.icon className={cn('h-5 w-5 flex-shrink-0', isActive ? 'text-indigo-600 dark:text-indigo-400' : '')} />
+                            {!collapsed && <span>{navLabel(item.label)}</span>}
+                            <NavLinkPendingIcon />
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
                 {adminNavItems.map((item) => {
                   const isActive = isActiveRoute(pathname, item.href);
                   return (

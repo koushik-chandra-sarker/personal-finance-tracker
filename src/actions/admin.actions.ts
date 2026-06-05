@@ -41,6 +41,7 @@ export type AdminUserRow = {
   id: string;
   name: string;
   email: string;
+  phoneNumber: string | null;
   role: UserRole;
   status: UserStatus;
   lastLoginAt: string | null;
@@ -134,6 +135,7 @@ export type AdminManualPaymentRequestRow = {
     id: string;
     name: string;
     email: string;
+    phoneNumber: string | null;
   };
   package: {
     id: string;
@@ -308,10 +310,19 @@ function hashInviteToken(token: string) {
   return createHash('sha256').update(token).digest('hex');
 }
 
+function normalizePhoneNumber(value: string) {
+  const digits = value.replace(/\D/g, '');
+  if (digits.startsWith('880')) return `+${digits}`;
+  if (digits.startsWith('0')) return `+88${digits}`;
+  if (digits.startsWith('1')) return `+880${digits}`;
+  return value.trim();
+}
+
 function serializeUser(user: {
   id: string;
   name: string;
   email: string;
+  phoneNumber: string | null;
   role: UserRole;
   status: UserStatus;
   lastLoginAt: Date | null;
@@ -452,7 +463,7 @@ function serializeAdminManualPaymentRequest(request: {
   adminNote: string | null;
   createdAt: Date;
   reviewedAt: Date | null;
-  user: { id: string; name: string; email: string };
+  user: { id: string; name: string; email: string; phoneNumber: string | null };
   package: { id: string; name: string; interval: SubscriptionInterval };
   method: { id: string; label: string; accountNumber: string; accountName: string } | null;
   reviewedBy: { name: string; email: string } | null;
@@ -735,6 +746,7 @@ export async function getAdminUsersAction(): Promise<AdminUserRow[]> {
       id: true,
       name: true,
       email: true,
+      phoneNumber: true,
       role: true,
       status: true,
       lastLoginAt: true,
@@ -821,6 +833,7 @@ export async function getAdminUsersPageAction(query: AdminUsersQuery = {}): Prom
       id: true,
       name: true,
       email: true,
+      phoneNumber: true,
       role: true,
       status: true,
       lastLoginAt: true,
@@ -931,7 +944,7 @@ export async function getAdminManualPaymentRequestsAction(): Promise<AdminManual
       createdAt: true,
       reviewedAt: true,
       user: {
-        select: { id: true, name: true, email: true },
+        select: { id: true, name: true, email: true, phoneNumber: true },
       },
       package: {
         select: { id: true, name: true, interval: true },
@@ -1940,15 +1953,20 @@ export async function grantUserAccessAction(formData: FormData): Promise<ActionR
   if (!session?.user?.id) return { success: false, message: 'অনুমতি নেই' };
   await requireRole('ADMIN');
 
-  const email = String(formData.get('email') || '').trim().toLowerCase();
+  const identifier = String(formData.get('identifier') || formData.get('email') || '').trim();
+  const email = identifier.toLowerCase();
   const duration = String(formData.get('duration') || '');
   const packageId = String(formData.get('packageId') || '').trim() || null;
-  if (!email) return { success: false, message: 'ব্যবহারকারীর ইমেইল প্রয়োজন' };
+  if (!identifier) return { success: false, message: 'ব্যবহারকারীর ইমেইল বা ফোন নম্বর প্রয়োজন' };
   if (!['MONTHLY', 'YEARLY', 'UNLIMITED'].includes(duration)) {
     return { success: false, message: 'গ্র্যান্ট সময়কাল সঠিক নয়' };
   }
 
-  const targetUser = await prisma.user.findUnique({ where: { email } });
+  const targetUser = await prisma.user.findFirst({
+    where: identifier.includes('@')
+      ? { email }
+      : { phoneNumber: normalizePhoneNumber(identifier) },
+  });
   if (!targetUser) return { success: false, message: 'ব্যবহারকারী পাওয়া যায়নি' };
 
   const now = new Date();

@@ -99,7 +99,7 @@ function buildVerificationSummary(
   locale: string
 ) {
   return [
-    `${labels.user}: ${request.user.name} <${request.user.email}>`,
+    `${labels.user}: ${request.user.name} <${request.user.email}>${request.user.phoneNumber ? ` (${request.user.phoneNumber})` : ''}`,
     `${labels.package}: ${request.package.name}`,
     `${labels.amount}: ${formatCurrency(request.amount, request.currency)}`,
     `${labels.provider}: ${providerLabel(request.provider)}`,
@@ -169,6 +169,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
       const matchesSearch = !query
         || request.user.name.toLowerCase().includes(query)
         || request.user.email.toLowerCase().includes(query)
+        || (request.user.phoneNumber || '').toLowerCase().includes(query)
         || request.transactionId.toLowerCase().includes(query)
         || request.reference.toLowerCase().includes(query)
         || request.senderAccount.toLowerCase().includes(query)
@@ -408,6 +409,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                         <p className="truncate font-semibold text-slate-900 dark:text-slate-200">{request.user.name}</p>
                       </div>
                       <p className="mt-1 truncate text-sm text-slate-500 dark:text-slate-400">{request.user.email}</p>
+                      {request.user.phoneNumber && <p className="truncate text-sm text-slate-500 dark:text-slate-400">{request.user.phoneNumber}</p>}
                       <div className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">{providerLabel(request.provider)}</span>
                         <span className="truncate text-xs text-slate-400">{request.package.name}</span>
@@ -462,6 +464,7 @@ export default function AdminManualPaymentsClient({ initialPaymentMethods, initi
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.customer}</p>
                         <p className="mt-1 truncate text-lg font-black text-slate-900 dark:text-slate-200">{selectedRequest.user.name}</p>
                         <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedRequest.user.email}</p>
+                        {selectedRequest.user.phoneNumber && <p className="truncate text-sm text-slate-500 dark:text-slate-400">{selectedRequest.user.phoneNumber}</p>}
                       </div>
                       <div className="sm:text-right">
                         <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{copy.amountToVerify}</p>

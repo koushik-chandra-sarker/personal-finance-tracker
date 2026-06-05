@@ -5,7 +5,7 @@ import { AlertTriangle, Bell, BookOpen, CheckCircle2, FileText, Info, LogOut, Ma
 import ThemeToggle from './ThemeToggle';
 import { type ElementType, useState, useRef, useEffect, useCallback } from 'react';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
-import Link from 'next/link';
+import Link, { useLinkStatus } from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
   getNotificationFeedAction,
@@ -16,6 +16,7 @@ import { payDpsInstallmentAction } from '@/actions/investment.actions';
 import {
   LayoutDashboard, ArrowLeftRight, Wallet, PieChart, Target, CreditCard,
   RefreshCw, FileBarChart, Settings, X, ChevronDown, Users, KeyRound, TrendingUp, BarChart3, PlayCircle, MessageSquare, LifeBuoy, ReceiptText, Calculator,
+  Loader2, Trash2, UserPlus,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatRelativeDate } from '@/lib/utils';
@@ -61,8 +62,6 @@ const secondaryNavItems: NavItem[] = [
 
 const adminNavItems: NavItem[] = [
   { href: '/admin/analytics', label: 'Analytics', icon: BarChart3 },
-  { href: '/admin/users', label: 'Users', icon: Users },
-  { href: '/admin/subscriptions', label: 'Subscriptions', icon: KeyRound },
   { href: '/admin/payments', label: 'Payments', icon: ReceiptText },
   { href: '/admin/messages', label: 'Messages', icon: MessageSquare },
   { href: '/admin/contact-settings', label: 'Contact Settings', icon: Mail },
@@ -72,6 +71,18 @@ const adminNavItems: NavItem[] = [
   { href: '/admin/tax-config', label: 'Tax Config', icon: Calculator },
 ];
 
+const userAdminNavItems: NavItem[] = [
+  { href: '/admin/users/accounts', label: 'User Accounts', icon: Users },
+  { href: '/admin/users/invites', label: 'User Invites', icon: UserPlus },
+  { href: '/admin/users/deleted', label: 'Deleted Users', icon: Trash2 },
+];
+
+const subscriptionAdminNavItems: NavItem[] = [
+  { href: '/admin/subscriptions/packages', label: 'Package Setup', icon: KeyRound },
+  { href: '/admin/subscriptions/access', label: 'User Access', icon: Users },
+  { href: '/admin/subscriptions/payment-accounts', label: 'Payment Accounts', icon: CreditCard },
+];
+
 function isActiveRoute(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + '/');
 }
@@ -79,6 +90,20 @@ function isActiveRoute(pathname: string, href: string) {
 function isActiveInvestmentRoute(pathname: string, href: string) {
   if (href === '/investments') return pathname === href;
   return isActiveRoute(pathname, href);
+}
+
+function NavLinkPendingIcon() {
+  const { pending } = useLinkStatus();
+
+  return (
+    <Loader2
+      aria-hidden="true"
+      className={cn(
+        'ml-auto h-3.5 w-3.5 shrink-0 animate-spin transition-opacity',
+        pending ? 'opacity-100' : 'opacity-0'
+      )}
+    />
+  );
 }
 
 type NotificationItem = {
@@ -108,6 +133,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
   const pathname = usePathname();
   const [mobileInvestmentsOpen, setMobileInvestmentsOpen] = useState(() => pathname.startsWith('/investments'));
   const [mobileAdminOpen, setMobileAdminOpen] = useState(() => pathname.startsWith('/admin'));
+  const [mobileUserAdminOpen, setMobileUserAdminOpen] = useState(() => pathname.startsWith('/admin/users'));
+  const [mobileSubscriptionAdminOpen, setMobileSubscriptionAdminOpen] = useState(() => pathname.startsWith('/admin/subscriptions'));
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -122,6 +149,8 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
   const isSubscriptionLocked = Boolean(accessUser) && !hasActiveSubscriptionAccess(accessUser);
   const isInvestmentsRoute = pathname.startsWith('/investments');
   const isAdminRoute = pathname.startsWith('/admin');
+  const isUserAdminRoute = pathname.startsWith('/admin/users');
+  const isSubscriptionAdminRoute = pathname.startsWith('/admin/subscriptions');
   const experienceMode = accessUser?.experienceMode;
   const visiblePrimaryNavItems = primaryNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
   const visibleInvestmentNavItems = investmentNavItems.filter((item) => isVisibleForExperienceMode(item.href, experienceMode));
@@ -726,6 +755,94 @@ export default function Topbar({ subscriptionAccessUser }: TopbarProps) {
 
                   {mobileAdminOpen && (
                     <div className="mt-1 pl-4 space-y-1">
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setMobileUserAdminOpen(!mobileUserAdminOpen)}
+                          className={cn(
+                            'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                            isUserAdminRoute
+                              ? 'bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-slate-200'
+                              : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                          )}
+                          aria-expanded={mobileUserAdminOpen}
+                        >
+                          <Users className="h-5 w-5" />
+                          <span className="flex-1 text-left">{navLabel('Users')}</span>
+                          <ChevronDown className={cn('h-4 w-4 transition-transform', mobileUserAdminOpen && 'rotate-180')} />
+                        </button>
+
+                        {mobileUserAdminOpen && (
+                          <div className="mt-1 space-y-1 pl-4">
+                            {userAdminNavItems.map((item) => {
+                              const isActive = isActiveRoute(pathname, item.href);
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={navHref(item.href)}
+                                  prefetch={!isSubscriptionLocked}
+                                  onClick={() => setMobileOpen(false)}
+                                  className={cn(
+                                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                                    isActive
+                                      ? 'border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-slate-200'
+                                      : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                                  )}
+                                >
+                                  <item.icon className="h-5 w-5" />
+                                  <span>{navLabel(item.label)}</span>
+                                  <NavLinkPendingIcon />
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <button
+                          type="button"
+                          onClick={() => setMobileSubscriptionAdminOpen(!mobileSubscriptionAdminOpen)}
+                          className={cn(
+                            'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                            isSubscriptionAdminRoute
+                              ? 'bg-indigo-500/10 text-indigo-700 dark:bg-indigo-500/20 dark:text-slate-200'
+                              : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                          )}
+                          aria-expanded={mobileSubscriptionAdminOpen}
+                        >
+                          <KeyRound className="h-5 w-5" />
+                          <span className="flex-1 text-left">{navLabel('Subscriptions')}</span>
+                          <ChevronDown className={cn('h-4 w-4 transition-transform', mobileSubscriptionAdminOpen && 'rotate-180')} />
+                        </button>
+
+                        {mobileSubscriptionAdminOpen && (
+                          <div className="mt-1 space-y-1 pl-4">
+                            {subscriptionAdminNavItems.map((item) => {
+                              const isActive = isActiveRoute(pathname, item.href);
+                              return (
+                                <Link
+                                  key={item.href}
+                                  href={navHref(item.href)}
+                                  prefetch={!isSubscriptionLocked}
+                                  onClick={() => setMobileOpen(false)}
+                                  className={cn(
+                                    'flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all',
+                                    isActive
+                                      ? 'border border-indigo-500/20 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 text-indigo-700 shadow-sm dark:border-indigo-500/30 dark:from-indigo-500/20 dark:to-purple-500/20 dark:text-slate-200'
+                                      : 'text-slate-500 hover:bg-slate-200/50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-200'
+                                  )}
+                                >
+                                  <item.icon className="h-5 w-5" />
+                                  <span>{navLabel(item.label)}</span>
+                                  <NavLinkPendingIcon />
+                                </Link>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+
                       {adminNavItems.map((item) => {
                         const isActive = isActiveRoute(pathname, item.href);
                         return (
