@@ -9,6 +9,15 @@ type GoalTransactionMarker = {
   action: 'CONTRIBUTION' | 'DEDUCTION';
 };
 
+type MonthlyExpenseFilters = {
+  month: number;
+  year: number;
+  categoryId?: string;
+  accountId?: string;
+  page?: number;
+  limit?: number;
+};
+
 function sanitizeUserTags(tags?: string[]) {
   return (tags || []).filter(tag => !tag.startsWith('__pft:'));
 }
@@ -160,6 +169,249 @@ export async function getTransactions(userId: string, filters: TransactionFilter
     totalIncome,
     totalExpense
   };
+}
+
+function getMonthDateRange(month: number, year: number) {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
+  return { startDate, endDate };
+}
+
+function getPreviousMonth(month: number, year: number) {
+  if (month === 1) return { month: 12, year: year - 1 };
+  return { month: month - 1, year };
+}
+
+function buildMonthlyExpenseWhere(
+  userId: string,
+  filters: MonthlyExpenseFilters,
+  dateRange = getMonthDateRange(filters.month, filters.year)
+): Prisma.TransactionWhereInput {
+  return {
+    userId,
+    type: 'EXPENSE',
+    date: { gte: dateRange.startDate, lte: dateRange.endDate },
+    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+    ...(filters.accountId ? { accountId: filters.accountId } : {}),
+  };
+}
+
+function buildMonthlyIncomeWhere(
+  userId: string,
+  filters: MonthlyExpenseFilters,
+  dateRange = getMonthDateRange(filters.month, filters.year)
+): Prisma.TransactionWhereInput {
+  return {
+    userId,
+    type: 'INCOME',
+    date: { gte: dateRange.startDate, lte: dateRange.endDate },
+    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+    ...(filters.accountId ? { accountId: filters.accountId } : {}),
+  };
+}
+
+function buildRegularMonthlyTransactionWhere(
+  userId: string,
+  filters: MonthlyExpenseFilters,
+  dateRange = getMonthDateRange(filters.month, filters.year)
+): Prisma.TransactionWhereInput {
+  return {
+    userId,
+    date: { gte: dateRange.startDate, lte: dateRange.endDate },
+    ...(filters.categoryId ? { categoryId: filters.categoryId } : {}),
+    ...(filters.accountId ? { accountId: filters.accountId } : {}),
+    investmentCashflows: { none: {} },
+    NOT: [
+      { tags: { has: '__pft:goal-transfer' } },
+    ],
+  };
+}
+
+function buildRegularMonthlyExpenseWhere(
+  userId: string,
+  filters: MonthlyExpenseFilters,
+  dateRange = getMonthDateRange(filters.month, filters.year)
+): Prisma.TransactionWhereInput {
+  return {
+    ...buildRegularMonthlyTransactionWhere(userId, filters, dateRange),
+    type: 'EXPENSE',
+  };
+}
+
+function buildRegularMonthlyIncomeWhere(
+  userId: string,
+  filters: MonthlyExpenseFilters,
+  dateRange = getMonthDateRange(filters.month, filters.year)
+): Prisma.TransactionWhereInput {
+  return {
+    ...buildRegularMonthlyTransactionWhere(userId, filters, dateRange),
+    type: 'INCOME',
+  };
+}
+
+export async function getMonthlyExpenseDetails(userId: string, filters: MonthlyExpenseFilters) {
+  const page = Math.max(1, filters.page || 1);
+  const limit = Math.max(1, Math.min(filters.limit || 50, 100));
+  const dateRange = getMonthDateRange(filters.month, filters.year);
+  const previousMonth = getPreviousMonth(filters.month, filters.year);
+  const previousDateRange = getMonthDateRange(previousMonth.month, previousMonth.year);
+
+  const regularActivityWhere = buildRegularMonthlyTransactionWhere(userId, filters, dateRange);
+  const regularExpenseWhere = buildRegularMonthlyExpenseWhere(userId, filters, dateRange);
+  const regularIncomeWhere = buildRegularMonthlyIncomeWhere(userId, filters, dateRange);
+  const previousRegularExpenseWhere = buildRegularMonthlyExpenseWhere(
+    userId,
+    { ...filters, month: previousMonth.month, year: previousMonth.year },
+    previousDateRange
+  );
+  const previousRegularIncomeWhere = buildRegularMonthlyIncomeWhere(
+    userId,
+    { ...filters, month: previousMonth.month, year: previousMonth.year },
+    previousDateRange
+  );
+  const allExpenseWhere = buildMonthlyExpenseWhere(userId, filters, dateRange);
+  const allIncomeWhere = buildMonthlyIncomeWhere(userId, filters, dateRange);
+  const savingsWhere: Prisma.TransactionWhereInput = {
+    ...allExpenseWhere,
+    tags: { has: '__pft:goal-transfer' },
+  };
+  const investmentWhere: Prisma.TransactionWhereInput = {
+    ...allExpenseWhere,
+    investmentCashflows: { some: {} },
+  };
+
+  const [
+    transactions,
+    total,
+    regularExpenseAggregate,
+    regularIncomeAggregate,
+    previousRegularExpenseAggregate,
+    previousRegularIncomeAggregate,
+    allExpenseAggregate,
+    allIncomeAggregate,
+    savingsAggregate,
+    investmentAggregate,
+    expenseCategoryGroups,
+    incomeCategoryGroups,
+  ] = await Promise.all([
+    prisma.transaction.findMany({
+      where: regularActivityWhere,
+      include: {
+        category: true,
+        account: true,
+      },
+      orderBy: [{ date: 'desc' }, { createdAt: 'desc' }],
+      skip: (page - 1) * limit,
+      take: limit,
+    }),
+    prisma.transaction.count({ where: regularActivityWhere }),
+    prisma.transaction.aggregate({ where: regularExpenseWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: regularIncomeWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: previousRegularExpenseWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: previousRegularIncomeWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: allExpenseWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: allIncomeWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: savingsWhere, _sum: { amount: true } }),
+    prisma.transaction.aggregate({ where: investmentWhere, _sum: { amount: true } }),
+    prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: regularExpenseWhere,
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+    prisma.transaction.groupBy({
+      by: ['categoryId'],
+      where: regularIncomeWhere,
+      _sum: { amount: true },
+      _count: { _all: true },
+    }),
+  ]);
+
+  const categoryGroups = [...expenseCategoryGroups, ...incomeCategoryGroups];
+  const categoryIds = Array.from(new Set(categoryGroups.map(group => group.categoryId)));
+  const categories = categoryIds.length
+    ? await prisma.category.findMany({
+        where: { id: { in: categoryIds }, userId },
+        select: { id: true, name: true, color: true, icon: true },
+      })
+    : [];
+  const categoryMap = new Map(categories.map(category => [category.id, category]));
+  const totalRegularExpense = Number(regularExpenseAggregate._sum.amount || 0);
+  const totalRegularIncome = Number(regularIncomeAggregate._sum.amount || 0);
+
+  const categoryBreakdown = expenseCategoryGroups
+    .map(group => {
+      const category = categoryMap.get(group.categoryId);
+      const totalAmount = Number(group._sum.amount || 0);
+      return {
+        categoryId: group.categoryId,
+        categoryName: category?.name || 'Uncategorized',
+        categoryColor: category?.color || '#64748b',
+        categoryIcon: category?.icon || 'tag',
+        total: totalAmount,
+        count: group._count._all,
+        percentage: totalRegularExpense > 0 ? Math.round((totalAmount / totalRegularExpense) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+  const incomeCategoryBreakdown = incomeCategoryGroups
+    .map(group => {
+      const category = categoryMap.get(group.categoryId);
+      const totalAmount = Number(group._sum.amount || 0);
+      return {
+        categoryId: group.categoryId,
+        categoryName: category?.name || 'Uncategorized',
+        categoryColor: category?.color || '#64748b',
+        categoryIcon: category?.icon || 'tag',
+        total: totalAmount,
+        count: group._count._all,
+        percentage: totalRegularIncome > 0 ? Math.round((totalAmount / totalRegularIncome) * 100) : 0,
+      };
+    })
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    transactions,
+    total,
+    pages: Math.ceil(total / limit),
+    currentPage: page,
+    totalRegularIncome,
+    totalRegularExpense,
+    regularNet: totalRegularIncome - totalRegularExpense,
+    previousRegularIncome: Number(previousRegularIncomeAggregate._sum.amount || 0),
+    previousRegularExpense: Number(previousRegularExpenseAggregate._sum.amount || 0),
+    totalIncome: Number(allIncomeAggregate._sum.amount || 0),
+    totalExpense: Number(allExpenseAggregate._sum.amount || 0),
+    savingsExpense: Number(savingsAggregate._sum.amount || 0),
+    investmentExpense: Number(investmentAggregate._sum.amount || 0),
+    categoryBreakdown,
+    incomeCategoryBreakdown,
+    dateRange,
+    previousMonth,
+  };
+}
+
+export async function getRegularMonthlyTransactionCategories(userId: string, filters: MonthlyExpenseFilters) {
+  const regularWhere = buildRegularMonthlyTransactionWhere(userId, { ...filters, categoryId: undefined });
+  const categoryGroups = await prisma.transaction.groupBy({
+    by: ['categoryId'],
+    where: regularWhere,
+    _sum: { amount: true },
+  });
+  const categoryIds = categoryGroups.map(group => group.categoryId);
+
+  if (categoryIds.length === 0) return [];
+
+  const categories = await prisma.category.findMany({
+    where: { id: { in: categoryIds }, userId },
+    select: { id: true, name: true },
+  });
+  const totalMap = new Map(categoryGroups.map(group => [group.categoryId, Number(group._sum.amount || 0)]));
+
+  return categories
+    .map(category => ({ ...category, total: totalMap.get(category.id) || 0 }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name))
+    .map(({ id, name }) => ({ id, name }));
 }
 
 export async function createTransaction(userId: string, executorId: string, data: {
