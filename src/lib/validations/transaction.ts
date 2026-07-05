@@ -5,7 +5,7 @@ export const transactionSchema = z.object({
   categoryId: z.string().min(1, 'ক্যাটাগরি নির্বাচন করুন'),
   type: z.enum(['INCOME', 'EXPENSE']),
   amount: z.coerce.number().positive('পরিমাণ ০-এর বেশি হতে হবে'),
-  description: z.string().min(1, 'বিবরণ প্রয়োজন'),
+  description: z.string().trim().default(''),
   date: z.string().min(1, 'তারিখ প্রয়োজন'),
   tags: z.union([
     z.array(z.string()),

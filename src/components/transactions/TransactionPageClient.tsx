@@ -284,15 +284,18 @@ export default function TransactionPageClient({
                 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate">{tx.description}</p>
+                    <p className="text-sm font-medium text-slate-900 dark:text-slate-200 truncate">{tx.category.name}</p>
                     {/* Mobile Amount */}
                     <p className={`sm:hidden text-sm font-semibold whitespace-nowrap ${tx.type === 'INCOME' ? 'text-emerald-500 dark:text-emerald-400' : 'text-rose-500 dark:text-rose-400'}`}>
                       {tx.type === 'INCOME' ? '+' : '-'} {formatCurrency(Number(tx.amount), userCurrency, userLocale)}
                     </p>
                   </div>
+                  {tx.description && (
+                    <p className="text-xs text-slate-600 dark:text-slate-300 truncate mt-0.5">{tx.description}</p>
+                  )}
                   
                   <p className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                    {tx.category.name} · {tx.account.name} · {formatDate(tx.date, undefined, userLocale)}
+                    {tx.account.name} · {formatDate(tx.date, undefined, userLocale)}
                   </p>
                   
                   {tx.tags.filter(tag => !isInternalTag(tag)).length > 0 && (

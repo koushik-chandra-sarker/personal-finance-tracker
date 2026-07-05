@@ -269,9 +269,12 @@ export default async function MonthlyExpensesPage({
               {details.transactions.map(transaction => (
                 <div key={transaction.id} className="grid gap-3 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{transaction.description}</p>
+                    <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{transaction.category.name}</p>
+                    {transaction.description && (
+                      <p className="mt-1 truncate text-xs text-slate-600 dark:text-slate-300">{transaction.description}</p>
+                    )}
                     <p className="mt-1 truncate text-xs text-slate-500 dark:text-slate-400">
-                      {transaction.category.name} · {transaction.account.name} · {formatDate(transaction.date, undefined, locale)}
+                      {transaction.account.name} · {formatDate(transaction.date, undefined, locale)}
                     </p>
                   </div>
                   <p className={`text-sm font-semibold ${transaction.type === 'INCOME' ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
