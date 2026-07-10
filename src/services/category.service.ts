@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import type { Prisma } from '@prisma/client';
+import { getFinancialMonthDateRange } from '@/lib/financial-period';
 
-export async function getCategories(userId: string, month?: number, year?: number) {
+export async function getCategories(userId: string, month?: number, year?: number, startDay = 1) {
   const categories = await prisma.category.findMany({
     where: { userId },
     orderBy: [{ type: 'asc' }, { name: 'asc' }],
@@ -32,8 +33,7 @@ export async function getCategories(userId: string, month?: number, year?: numbe
       where: { userId, month, year }
     });
 
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0); // Last day of month
+    const { startDate, endDate } = getFinancialMonthDateRange(month, year, startDay);
 
     dailyTotals = await (prisma.transaction as any).groupBy({
       by: ['categoryId'],

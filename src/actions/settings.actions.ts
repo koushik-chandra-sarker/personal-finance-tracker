@@ -281,6 +281,32 @@ export async function updateCurrencyAction(currency: string): Promise<ActionResp
   }
 }
 
+export async function updateFinancialMonthStartDayAction(startDay: number): Promise<ActionResponse<{ startDay: number }>> {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, message: 'Unauthorized' };
+
+  if (!Number.isInteger(startDay) || startDay < 1 || startDay > 31) {
+    return { success: false, message: 'Choose a financial month start day between 1 and 31.' };
+  }
+
+  try {
+    await prisma.user.update({
+      where: { id: session.user.id },
+      data: { financialMonthStartDay: startDay },
+    });
+
+    revalidatePath('/settings');
+    revalidatePath('/dashboard');
+    revalidatePath('/transactions');
+    revalidatePath('/budgets');
+    revalidatePath('/monthly-expenses');
+    revalidatePath('/reports');
+    return { success: true, message: 'Financial month updated.', data: { startDay } };
+  } catch {
+    return { success: false, message: 'Failed to update financial month.' };
+  }
+}
+
 export async function updateLocaleAction(locale: string): Promise<ActionResponse<{ preferredLocale: AppLocale }>> {
   const preferredLocale = normalizeLocale(locale);
   const session = await auth();

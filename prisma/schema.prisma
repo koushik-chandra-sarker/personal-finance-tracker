@@ -18,6 +18,7 @@ model User {
   role          UserRole               @default(USER)
   status        UserStatus             @default(ACTIVE)
   currency      String                 @default("BDT")
+  financialMonthStartDay Int           @default(1)
   preferredLocale String               @default("bn-BD")
   experienceMode UserExperienceMode    @default(FULL)
   onboardingCompletedAt DateTime?

@@ -2,7 +2,8 @@ import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
 import { getBudgets } from '@/services/budget.service';
 import { prisma } from '@/lib/prisma';
-import { getCurrentMonthYear } from '@/lib/utils';
+import { getCurrentFinancialMonthYear } from '@/lib/financial-period';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 import BudgetPageClient from '@/components/budgets/BudgetPageClient';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
 
@@ -13,14 +14,15 @@ export default async function BudgetsPage({ searchParams }: { searchParams: Prom
   await validateAccess('BUDGETS', 'VIEW');
   
   const params = await searchParams;
-  const current = getCurrentMonthYear();
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
+  const current = getCurrentFinancialMonthYear(new Date(), financialMonthStartDay);
   const month = params.month ? parseInt(params.month) : current.month;
   const year = params.year ? parseInt(params.year) : current.year;
 
   const [budgets, categories] = await Promise.all([
-    getBudgets(userId, month, year),
+    getBudgets(userId, month, year, financialMonthStartDay),
     prisma.category.findMany({ where: { userId }, orderBy: { name: 'asc' } }),
   ]);
 
-  return <BudgetPageClient budgets={budgets} categories={JSON.parse(JSON.stringify(categories))} currentMonth={month} currentYear={year} />;
+  return <BudgetPageClient budgets={budgets} categories={JSON.parse(JSON.stringify(categories))} currentMonth={month} currentYear={year} financialMonthStartDay={financialMonthStartDay} />;
 }

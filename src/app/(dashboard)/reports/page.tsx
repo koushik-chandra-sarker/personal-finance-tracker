@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import ReportsPageClient from '@/components/reports/ReportsPageClient';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
 import { subMonths } from 'date-fns';
+import { getCurrentFinancialMonthYear, getFinancialMonthDateRange } from '@/lib/financial-period';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string }> }) {
   const session = await auth();
@@ -13,21 +15,23 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
   await validateAccess('REPORTS', 'VIEW');
 
   const params = await searchParams;
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
   const now = new Date();
-  const defaultStart = subMonths(now, 11); // last 12 months
+  const current = getCurrentFinancialMonthYear(now, financialMonthStartDay);
+  const defaultStart = subMonths(new Date(current.year, current.month - 1, 1), 11); // last 12 financial months
 
   const fromMonth = params.fromMonth ? parseInt(params.fromMonth) : defaultStart.getMonth() + 1;
   const fromYear = params.fromYear ? parseInt(params.fromYear) : defaultStart.getFullYear();
-  const toMonth = params.toMonth ? parseInt(params.toMonth) : now.getMonth() + 1;
-  const toYear = params.toYear ? parseInt(params.toYear) : now.getFullYear();
+  const toMonth = params.toMonth ? parseInt(params.toMonth) : current.month;
+  const toYear = params.toYear ? parseInt(params.toYear) : current.year;
 
   // Date range for transaction query
-  const startDate = new Date(fromYear, fromMonth - 1, 1);
-  const endDate = new Date(toYear, toMonth, 0, 23, 59, 59, 999);
+  const startDate = getFinancialMonthDateRange(fromMonth, fromYear, financialMonthStartDay).startDate;
+  const endDate = getFinancialMonthDateRange(toMonth, toYear, financialMonthStartDay).endDate;
 
   const [trend, breakdown, transactions, investmentReport] = await Promise.all([
-    getMonthlyTrendRange(userId, fromMonth, fromYear, toMonth, toYear),
-    getCategoryBreakdownRange(userId, fromMonth, fromYear, toMonth, toYear),
+    getMonthlyTrendRange(userId, fromMonth, fromYear, toMonth, toYear, financialMonthStartDay),
+    getCategoryBreakdownRange(userId, fromMonth, fromYear, toMonth, toYear, financialMonthStartDay),
     prisma.transaction.findMany({
       where: {
         userId,
@@ -37,7 +41,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       orderBy: { date: 'desc' },
       take: 500,
     }),
-    getInvestmentReportRange(userId, fromMonth, fromYear, toMonth, toYear),
+    getInvestmentReportRange(userId, fromMonth, fromYear, toMonth, toYear, financialMonthStartDay),
   ]);
 
   return (
@@ -50,6 +54,7 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       fromYear={fromYear}
       toMonth={toMonth}
       toYear={toYear}
+      financialMonthStartDay={financialMonthStartDay}
     />
   );
 }

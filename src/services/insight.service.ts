@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma';
-import { subMonths } from 'date-fns';
 import { getBudgets } from '@/services/budget.service';
+import { getCurrentFinancialMonthYear, getFinancialMonthDateRange, getPreviousFinancialMonth } from '@/lib/financial-period';
 
 type Insight = {
   type: 'warning' | 'success' | 'info';
@@ -8,19 +8,13 @@ type Insight = {
   message: string;
 };
 
-export async function getSpendingInsights(userId: string): Promise<Insight[]> {
+export async function getSpendingInsights(userId: string, startDay = 1): Promise<Insight[]> {
   const insights: Insight[] = [];
   const now = new Date();
-  const thisMonth = now.getMonth() + 1;
-  const thisYear = now.getFullYear();
-  const lastMonthDate = subMonths(now, 1);
-  const lastMonth = lastMonthDate.getMonth() + 1;
-  const lastYear = lastMonthDate.getFullYear();
-
-  const startThis = new Date(thisYear, thisMonth - 1, 1);
-  const endThis = new Date(thisYear, thisMonth, 0, 23, 59, 59);
-  const startLast = new Date(lastYear, lastMonth - 1, 1);
-  const endLast = new Date(lastYear, lastMonth, 0, 23, 59, 59);
+  const current = getCurrentFinancialMonthYear(now, startDay);
+  const previous = getPreviousFinancialMonth(current.month, current.year);
+  const { startDate: startThis, endDate: endThis } = getFinancialMonthDateRange(current.month, current.year, startDay);
+  const { startDate: startLast, endDate: endLast } = getFinancialMonthDateRange(previous.month, previous.year, startDay);
 
   // Current month totals
   const [incomeThis, expenseThis] = await Promise.all([
@@ -90,7 +84,7 @@ export async function getSpendingInsights(userId: string): Promise<Insight[]> {
   }
 
   // Budget alerts
-  const budgets = await getBudgets(userId, thisMonth, thisYear);
+  const budgets = await getBudgets(userId, current.month, current.year, startDay);
 
   for (const budget of budgets) {
     const spentVal = budget.spent;

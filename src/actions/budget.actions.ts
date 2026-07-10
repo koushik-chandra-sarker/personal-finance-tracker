@@ -6,10 +6,12 @@ import { budgetSchema } from '@/lib/validations/budget';
 import * as budgetService from '@/services/budget.service';
 import type { ActionResponse } from '@/types';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 export async function getBudgetsAction(month: number, year: number) {
   const userId = await getEffectiveUserId();
   await validateAccess('BUDGETS', 'VIEW');
-  return budgetService.getBudgets(userId, month, year);
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
+  return budgetService.getBudgets(userId, month, year, financialMonthStartDay);
 }
 
 export async function createBudgetAction(formData: FormData): Promise<ActionResponse> {

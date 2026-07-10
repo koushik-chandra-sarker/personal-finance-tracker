@@ -4,16 +4,18 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, Loader2 } from 'lucide-react';
 import { useTransition } from 'react';
 import { getMonthName } from '@/lib/utils';
+import { getCurrentFinancialMonthYear } from '@/lib/financial-period';
 
 interface MonthYearPickerProps {
   month: number;
   year: number;
   route?: string;
+  financialMonthStartDay?: number;
 }
 
 const MONTHS = Array.from({ length: 12 }, (_, index) => index + 1);
 
-export default function MonthYearPicker({ month, year, route = '/dashboard' }: MonthYearPickerProps) {
+export default function MonthYearPicker({ month, year, route = '/dashboard', financialMonthStartDay = 1 }: MonthYearPickerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
@@ -29,7 +31,8 @@ export default function MonthYearPicker({ month, year, route = '/dashboard' }: M
   };
 
   const now = new Date();
-  const isCurrentMonth = month === now.getMonth() + 1 && year === now.getFullYear();
+  const current = getCurrentFinancialMonthYear(now, financialMonthStartDay);
+  const isCurrentMonth = month === current.month && year === current.year;
 
   // Generate year options: 5 years back to 1 year forward
   const currentYear = now.getFullYear();
@@ -70,7 +73,7 @@ export default function MonthYearPicker({ month, year, route = '/dashboard' }: M
       {!isCurrentMonth && (
         <button
           disabled={isPending}
-          onClick={() => navigate(now.getMonth() + 1, currentYear)}
+          onClick={() => navigate(current.month, current.year)}
           className="px-3 py-2 rounded-xl text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 border border-indigo-200 dark:border-indigo-500/20 transition-colors disabled:opacity-50"
         >
           Today

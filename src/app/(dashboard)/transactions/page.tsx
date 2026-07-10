@@ -5,6 +5,8 @@ import { prisma } from '@/lib/prisma';
 import { getEffectiveUserId, validateAccess } from '@/lib/access';
 import TransactionPageClient from '@/components/transactions/TransactionPageClient';
 import { format } from 'date-fns';
+import { getCurrentFinancialMonthYear, getFinancialMonthDateRange } from '@/lib/financial-period';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 
 export default async function TransactionsPage({ searchParams }: { searchParams: Promise<{ [key: string]: string }> }) {
   const session = await auth();
@@ -16,10 +18,12 @@ export default async function TransactionsPage({ searchParams }: { searchParams:
   const page = parseInt(params.page || '1');
   const limit = 20;
 
-  // Calculate default date range (current month)
-  const now = new Date();
-  const firstDayOfMonth = format(new Date(now.getFullYear(), now.getMonth(), 1), 'yyyy-MM-dd');
-  const lastDayOfMonth = format(new Date(now.getFullYear(), now.getMonth() + 1, 0), 'yyyy-MM-dd');
+  // Calculate the configured current financial month range.
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
+  const current = getCurrentFinancialMonthYear(new Date(), financialMonthStartDay);
+  const currentRange = getFinancialMonthDateRange(current.month, current.year, financialMonthStartDay);
+  const firstDayOfMonth = format(currentRange.startDate, 'yyyy-MM-dd');
+  const lastDayOfMonth = format(currentRange.endDate, 'yyyy-MM-dd');
 
   const dateFrom = params.dateFrom || firstDayOfMonth;
   const dateTo = params.dateTo || lastDayOfMonth;

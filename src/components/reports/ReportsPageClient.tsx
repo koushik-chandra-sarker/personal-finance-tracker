@@ -10,6 +10,7 @@ import { formatCurrency, getMonthName, getTransactionTypeLabel } from '@/lib/uti
 import Button from '@/components/ui/Button';
 import { Download, Calendar, Loader2, TrendingUp, Wallet, ArrowUpRight } from 'lucide-react';
 import { useI18n } from '@/i18n/client';
+import { formatFinancialPeriodSpan, getCurrentFinancialMonthYear } from '@/lib/financial-period';
 
 interface ReportsPageClientProps {
   trend: MonthlyTrend[];
@@ -19,6 +20,7 @@ interface ReportsPageClientProps {
   fromYear: number;
   toMonth: number;
   toYear: number;
+  financialMonthStartDay: number;
   investmentReport: {
     totalReturnAmount: number;
     returnsByType: Record<string, number>;
@@ -28,7 +30,7 @@ interface ReportsPageClientProps {
   };
 }
 
-export default function ReportsPageClient({ trend, breakdown, transactions, investmentReport, fromMonth, fromYear, toMonth, toYear }: ReportsPageClientProps) {
+export default function ReportsPageClient({ trend, breakdown, transactions, investmentReport, fromMonth, fromYear, toMonth, toYear, financialMonthStartDay }: ReportsPageClientProps) {
   const { theme, resolvedTheme } = useTheme();
   const { data: session } = useSession();
   const userCurrency = (session?.user as any)?.currency || 'BDT';
@@ -62,6 +64,7 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
   }, [fromMonth, fromYear, toMonth, toYear]);
 
   const now = new Date();
+  const currentFinancialMonth = getCurrentFinancialMonthYear(now, financialMonthStartDay);
   const currentYear = now.getFullYear();
   const years = Array.from({ length: 7 }, (_, i) => currentYear - 5 + i);
 
@@ -84,14 +87,16 @@ export default function ReportsPageClient({ trend, breakdown, transactions, inve
   };
 
   // Check if current range matches default (last 12 months)
-  const defaultStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const defaultStart = new Date(currentFinancialMonth.year, currentFinancialMonth.month - 12, 1);
   const isDefaultRange =
     fromMonth === defaultStart.getMonth() + 1 &&
     fromYear === defaultStart.getFullYear() &&
-    toMonth === now.getMonth() + 1 &&
-    toYear === now.getFullYear();
+    toMonth === currentFinancialMonth.month &&
+    toYear === currentFinancialMonth.year;
 
-  const rangeLabel = `${getMonthName(fromMonth, locale)} ${fromYear} – ${getMonthName(toMonth, locale)} ${toYear}`;
+  const rangeLabel = financialMonthStartDay === 1
+    ? `${getMonthName(fromMonth, locale)} ${fromYear} – ${getMonthName(toMonth, locale)} ${toYear}`
+    : formatFinancialPeriodSpan(fromMonth, fromYear, toMonth, toYear, financialMonthStartDay, locale);
 
   const handleExportCSV = () => {
     const headers = copy.csvHeaders;

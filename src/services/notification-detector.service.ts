@@ -3,6 +3,7 @@ import { formatCurrency, formatDate } from '@/lib/utils';
 import { getBudgets } from '@/services/budget.service';
 import { createNotificationOnce, getOrCreateNotificationPreferences } from '@/services/notification.service';
 import { addDays, differenceInCalendarDays, endOfDay, startOfDay, subDays } from 'date-fns';
+import { getCurrentFinancialMonthYear, normalizeFinancialMonthStartDay } from '@/lib/financial-period';
 
 type DetectorCounts = {
   billReminders: number;
@@ -130,10 +131,13 @@ export async function detectBudgetThresholds(userId: string, now = new Date()) {
   const preferences = await getOrCreateNotificationPreferences(userId);
   if (!preferences.budgetAlertsEnabled) return 0;
 
-  const user = await prisma.user.findUnique({ where: { id: userId }, select: { currency: true } });
-  const month = now.getMonth() + 1;
-  const year = now.getFullYear();
-  const budgets = await getBudgets(userId, month, year);
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { currency: true, financialMonthStartDay: true },
+  });
+  const startDay = normalizeFinancialMonthStartDay(user?.financialMonthStartDay);
+  const { month, year } = getCurrentFinancialMonthYear(now, startDay);
+  const budgets = await getBudgets(userId, month, year, startDay);
   let created = 0;
 
   for (const budget of budgets) {

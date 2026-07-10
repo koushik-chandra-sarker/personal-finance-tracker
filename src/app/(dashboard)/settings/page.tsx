@@ -9,6 +9,7 @@ export default async function SettingsPage() {
         where: { id: session.user.id },
         select: {
           experienceMode: true,
+          financialMonthStartDay: true,
           appPinHash: true,
           appPinSetAt: true,
           subscription: {
@@ -33,6 +34,7 @@ export default async function SettingsPage() {
         pinSetAt: userState?.appPinSetAt?.toISOString() || null,
       }}
       initialExperienceMode={userState?.experienceMode || 'FULL'}
+      initialFinancialMonthStartDay={userState?.financialMonthStartDay || 1}
       initialSubscription={{
         plan: userState?.subscription?.plan || null,
         interval: userState?.subscription?.interval || null,

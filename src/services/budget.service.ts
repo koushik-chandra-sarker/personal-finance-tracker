@@ -1,16 +1,9 @@
 import { prisma } from '@/lib/prisma';
 import type { BudgetWithSpent } from '@/types';
+import { getFinancialMonthDateRange, getPreviousFinancialMonth } from '@/lib/financial-period';
 
-function getPreviousMonth(month: number, year: number) {
-  if (month === 1) {
-    return { month: 12, year: year - 1 };
-  }
-  return { month: month - 1, year };
-}
-
-async function getCategorySpending(userId: string, categoryId: string, month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+async function getCategorySpending(userId: string, categoryId: string, month: number, year: number, startDay = 1) {
+  const { startDate, endDate } = getFinancialMonthDateRange(month, year, startDay);
   const spending = await prisma.transaction.aggregate({
     where: {
       userId,
@@ -28,11 +21,12 @@ async function getRolloverAmount(
   categoryId: string,
   month: number,
   year: number,
-  depth = 0
+  depth = 0,
+  startDay = 1
 ): Promise<number> {
   if (depth > 120) return 0;
 
-  const previous = getPreviousMonth(month, year);
+  const previous = getPreviousFinancialMonth(month, year);
   const previousBudget = await prisma.budget.findUnique({
     where: {
       userId_categoryId_month_year: {
@@ -51,15 +45,16 @@ async function getRolloverAmount(
     categoryId,
     previous.month,
     previous.year,
-    depth + 1
+    depth + 1,
+    startDay
   );
   const previousLimit = Number(previousBudget.amount) + incomingRollover;
-  const previousSpent = await getCategorySpending(userId, categoryId, previous.month, previous.year);
+  const previousSpent = await getCategorySpending(userId, categoryId, previous.month, previous.year, startDay);
 
   return Math.max(0, previousLimit - previousSpent);
 }
 
-export async function getBudgets(userId: string, month: number, year: number) {
+export async function getBudgets(userId: string, month: number, year: number, startDay = 1) {
   const budgets = await prisma.budget.findMany({
     where: { userId, month, year },
     include: { category: true },
@@ -76,8 +71,7 @@ export async function getBudgets(userId: string, month: number, year: number) {
   });
   const userMap = new Map(users.map(u => [u.id, u.name]));
 
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+  const { startDate, endDate } = getFinancialMonthDateRange(month, year, startDay);
 
   const spending = await prisma.transaction.groupBy({
     by: ['categoryId'],
@@ -94,7 +88,7 @@ export async function getBudgets(userId: string, month: number, year: number) {
   return Promise.all(budgets.map(async (budget): Promise<BudgetWithSpent> => {
     const spent = spendingMap.get(budget.categoryId) || 0;
     const amount = Number(budget.amount);
-    const rolloverAmount = await getRolloverAmount(userId, budget.categoryId, month, year);
+    const rolloverAmount = await getRolloverAmount(userId, budget.categoryId, month, year, 0, startDay);
     const effectiveAmount = amount + rolloverAmount;
     const remaining = effectiveAmount - spent;
     return {
@@ -136,8 +130,8 @@ function calculateUsage(budgets: BudgetWithSpent[]): Pick<BudgetUsageSummary, 's
   return { spent, total, percentage };
 }
 
-export async function getBudgetUsageSummary(userId: string, month: number, year: number): Promise<BudgetUsageSummary> {
-  const selectedMonthBudgets = await getBudgets(userId, month, year);
+export async function getBudgetUsageSummary(userId: string, month: number, year: number, startDay = 1): Promise<BudgetUsageSummary> {
+  const selectedMonthBudgets = await getBudgets(userId, month, year, startDay);
   if (selectedMonthBudgets.length > 0) {
     return {
       ...calculateUsage(selectedMonthBudgets),
@@ -165,8 +159,7 @@ export async function getBudgetUsageSummary(userId: string, month: number, year:
   });
 
   const fallbackCategoryIds = latestBudgets.map((budget) => budget.categoryId);
-  const selectedStartDate = new Date(year, month - 1, 1);
-  const selectedEndDate = new Date(year, month, 0, 23, 59, 59);
+  const { startDate: selectedStartDate, endDate: selectedEndDate } = getFinancialMonthDateRange(month, year, startDay);
   const selectedMonthSpending = fallbackCategoryIds.length
     ? await prisma.transaction.groupBy({
         by: ['categoryId'],

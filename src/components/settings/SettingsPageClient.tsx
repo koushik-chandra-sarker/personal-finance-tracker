@@ -17,6 +17,7 @@ import {
   deleteMyAccountAction,
   getActiveSubscriptionPackagesAction,
   updateCurrencyAction,
+  updateFinancialMonthStartDayAction,
   updateExperienceModeAction,
   type SubscriptionPackageRow,
 } from '@/actions/settings.actions';
@@ -49,10 +50,12 @@ type SettingsSubscriptionSnapshot = {
 export default function SettingsPageClient({
   initialAppPinStatus,
   initialExperienceMode,
+  initialFinancialMonthStartDay,
   initialSubscription,
 }: {
   initialAppPinStatus: AppPinStatus;
   initialExperienceMode: UserExperienceMode;
+  initialFinancialMonthStartDay: number;
   initialSubscription: SettingsSubscriptionSnapshot;
 }) {
   const { data: session, update } = useSession();
@@ -68,6 +71,8 @@ export default function SettingsPageClient({
   const [isCurrencyUpdating, setIsCurrencyUpdating] = useState(false);
   const [isLocaleUpdating, setIsLocaleUpdating] = useState(false);
   const [isExperienceModeUpdating, setIsExperienceModeUpdating] = useState(false);
+  const [isFinancialMonthUpdating, setIsFinancialMonthUpdating] = useState(false);
+  const [financialMonthStartDay, setFinancialMonthStartDay] = useState(initialFinancialMonthStartDay);
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [pinMessage, setPinMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const [appPinStatus, setAppPinStatus] = useState<AppPinStatus>(initialAppPinStatus);
@@ -131,6 +136,20 @@ export default function SettingsPageClient({
       router.refresh();
     }
     setIsExperienceModeUpdating(false);
+  };
+
+  const handleFinancialMonthChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const previousDay = financialMonthStartDay;
+    const nextDay = Number(e.target.value);
+    setFinancialMonthStartDay(nextDay);
+    setIsFinancialMonthUpdating(true);
+    const result = await updateFinancialMonthStartDayAction(nextDay);
+    if (result.success) {
+      router.refresh();
+    } else {
+      setFinancialMonthStartDay(previousDay);
+    }
+    setIsFinancialMonthUpdating(false);
   };
 
   const isPersonalWorkspace = !activeId || activeId === session?.user?.id;
@@ -503,6 +522,26 @@ export default function SettingsPageClient({
                               { value: 'AUD', label: 'AUD (A$)' },
                             ]}
                             disabled={isCurrencyUpdating}
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-6 dark:border-slate-700/50 dark:bg-slate-900/50 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-base font-semibold text-slate-900 dark:text-slate-200">Financial Month Start</p>
+                          <p className="text-sm leading-6 text-slate-500 dark:text-slate-400">
+                            Monthly dashboards, budgets, reports, and default transaction dates will start on this day. For example, day 25 creates periods from the 25th through the 24th.
+                          </p>
+                        </div>
+                        <div className="w-full sm:w-56">
+                          <Select
+                            id="financialMonthStartDay"
+                            value={financialMonthStartDay}
+                            onChange={handleFinancialMonthChange}
+                            options={Array.from({ length: 31 }, (_, index) => ({
+                              value: String(index + 1),
+                              label: index === 0 ? '1st (calendar month)' : `Day ${index + 1}`,
+                            }))}
+                            disabled={isFinancialMonthUpdating}
                           />
                         </div>
                       </div>

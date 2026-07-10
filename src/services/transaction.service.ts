@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { getFinancialMonthDateRange, getPreviousFinancialMonth } from '@/lib/financial-period';
 import { CategoryType, Prisma } from '@prisma/client';
 import type { TransactionFilters } from '@/types';
 import { detectUnusualExpenses } from '@/services/notification-detector.service';
@@ -171,21 +172,10 @@ export async function getTransactions(userId: string, filters: TransactionFilter
   };
 }
 
-function getMonthDateRange(month: number, year: number) {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-  return { startDate, endDate };
-}
-
-function getPreviousMonth(month: number, year: number) {
-  if (month === 1) return { month: 12, year: year - 1 };
-  return { month: month - 1, year };
-}
-
 function buildMonthlyExpenseWhere(
   userId: string,
   filters: MonthlyExpenseFilters,
-  dateRange = getMonthDateRange(filters.month, filters.year)
+  dateRange = getFinancialMonthDateRange(filters.month, filters.year)
 ): Prisma.TransactionWhereInput {
   return {
     userId,
@@ -199,7 +189,7 @@ function buildMonthlyExpenseWhere(
 function buildMonthlyIncomeWhere(
   userId: string,
   filters: MonthlyExpenseFilters,
-  dateRange = getMonthDateRange(filters.month, filters.year)
+  dateRange = getFinancialMonthDateRange(filters.month, filters.year)
 ): Prisma.TransactionWhereInput {
   return {
     userId,
@@ -213,7 +203,7 @@ function buildMonthlyIncomeWhere(
 function buildRegularMonthlyTransactionWhere(
   userId: string,
   filters: MonthlyExpenseFilters,
-  dateRange = getMonthDateRange(filters.month, filters.year)
+  dateRange = getFinancialMonthDateRange(filters.month, filters.year)
 ): Prisma.TransactionWhereInput {
   return {
     userId,
@@ -230,7 +220,7 @@ function buildRegularMonthlyTransactionWhere(
 function buildRegularMonthlyExpenseWhere(
   userId: string,
   filters: MonthlyExpenseFilters,
-  dateRange = getMonthDateRange(filters.month, filters.year)
+  dateRange = getFinancialMonthDateRange(filters.month, filters.year)
 ): Prisma.TransactionWhereInput {
   return {
     ...buildRegularMonthlyTransactionWhere(userId, filters, dateRange),
@@ -241,7 +231,7 @@ function buildRegularMonthlyExpenseWhere(
 function buildRegularMonthlyIncomeWhere(
   userId: string,
   filters: MonthlyExpenseFilters,
-  dateRange = getMonthDateRange(filters.month, filters.year)
+  dateRange = getFinancialMonthDateRange(filters.month, filters.year)
 ): Prisma.TransactionWhereInput {
   return {
     ...buildRegularMonthlyTransactionWhere(userId, filters, dateRange),
@@ -249,12 +239,12 @@ function buildRegularMonthlyIncomeWhere(
   };
 }
 
-export async function getMonthlyExpenseDetails(userId: string, filters: MonthlyExpenseFilters) {
+export async function getMonthlyExpenseDetails(userId: string, filters: MonthlyExpenseFilters, startDay = 1) {
   const page = Math.max(1, filters.page || 1);
   const limit = Math.max(1, Math.min(filters.limit || 50, 100));
-  const dateRange = getMonthDateRange(filters.month, filters.year);
-  const previousMonth = getPreviousMonth(filters.month, filters.year);
-  const previousDateRange = getMonthDateRange(previousMonth.month, previousMonth.year);
+  const dateRange = getFinancialMonthDateRange(filters.month, filters.year, startDay);
+  const previousMonth = getPreviousFinancialMonth(filters.month, filters.year);
+  const previousDateRange = getFinancialMonthDateRange(previousMonth.month, previousMonth.year, startDay);
 
   const regularActivityWhere = buildRegularMonthlyTransactionWhere(userId, filters, dateRange);
   const regularExpenseWhere = buildRegularMonthlyExpenseWhere(userId, filters, dateRange);
@@ -391,8 +381,9 @@ export async function getMonthlyExpenseDetails(userId: string, filters: MonthlyE
   };
 }
 
-export async function getRegularMonthlyTransactionCategories(userId: string, filters: MonthlyExpenseFilters) {
-  const regularWhere = buildRegularMonthlyTransactionWhere(userId, { ...filters, categoryId: undefined });
+export async function getRegularMonthlyTransactionCategories(userId: string, filters: MonthlyExpenseFilters, startDay = 1) {
+  const dateRange = getFinancialMonthDateRange(filters.month, filters.year, startDay);
+  const regularWhere = buildRegularMonthlyTransactionWhere(userId, { ...filters, categoryId: undefined }, dateRange);
   const categoryGroups = await prisma.transaction.groupBy({
     by: ['categoryId'],
     where: regularWhere,

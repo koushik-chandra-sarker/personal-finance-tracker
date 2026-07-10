@@ -5,7 +5,9 @@ import { getBudgets, getBudgetUsageSummary } from '@/services/budget.service';
 import { getTotalBalance } from '@/services/account.service';
 import { getSpendingInsights } from '@/services/insight.service';
 import { getPortfolioSummary, getUpcomingMaturities } from '@/services/investment.service';
-import { getCurrentMonthYear, getMonthName } from '@/lib/utils';
+import { getMonthName } from '@/lib/utils';
+import { formatFinancialPeriodRange, getCurrentFinancialMonthYear } from '@/lib/financial-period';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 import { DEFAULT_LOCALE } from '@/i18n/config';
 import { getMessages } from '@/i18n/messages';
 import SummaryCards from '@/components/dashboard/SummaryCards';
@@ -28,7 +30,8 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const userId = await getEffectiveUserId();
 
   const params = await searchParams;
-  const current = getCurrentMonthYear();
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
+  const current = getCurrentFinancialMonthYear(new Date(), financialMonthStartDay);
   const monthParam = Array.isArray(params.month) ? params.month[0] : params.month;
   const yearParam = Array.isArray(params.year) ? params.year[0] : params.year;
   const parsedMonth = monthParam ? parseInt(monthParam, 10) : current.month;
@@ -37,20 +40,22 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const year = Number.isInteger(parsedYear) ? parsedYear : current.year;
   const userLocale = session.user.preferredLocale || DEFAULT_LOCALE;
   const messages = getMessages(userLocale);
-  const periodLabel = `${getMonthName(month, userLocale)} ${year}`;
+  const periodLabel = financialMonthStartDay === 1
+    ? `${getMonthName(month, userLocale)} ${year}`
+    : `${getMonthName(month, userLocale)} ${year} · ${formatFinancialPeriodRange(month, year, financialMonthStartDay, userLocale)}`;
 
   const [summary, categoryBreakdown, trend, recentTx, budgets, totalBalance, insights, summary_portfolio, maturities, upcomingBills, budgetUsageSummary] = await Promise.all([
-    getMonthlySummary(userId, month, year),
-    getCategoryBreakdown(userId, month, year),
-    getMonthlyTrend(userId, 6),
+    getMonthlySummary(userId, month, year, financialMonthStartDay),
+    getCategoryBreakdown(userId, month, year, financialMonthStartDay),
+    getMonthlyTrend(userId, 6, financialMonthStartDay),
     getRecentTransactions(userId, 7),
-    getBudgets(userId, month, year),
+    getBudgets(userId, month, year, financialMonthStartDay),
     getTotalBalance(userId),
-    getSpendingInsights(userId),
+    getSpendingInsights(userId, financialMonthStartDay),
     getPortfolioSummary(userId),
     getUpcomingMaturities(userId),
     getUpcomingBillsSummary(userId, 14),
-    getBudgetUsageSummary(userId, month, year),
+    getBudgetUsageSummary(userId, month, year, financialMonthStartDay),
   ]);
 
   const userCurrency = (session.user as { currency?: string }).currency || 'BDT';
@@ -59,7 +64,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
       {/* Header with Month/Year Picker */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{messages.dashboard.title}</h1>
-        <MonthYearPicker month={month} year={year} />
+        <MonthYearPicker month={month} year={year} financialMonthStartDay={financialMonthStartDay} />
       </div>
 
       {/* Summary Cards */}

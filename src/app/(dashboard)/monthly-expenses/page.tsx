@@ -9,6 +9,8 @@ import { getMessages } from '@/i18n/messages';
 import { getRequestLocale } from '@/i18n/server';
 import { formatCurrency, formatDate, formatNumber, getMonthName } from '@/lib/utils';
 import MonthlyExpenseFilters from '@/components/monthly-expenses/MonthlyExpenseFilters';
+import { formatFinancialPeriodRange, getCurrentFinancialMonthYear, getFinancialMonthDateRange } from '@/lib/financial-period';
+import { getFinancialMonthStartDay } from '@/services/financial-period.service';
 
 type MonthlyExpensesSearchParams = {
   month?: string;
@@ -58,8 +60,10 @@ export default async function MonthlyExpensesPage({
 
   const params = await searchParams;
   const now = new Date();
-  const month = clampMonth(params.month, now.getMonth() + 1);
-  const year = parseYear(params.year, now.getFullYear());
+  const financialMonthStartDay = await getFinancialMonthStartDay(userId);
+  const current = getCurrentFinancialMonthYear(now, financialMonthStartDay);
+  const month = clampMonth(params.month, current.month);
+  const year = parseYear(params.year, current.year);
   const page = Math.max(1, Number(params.page || 1) || 1);
   const locale = session.user.preferredLocale || await getRequestLocale();
   const messages = getMessages(locale);
@@ -73,12 +77,12 @@ export default async function MonthlyExpensesPage({
       limit: 50,
       categoryId: params.categoryId,
       accountId: params.accountId,
-    }),
+    }, financialMonthStartDay),
     getRegularMonthlyTransactionCategories(userId, {
       month,
       year,
       accountId: params.accountId,
-    }),
+    }, financialMonthStartDay),
     prisma.account.findMany({
       where: { userId, isActive: true },
       orderBy: { name: 'asc' },
@@ -91,15 +95,17 @@ export default async function MonthlyExpensesPage({
   ]);
 
   const currency = owner?.currency || session.user.currency || 'BDT';
-  const monthLabel = `${getMonthName(month, locale)} ${formatNumber(year, { useGrouping: false }, locale)}`;
+  const monthLabel = financialMonthStartDay === 1
+    ? `${getMonthName(month, locale)} ${formatNumber(year, { useGrouping: false }, locale)}`
+    : `${getMonthName(month, locale)} ${formatNumber(year, { useGrouping: false }, locale)} · ${formatFinancialPeriodRange(month, year, financialMonthStartDay, locale)}`;
   const monthOptions = Array.from({ length: 12 }, (_, index) => ({
     value: index + 1,
     label: getMonthName(index + 1, locale),
   }));
-  const currentMonthEnd = new Date(year, month, 0);
-  const dayCount = now.getFullYear() === year && now.getMonth() + 1 === month
-    ? now.getDate()
-    : currentMonthEnd.getDate();
+  const selectedRange = getFinancialMonthDateRange(month, year, financialMonthStartDay);
+  const isCurrentPeriod = current.month === month && current.year === year;
+  const elapsedEnd = isCurrentPeriod && now < selectedRange.endDate ? now : selectedRange.endDate;
+  const dayCount = Math.max(1, Math.floor((elapsedEnd.getTime() - selectedRange.startDate.getTime()) / 86_400_000) + 1);
   const dailyAverage = details.totalRegularExpense / Math.max(1, dayCount);
 
   return (

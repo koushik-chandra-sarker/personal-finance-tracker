@@ -1,10 +1,10 @@
 import { prisma } from '@/lib/prisma';
 import type { MonthlySummary, CategoryBreakdown, MonthlyTrend, UpcomingBillsSummary } from '@/types';
 import { format, subMonths } from 'date-fns';
+import { getCurrentFinancialMonthYear, getFinancialMonthDateRange } from '@/lib/financial-period';
 
-export async function getMonthlySummary(userId: string, month: number, year: number): Promise<MonthlySummary> {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+export async function getMonthlySummary(userId: string, month: number, year: number, startDay = 1): Promise<MonthlySummary> {
+  const { startDate, endDate } = getFinancialMonthDateRange(month, year, startDay);
 
   const [income, expense, count] = await Promise.all([
     prisma.transaction.aggregate({
@@ -31,19 +31,18 @@ export async function getMonthlySummary(userId: string, month: number, year: num
   };
 }
 
-export async function getCategoryBreakdown(userId: string, month: number, year: number): Promise<CategoryBreakdown[]> {
-  const startDate = new Date(year, month - 1, 1);
-  const endDate = new Date(year, month, 0, 23, 59, 59);
+export async function getCategoryBreakdown(userId: string, month: number, year: number, startDay = 1): Promise<CategoryBreakdown[]> {
+  const { startDate, endDate } = getFinancialMonthDateRange(month, year, startDay);
   return getCategoryBreakdownForRange(userId, startDate, endDate);
 }
 
 export async function getCategoryBreakdownRange(
   userId: string,
   startMonth: number, startYear: number,
-  endMonth: number, endYear: number
+  endMonth: number, endYear: number, startDay = 1
 ): Promise<CategoryBreakdown[]> {
-  const startDate = new Date(startYear, startMonth - 1, 1);
-  const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+  const startDate = getFinancialMonthDateRange(startMonth, startYear, startDay).startDate;
+  const endDate = getFinancialMonthDateRange(endMonth, endYear, startDay).endDate;
   return getCategoryBreakdownForRange(userId, startDate, endDate);
 }
 
@@ -78,20 +77,22 @@ async function getCategoryBreakdownForRange(userId: string, startDate: Date, end
     .sort((a, b) => b.total - a.total);
 }
 
-export async function getMonthlyTrend(userId: string, months: number = 6): Promise<MonthlyTrend[]> {
+export async function getMonthlyTrend(userId: string, months: number = 6, startDay = 1): Promise<MonthlyTrend[]> {
   const now = new Date();
-  const startDate = subMonths(now, months - 1);
+  const current = getCurrentFinancialMonthYear(now, startDay);
+  const currentAnchor = new Date(current.year, current.month - 1, 1);
+  const startDate = subMonths(currentAnchor, months - 1);
   return getMonthlyTrendRange(
     userId,
     startDate.getMonth() + 1, startDate.getFullYear(),
-    now.getMonth() + 1, now.getFullYear()
+    current.month, current.year, startDay
   );
 }
 
 export async function getMonthlyTrendRange(
   userId: string,
   startMonth: number, startYear: number,
-  endMonth: number, endYear: number
+  endMonth: number, endYear: number, startDay = 1
 ): Promise<MonthlyTrend[]> {
   const trends: MonthlyTrend[] = [];
 
@@ -99,7 +100,7 @@ export async function getMonthlyTrendRange(
   let y = startYear;
 
   while (y < endYear || (y === endYear && m <= endMonth)) {
-    const summary = await getMonthlySummary(userId, m, y);
+    const summary = await getMonthlySummary(userId, m, y, startDay);
     const date = new Date(y, m - 1, 1);
     trends.push({
       month: format(date, 'MMM yyyy'),
@@ -167,10 +168,10 @@ export async function getUpcomingBillsSummary(userId: string, daysAhead: number 
 export async function getInvestmentReportRange(
   userId: string,
   startMonth: number, startYear: number,
-  endMonth: number, endYear: number
+  endMonth: number, endYear: number, startDay = 1
 ) {
-  const startDate = new Date(startYear, startMonth - 1, 1);
-  const endDate = new Date(endYear, endMonth, 0, 23, 59, 59);
+  const startDate = getFinancialMonthDateRange(startMonth, startYear, startDay).startDate;
+  const endDate = getFinancialMonthDateRange(endMonth, endYear, startDay).endDate;
 
   const [returns, valuations, investments] = await Promise.all([
     prisma.investmentReturn.findMany({
@@ -211,4 +212,3 @@ export async function getInvestmentReportRange(
     activeInvestmentCount: investments.filter(i => i.status === 'ACTIVE').length,
   };
 }
-

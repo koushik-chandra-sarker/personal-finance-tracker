@@ -22,7 +22,7 @@ import { useI18n } from '@/i18n/client';
 
 interface Category { id: string; name: string; type: string; color: string; }
 
-export default function BudgetPageClient({ budgets, categories, currentMonth, currentYear }: { budgets: BudgetWithSpent[]; categories: Category[]; currentMonth: number; currentYear: number; }) {
+export default function BudgetPageClient({ budgets, categories, currentMonth, currentYear, financialMonthStartDay }: { budgets: BudgetWithSpent[]; categories: Category[]; currentMonth: number; currentYear: number; financialMonthStartDay: number; }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBudget, setEditingBudget] = useState<BudgetWithSpent | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -91,7 +91,7 @@ export default function BudgetPageClient({ budgets, categories, currentMonth, cu
         <div>
           <div className="flex items-center gap-4 mb-1">
             <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-200">{copy.title}</h1>
-            <MonthYearPicker month={currentMonth} year={currentYear} route="/budgets" />
+            <MonthYearPicker month={currentMonth} year={currentYear} route="/budgets" financialMonthStartDay={financialMonthStartDay} />
           </div>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {copy.monthlyUsage} — {formatCurrency(totalSpent, userCurrency, locale)} / {formatCurrency(totalBudget, userCurrency, locale)}
